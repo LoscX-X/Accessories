@@ -1,0 +1,22 @@
+package com.blanoir.accessory.attributeload;
+
+import com.blanoir.accessory.Accessory;
+import dev.aurelium.auraskills.api.item.ItemContext;
+import dev.aurelium.auraskills.api.registry.NamespacedId;
+import dev.aurelium.auraskills.api.stat.CustomStat;
+import dev.aurelium.auraskills.api.trait.CustomTrait;
+
+public class CustomTraits {
+
+    public static final CustomTrait HEAL_REGENERATION = CustomTrait
+            .builder(NamespacedId.of("accessory", "heal_regeneration"))
+            .displayName("Health_Regeneration")
+            .build();
+    public static final CustomTrait DEFENCE = CustomTrait
+            .builder(NamespacedId.of("accessory", "defence"))
+            .displayName("Defense")
+            .build();
+
+
+
+}

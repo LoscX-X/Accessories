@@ -1,0 +1,9 @@
+name: Accessory
+version: '0.0.1'
+main: com.blanoir.accessory.Accessory
+api-version: '1.21'
+depend: [AuraSkills]
+commands:
+  inv:
+    description: 打开个人背包界面
+    usage: /<command>
