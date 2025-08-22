@@ -11,7 +11,8 @@ The accessory function has been completely tested.
 
 There are 4 slot for different types of the accessory
 
-How to use?
+How to use? 
+
 1: You should use the  
 /sk item trait add [traits] [value] [operation]
 
