@@ -3,6 +3,7 @@ package com.blanoir.accessory;
 import com.blanoir.accessory.attribute.Defence;
 import com.blanoir.accessory.attribute.HealRegeneration;
 import com.blanoir.accessory.attributeload.CustomTraits;
+import com.blanoir.accessory.attributeload.InvListener;
 import com.blanoir.accessory.inv.InvLoad;
 import com.blanoir.accessory.inv.InvSave;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
@@ -21,6 +22,7 @@ public final class Accessory extends JavaPlugin {
         getDataFolder().mkdirs(); // 这个目录有时还未创建。:contentReference[oaicite:0]{index=0}
         saveIfAbsent("stats.yml");
         getServer().getPluginManager().registerEvents(new InvSave(this), this);
+        getServer().getPluginManager().registerEvents(new InvListener(this), this);
         getCommand("inv").setExecutor((sender, cmd, label, args) -> {
             if (!(sender instanceof Player p)) return true;
             new InvLoad(this).openFor(p);
