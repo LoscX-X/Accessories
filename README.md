@@ -12,7 +12,7 @@ The accessory function has been completely tested.
 There are 4 slot for different types of the accessory
 
 How to use?
-1: You should use the 
+1: You should use the  
 /sk item trait add [traits] [value] [operation]
 
 2: Change the lore conditoins in the config and use /accessory to reload it 
