@@ -16,7 +16,7 @@ How to use?
 1: You should use the  
 /sk item trait add [traits] [value] [operation]
 
-2: Change the lore conditoins in the config and use /accessory to reload it 
+2: Change the lore conditoins in the config and use /accessory reload to reload it 
 
 3: add the lore to the item with the plugin such as essential plugin or other item manage plugin
 
