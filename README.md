@@ -7,20 +7,37 @@ HealRegeneration – Restores health amonut/secound.
 Defence – Reduces incoming damage, caculate in add and substract.
 Not in the percent 
 
-The accessory function has been completely tested.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Installation
 
-There are 4 slot for different types of the accessory
+Install AuraSkills and this plugin then start the server once to generate its files. 
+
+Place this add-on’s jar in /plugins/ and restart the server.
+
+Accessory GUI
+
+The GUI provides 4 slots, each bound to a type (e.g., Ring/Necklace/Bracelet/Talisman).
+
+Slot acceptance is enforced by lore rules (configured in this plugin’s config.yml).
+
+Drag the item into the matching slot to apply its trait(s) to the player.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 How to use? 
 
-1: You should use the  
-/sk item trait add [traits] [value] [operation]
+How to Use (Quick Start)
 
-2: Change the lore conditoins in the config and use /accessory reload to reload it 
+1:Give an item a trait with AuraSkills:/sk item trait add <trait> <value> [operation]
 
-3: add the lore to the item with the plugin such as essential plugin or other item manage plugin
+wiki.aurelium.dev
 
-4:Drag the item to the right slot
+2:Add the appropriate lore tag (per your config) to categorize the item (e.g., [Ring]).
 
-5: Enjoy!
- 
+3:Open the accessories GUI and drag the item into its matching slot.
+
+4:The add-on detects all trait modifiers on accessories and applies them to the player live.
+
+Enjoy!
+
+Future features:
+Language change
