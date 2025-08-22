@@ -1,7 +1,8 @@
+title: "<gradient:#00ffa6:#00d1ff><b>Accessories</b></gradient>"
+#the title of the gui
+
 Size: 9
-
 #Do not change the size unless you know what you want to do
-
 rules:
   "1":
     lore-includes: ["[Ring]"]

@@ -1,5 +1,7 @@
 package com.blanoir.accessory.inv;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -17,11 +19,13 @@ public class InvCreate implements InventoryHolder {
 
     public InvCreate(JavaPlugin plugin) {
         int size = plugin.getConfig().getInt("Size", 9);
+        String mm = plugin.getConfig().getString("title", "<green>Accessory");
+        Component title = MiniMessage.miniMessage().deserialize(mm);
         // 约束到 9..54 且为 9 的倍数
         size = Math.max(9, Math.min(54, size));
         size -= size % 9;
 
-        this.inventory = Bukkit.createInventory(this, size); // 也可加标题重载
+        this.inventory = Bukkit.createInventory(this, size, title); // 也可加标题重载
 
         // ★ 这里真正把“锁定的玻璃板”放进对应槽位
         ItemStack pane = lockedPane(plugin);
