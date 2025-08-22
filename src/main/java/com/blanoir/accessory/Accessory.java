@@ -1,17 +1,17 @@
 package com.blanoir.accessory;
 
-import com.blanoir.accessory.attribute.Defence;
-import com.blanoir.accessory.attribute.HealRegeneration;
+import com.blanoir.accessory.attributeload.CustomStats;
+import com.blanoir.accessory.traits.Defence;
+import com.blanoir.accessory.traits.HealRegeneration;
 import com.blanoir.accessory.attributeload.CustomTraits;
-import com.blanoir.accessory.attributeload.InvListener;
+import com.blanoir.accessory.inv.InvListener;
 import com.blanoir.accessory.inv.InvLoad;
+import com.blanoir.accessory.inv.InvReload;
 import com.blanoir.accessory.inv.InvSave;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.registry.NamespacedRegistry;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.checkerframework.common.returnsreceiver.qual.This;
 
 import java.io.File;
 
@@ -21,6 +21,7 @@ public final class Accessory extends JavaPlugin {
     public void onEnable() {
         getDataFolder().mkdirs(); // 这个目录有时还未创建。:contentReference[oaicite:0]{index=0}
         saveIfAbsent("stats.yml");
+        saveDefaultConfig();
         getServer().getPluginManager().registerEvents(new InvSave(this), this);
         getServer().getPluginManager().registerEvents(new InvListener(this), this);
         getCommand("inv").setExecutor((sender, cmd, label, args) -> {
@@ -28,13 +29,13 @@ public final class Accessory extends JavaPlugin {
             new InvLoad(this).openFor(p);
             return true;
         });
-
+        getCommand("accessory").setExecutor(new InvReload(this));
         AuraSkillsApi api = AuraSkillsApi.get();
         NamespacedRegistry registry = api.useRegistry("accessory", getDataFolder());
 
         registry.registerTrait(CustomTraits.HEAL_REGENERATION);
         registry.registerTrait(CustomTraits.DEFENCE);
-
+        registry.registerStat(CustomStats.CUSTOM_STAT);
         HealRegeneration hr = new HealRegeneration(this, api);
         Defence def = new Defence(this, api);
         api.getHandlers().registerTraitHandler(hr);

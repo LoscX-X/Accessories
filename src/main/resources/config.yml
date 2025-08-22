@@ -1,0 +1,17 @@
+Size: 9
+
+#Do not change the size unless you know what you want to do
+
+rules:
+  "1":
+    lore-includes: ["[Ring]"]
+  "3":
+    lore-includes: ["[Necklace]"]
+  "5":
+    lore-includes: ["[Bracelet]"]
+  "7":
+    lore-includes: ["[Talisman]"]
+
+
+#Only fore rules for the original version
+#

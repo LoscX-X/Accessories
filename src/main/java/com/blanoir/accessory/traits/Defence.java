@@ -1,23 +1,23 @@
-package com.blanoir.accessory.attribute;
+package com.blanoir.accessory.traits;
 
 import com.blanoir.accessory.attributeload.CustomTraits;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.bukkit.BukkitTraitHandler;
 import dev.aurelium.auraskills.api.trait.Trait;
 import dev.aurelium.auraskills.api.user.SkillsUser;
-import org.bukkit.Bukkit;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class HealRegeneration implements BukkitTraitHandler{
+public class Defence implements BukkitTraitHandler, Listener{
     private final AuraSkillsApi auraSkills;
     private final JavaPlugin plugin;
 
     // Inject API dependency in constructor
-    public HealRegeneration(JavaPlugin plugin, AuraSkillsApi auraSkills) {
+    public Defence(JavaPlugin plugin, AuraSkillsApi auraSkills) {
         this.auraSkills = auraSkills;
         this.plugin = plugin;
     }
@@ -25,7 +25,7 @@ public class HealRegeneration implements BukkitTraitHandler{
     @Override
     public Trait[] getTraits() {
         // An array containing your CustomTrait instance
-        return new Trait[] {CustomTraits.HEAL_REGENERATION};
+        return new Trait[] {CustomTraits.DEFENCE};
     }
 
     @Override
@@ -41,22 +41,18 @@ public class HealRegeneration implements BukkitTraitHandler{
     }
 
     // Example implementation of the trait's functionality (not complete)
-    public void startTask() {
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                if (p.isDead()) continue;
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onDamage(EntityDamageEvent e){
+        if(!(e.getEntity() instanceof Player p)) return;
 
-                SkillsUser user = auraSkills.getUser(p.getUniqueId());
-                double hps = user.getEffectiveTraitLevel(CustomTraits.HEAL_REGENERATION);
-                if (hps <= 0) continue;
+        SkillsUser User = auraSkills.getUser(p.getUniqueId());
+        if(User == null || !User.isLoaded()) return;
 
-                double max = p.getAttribute(Attribute.MAX_HEALTH).getValue();
-                double cur = p.getHealth();
-                if (cur >= max) continue;
+        double flat = User.getEffectiveTraitLevel(CustomTraits.DEFENCE); // 固定减伤值
+        if (flat <= 0) return;
 
-                double healAmount = Math.min(hps, max - cur);
-                ((Damageable) p).heal(healAmount);
-            }
-        }, 20L, 20L);
+
+        e.setDamage(Math.max(0.0, e.getDamage() - flat));
+
     }
 }

@@ -1,1 +1,14 @@
 
+stats:
+  accessory/custom_stat:
+    enabled: true
+    traits:
+      accessory/heal_regeneration:
+        modifier: 0.01 # Overrides the value passed in with CustomStatBuilder#trait
+      accessory/defence:
+        modifier: 0.01
+traits:
+  accessory/defence:
+    enabled: true
+  accessory/heal_regeneration:
+    enabled: true

@@ -28,7 +28,7 @@ public class InvSave implements Listener {
 
         ItemStack[] contents = inv.getContents(); //Get the item the chest contain
         try {
-            File dir = new File(plugin.getDataFolder(), "data");
+            File dir = new File(plugin.getDataFolder(), "contain");
             if (!dir.exists()) dir.mkdirs();
 
             File file = new File(dir, p.getUniqueId() + ".yml");
@@ -36,7 +36,7 @@ public class InvSave implements Listener {
             cfg.set("contents", Arrays.asList(contents)); // List<ItemStack>
             cfg.save(file);
         } catch (IOException ex) {
-            plugin.getLogger().severe("保存玩家背包失败: " + p.getName());
+            plugin.getLogger().severe("Save failed: " + p.getName());
             ex.printStackTrace();
         }
     }

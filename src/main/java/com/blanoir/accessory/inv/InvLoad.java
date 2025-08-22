@@ -21,7 +21,7 @@ public class InvLoad {
         Inventory inv = holder.getInventory();
 
         // 从 /plugins/YourPlugin/data/<uuid>.yml 读回
-        File file = new File(plugin.getDataFolder(), "data/" + p.getUniqueId() + ".yml");
+        File file = new File(plugin.getDataFolder(), "contains/" + p.getUniqueId() + ".yml");
         if (file.exists()) {
             YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
             List<ItemStack> list = (List<ItemStack>) cfg.getList("contents");

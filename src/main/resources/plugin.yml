@@ -1,5 +1,5 @@
 name: Accessory
-version: '0.0.1'
+version: '1.0.0'
 main: com.blanoir.accessory.Accessory
 api-version: '1.21'
 depend: [AuraSkills]
@@ -7,3 +7,12 @@ commands:
   inv:
     description: 打开个人背包界面
     usage: /<command>
+    aliases: [ acc ]
+  accessory:
+    description: Accessory 主命令
+    usage: /accessory reload
+    aliases: [ acce ]
+permissions:
+  accessory.reload:
+    description: Allow Reloaded
+    default: op
