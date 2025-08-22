@@ -1,8 +1,25 @@
 Accessories Plugin for AuraSkills
-This is an addon for AuraSkills that introduces two new traits to enhance your gameplay:
 
-HealRegeneration – Restores health over time, allowing for better survival in battle.
+This is an addon for AuraSkills with tow new traits:
 
-Defence – Reduces incoming damage, providing players with better protection during combat.
+HealRegeneration – Restores health amonut/secound.
 
-Currently, the accessory functionality is under development, and more traits will be added in future updates. Please stay tuned!
+Defence – Reduces incoming damage, caculate in add and substract.
+Not in the percent 
+
+The accessory function has been completely tested.
+
+There are 4 slot for different types of the accessory
+
+How to use?
+1: You should use the 
+/sk item trait add [traits] [value] [operation]
+
+2: Change the lore conditoins in the config and use /accessory to reload it 
+
+3: add the lore to the item with the plugin such as essential plugin or other item manage plugin
+
+4:Drag the item to the right slot
+
+5: Enjoy!
+ 
