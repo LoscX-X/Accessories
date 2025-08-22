@@ -20,7 +20,7 @@ public class InvListener implements Listener {
         this.effects = new AccessoryLoad(); // 里面通过 AuraSkillsBukkit 拿 ItemManager
     }
 
-    /** 顶部背包是不是你的自定义 GUI */
+    /** 顶部背包是不是你的自定义GUI */
     private boolean isAccessoryTop(InventoryView view) {
         return view.getTopInventory().getHolder() instanceof InvCreate;
     }
