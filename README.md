@@ -1,43 +1,55 @@
-Accessories Plugin for AuraSkills
+Accessory (for AuraSkills)
 
-This is an addon for AuraSkills with tow new traits:
+Accessory is a lightweight accessories system for servers running AuraSkills. You can fully customize the GUI (title, size, locked-frame slots) and configure which items are allowed in each slot — by lore keywords.
 
-HealRegeneration – Restores health amonut/secound.
+🚀 Getting Started
 
-Defence – Reduces incoming damage, caculate in add and substract.
-Not in the percent 
+Java requirement
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Installation
+Java 17 for Minecraft 1.21+
 
-Install AuraSkills and this plugin then start the server once to generate its files. 
+Dependencies
 
-Place this add-on’s jar in /plugins/ and restart the server.
+AuraSkills (required)
 
-Accessory GUI
+Install
 
-The GUI provides 4 slots, each bound to a type (e.g., Ring/Necklace/Bracelet/Talisman).
+Put Accessory.jar in /plugins
 
-Slot acceptance is enforced by lore rules (configured in this plugin’s config.yml).
+Restart your server
 
-Drag the item into the matching slot to apply its trait(s) to the player.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Open the GUI
 
-How to use? 
+Use /inv to open the accessories GUI
 
-How to Use (Quick Start)
+Place items that match slot rules (by lore keywords)
 
-1:Give an item a trait with AuraSkills:/sk item trait add <trait> <value> [operation]
+📦 Commands Command Description Permission /inv Opens the Accessories GUI accessory.inv /accessory reload Reloads config (GUI, frame, slots) accessory.reload ⚙️ Configuration Example
 
-wiki.aurelium.dev
+GUI appearance
+title: "Accessories", size: 9 # must be multiple of 9 (9–54)
 
-2:Add the appropriate lore tag (per your config) to categorize the item (e.g., [Ring]).
+Locked slots
+frame: slots: [0, 2, 4, 6, 8]
 
-3:Open the accessories GUI and drag the item into its matching slot.
+Accessory slots (lore check)
+Accessory: "1": lore: ["[Ring]"] "3": lore: ["[Necklace]"] "5": lore: ["[Bracelet]"] "7": lore: ["[Talisman]"]
 
-4:The add-on detects all trait modifiers on accessories and applies them to the player live.
+Locked slot item
+locked-slot-item: type: "BLACK_STAINED_GLASS_PANE" custom-model-data: 12345 hide-tooltip: true name: "<gray>Locked" lore: - "<dark_gray>Slot is locked"
 
-Enjoy!
+🔑 How It Works
 
-Future features:
-Language change
+Locked frame slots Configured in frame.slots, show a locked pane item. Players cannot place items here, but can take out non-locked items they accidentally left.
+
+Accessory slots Defined in Accessory.<slot> with lore keywords. An item can only be placed if its lore matches one of the keywords.
+
+📝 Notes
+
+Inventory size must be a multiple of 9 (9–54).
+
+Titles use MiniMessage, so gradients and formatting work on Paper servers.
+
+Only slots defined in Accessory.<slot> accept items — others are blocked.
+
+Works best when combined with plugins that add or modify item lore.
