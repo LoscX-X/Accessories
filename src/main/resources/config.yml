@@ -1,18 +1,26 @@
-title: "<gradient:#00ffa6:#00d1ff><b>Accessories</b></gradient>"
 #the title of the gui
+title: "<gradient:#00ffa6:#00d1ff><b>Accessories</b></gradient>"
 
-Size: 9
-#Do not change the size unless you know what you want to do
-rules:
+size: 9  #from 9-54
+
+Accessory:
   "1":
-    lore-includes: ["[Ring]"]
+    lore: ["[Ring]"]
   "3":
-    lore-includes: ["[Necklace]"]
+    lore: ["[Necklace]"]
   "5":
-    lore-includes: ["[Bracelet]"]
+    lore: ["[Bracelet]"]
   "7":
-    lore-includes: ["[Talisman]"]
-
-
-#Only fore rules for the original version
-#
+    lore: ["[Talisman]"]
+  #"num":
+    #lore: ["[MORE]"]
+#As this config it will check weather the item lore has the content like [RING]
+frame:
+  slots: [0, 2, 4, 6, 8]               #locked slot
+  item:
+    type: "BLACK_STAINED_GLASS_PANE"
+    custom-model-data: 12345
+    hide-tooltip: true
+    name: "<gray>Locked"
+    lore:
+      - "<dark_gray>Slot is locked"

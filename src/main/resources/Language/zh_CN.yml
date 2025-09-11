@@ -1,0 +1,5 @@
+Message:
+  No_permission: "&c你没有权限使用该指令!"
+  Reload_success: "&a[Accessory] 成功重载."
+  Item_not_match: "&c这个饰品无法放入到饰品栏种!"
+  Item_locked: "&c这个格子已被锁定!"

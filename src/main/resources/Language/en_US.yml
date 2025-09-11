@@ -1,0 +1,5 @@
+Message:
+  No_permission: "&cYou do not have permission to use this command."
+  Reload_success: "&a[Accessory] Reloaded successfully."
+  Item_not_match: "&cThis item doesnot match the slot"
+  Item_locked: "&cThis slot is locked"

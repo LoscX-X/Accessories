@@ -1,4 +1,4 @@
-package com.blanoir.accessory.inv;
+package com.blanoir.accessory.inventory;
 
 import com.blanoir.accessory.Accessory;
 import org.bukkit.command.Command;
@@ -10,6 +10,8 @@ public class InvCommnad implements CommandExecutor {
 
     private final Accessory plugin;
 
+
+
     public InvCommnad(Accessory plugin) {
         this.plugin = plugin;
     }
@@ -20,7 +22,7 @@ public class InvCommnad implements CommandExecutor {
                              String label,
                              String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("这个命令只能由玩家执行！");
+            sender.sendMessage(plugin.lang().lang("No_permission"));
             return true; // 命令处理结束
         }
 

@@ -43,7 +43,11 @@ public class Defence implements BukkitTraitHandler, Listener{
     // Example implementation of the trait's functionality (not complete)
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
     public void onDamage(EntityDamageEvent e){
+        EntityDamageEvent.DamageCause cause = e.getCause();
         if(!(e.getEntity() instanceof Player p)) return;
+        if(cause != EntityDamageEvent.DamageCause.ENTITY_ATTACK && cause != EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK){
+            return;
+        }
 
         SkillsUser User = auraSkills.getUser(p.getUniqueId());
         if(User == null || !User.isLoaded()) return;

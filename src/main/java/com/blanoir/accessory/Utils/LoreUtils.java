@@ -16,7 +16,7 @@ public final class LoreUtils {
     public static List<String> plainLore(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return Collections.emptyList();
         ItemMeta meta = item.getItemMeta();
-        // Paper 1.20.5+：Component lore（推荐）
+        // Paper 1.20.5+：Component lore
         try {
             var lore = (List<Component>) ItemMeta.class.getMethod("lore").invoke(meta);
             if (lore == null) return Collections.emptyList();
@@ -25,7 +25,7 @@ public final class LoreUtils {
             for (Component c : lore) out.add(plain.serialize(c).trim());
             return out;
         } catch (ReflectiveOperationException ignored) {
-            // 旧版/Spigot：List<String>
+            //Spigot：List<String>
             try {
                 List<String> legacy = (List<String>) ItemMeta.class.getMethod("getLore").invoke(meta);
                 return legacy != null ? legacy : Collections.emptyList();

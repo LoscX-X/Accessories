@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/Accessory.main.iml" filepath="$PROJECT_DIR$/.idea/modules/Accessory.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/com.blanoir.Accessory.main.iml" filepath="$PROJECT_DIR$/.idea/modules/com.blanoir.Accessory.main.iml" />
     </modules>
   </component>
 </project>

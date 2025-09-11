@@ -4,11 +4,15 @@ stats:
     enabled: true
     traits:
       accessory/heal_regeneration:
-        modifier: 0.01 # Overrides the value passed in with CustomStatBuilder#trait
+        modifier: 0.01
       accessory/defence:
         modifier: 0.01
+      accessory/heal_Decrease:
+        modifier: 0.01
+#You can add the trait to other stats to you needs.
 traits:
   accessory/defence:
     enabled: true
   accessory/heal_regeneration:
     enabled: true
+#You can add the trait to other stats you need

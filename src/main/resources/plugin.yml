@@ -3,15 +3,16 @@ version: '1.0.0'
 main: com.blanoir.accessory.Accessory
 api-version: '1.21'
 depend: [AuraSkills]
+softdepend: [PlaceholderAPI]
 commands:
   inv:
-    description: 打开个人背包界面
-    usage: /<command>
+    description: Open the own accessory bag
+    usage: /acc
     aliases: [ acc ]
   accessory:
-    description: Accessory 主命令
+    description: Accessory Reload command
     usage: /accessory reload
-    aliases: [ acce ]
+    aliases: [ acre ]
 permissions:
   accessory.reload:
     description: Allow Reloaded

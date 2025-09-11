@@ -16,6 +16,10 @@ public class CustomTraits {
             .builder(NamespacedId.of("accessory", "defence"))
             .displayName("Defense")
             .build();
+    public static final CustomTrait HEAL_DECREASE = CustomTrait
+            .builder(NamespacedId.of("accessory", "heal_Decrease"))
+            .displayName("Heal_Decrease")
+            .build();
 
 
 
