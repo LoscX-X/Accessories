@@ -30,7 +30,7 @@ public class InvLoad {
                     Object o = raw.get(i);
                     if (o instanceof ItemStack is) arr[i] = is;
                 }
-                inv.setContents(arr); // 会覆盖掉先前构造器里铺的外框。:contentReference[oaicite:2]{index=2}
+                inv.setContents(arr); // 会覆盖掉先前构造器里铺的外框。
             }
         }
 

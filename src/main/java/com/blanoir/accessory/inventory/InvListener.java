@@ -25,11 +25,10 @@ public class InvListener implements Listener {
     private final AccessoryLoad effects;
     private final NamespacedKey LOCKED;                 // ← 不在字段处初始化
 
-
     public InvListener(Accessory plugin) {
         this.plugin = plugin;
         this.effects = new AccessoryLoad();
-        this.LOCKED = new NamespacedKey(plugin, "locked"); // ← 在构造器里用已赋值的 plugin
+        this.LOCKED = new NamespacedKey(plugin, "locked"); //在构造器里用已赋值的 plugin
     }
 
     private boolean isAccessoryTop(InventoryView view) {

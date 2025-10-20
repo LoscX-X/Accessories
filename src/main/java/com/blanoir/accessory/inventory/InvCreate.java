@@ -100,7 +100,7 @@ public class InvCreate implements InventoryHolder {
             try { meta.lore(lore); } catch (NoSuchMethodError ignored) {}
         }
 
-        // PDC 上打“locked”标记
+        //“locked”标记
         meta.getPersistentDataContainer().set(
                 new NamespacedKey(plugin, "locked"),
                 PersistentDataType.BYTE, (byte) 1

@@ -3,6 +3,8 @@ title: "<gradient:#00ffa6:#00d1ff><b>Accessories</b></gradient>"
 
 size: 9  #from 9-54
 
+Lang: en_US
+
 Accessory:
   "1":
     lore: ["[Ring]"]

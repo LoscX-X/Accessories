@@ -16,7 +16,6 @@ public final class LoreUtils {
     public static List<String> plainLore(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return Collections.emptyList();
         ItemMeta meta = item.getItemMeta();
-        // Paper 1.20.5+：Component lore
         try {
             var lore = (List<Component>) ItemMeta.class.getMethod("lore").invoke(meta);
             if (lore == null) return Collections.emptyList();
@@ -25,7 +24,6 @@ public final class LoreUtils {
             for (Component c : lore) out.add(plain.serialize(c).trim());
             return out;
         } catch (ReflectiveOperationException ignored) {
-            //Spigot：List<String>
             try {
                 List<String> legacy = (List<String>) ItemMeta.class.getMethod("getLore").invoke(meta);
                 return legacy != null ? legacy : Collections.emptyList();
@@ -35,7 +33,7 @@ public final class LoreUtils {
         }
     }
 
-    /** 是否至少命中一个关键词（不区分大小写，包含式匹配） */
+    /** 是否至少命中一个关键词 */
     public static boolean matchesAnyKeyword(List<String> itemLore, List<String> requiredKeywords) {
         if (requiredKeywords == null || requiredKeywords.isEmpty()) return true; // 没规则=放行
         for (String need : requiredKeywords) {
