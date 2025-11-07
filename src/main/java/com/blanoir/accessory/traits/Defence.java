@@ -37,8 +37,8 @@ public class Defence implements BukkitTraitHandler, Listener{
 
     @Override
     public void onReload(Player player, SkillsUser user, Trait trait) {
-        // Method called when the value of the trait's parent stat changes
-    }
+        // Method called when the value of the trait's parent stat changes1
+    }1
 
     // Example implementation of the trait's functionality (not complete)
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
