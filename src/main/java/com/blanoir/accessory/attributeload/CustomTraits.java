@@ -21,6 +21,9 @@ public class CustomTraits {
             .displayName("Heal_Decrease")
             .build();
 
-
+    public static final CustomTrait LIFE_STEAL = CustomTrait
+            .builder(NamespacedId.of("accessory", "life_steal"))
+            .displayName("life_steal")
+            .build();
 
 }

@@ -13,7 +13,7 @@ import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.registry.NamespacedRegistry;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import com.blanoir.accessory.Utils.Language;
+import com.blanoir.accessory.utils.Language;
 
 import java.io.File;
 

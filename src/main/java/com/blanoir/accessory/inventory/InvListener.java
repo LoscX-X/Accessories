@@ -1,7 +1,7 @@
 // com.blanoir.accessory.inv.InvListener
 package com.blanoir.accessory.inventory;
 
-import com.blanoir.accessory.Utils.LoreUtils;
+import com.blanoir.accessory.utils.LoreUtils;
 import com.blanoir.accessory.attributeload.AccessoryLoad;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -18,7 +18,6 @@ import com.blanoir.accessory.Accessory;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 public class InvListener implements Listener {
     private final Accessory plugin;

@@ -1,5 +1,5 @@
 // LoreUtils.java
-package com.blanoir.accessory.Utils;
+package com.blanoir.accessory.utils;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;

@@ -1,4 +1,4 @@
-package com.blanoir.accessory.Utils;
+package com.blanoir.accessory.utils;
 
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
@@ -41,8 +41,6 @@ public final class Language {
         File file = new File(langDir, currentFileName);
         if (!file.exists()) {
             plugin.saveResource(SUBFOLDER + "/" + currentFileName, false);
-        }
-        if (!file.exists()) {
             plugin.saveResource(SUBFOLDER + "/" + zh , false);
         }
         // 3) 读取 yml

@@ -57,6 +57,6 @@ public class Defence implements BukkitTraitHandler, Listener{
 
 
         e.setDamage(Math.max(0.0, e.getDamage() - flat));
-
+            //This machine don t check the vanilla damage machine
     }
 }
