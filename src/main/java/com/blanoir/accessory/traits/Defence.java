@@ -31,14 +31,15 @@ public class Defence implements BukkitTraitHandler, Listener{
     @Override
     public double getBaseLevel(Player player, Trait trait) {
         // The base value of your trait when its stat is at level 0, could be a
-        // Minecraft default value or values from other plugins
         return 0;
     }
 
     @Override
     public void onReload(Player player, SkillsUser user, Trait trait) {
         // Method called when the value of the trait's parent stat changes1
-    }1
+    }
+
+
 
     // Example implementation of the trait's functionality (not complete)
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)

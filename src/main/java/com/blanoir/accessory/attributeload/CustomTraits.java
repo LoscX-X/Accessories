@@ -17,7 +17,7 @@ public class CustomTraits {
             .displayName("Defense")
             .build();
     public static final CustomTrait HEAL_DECREASE = CustomTrait
-            .builder(NamespacedId.of("accessory", "heal_Decrease"))
+            .builder(NamespacedId.of("accessory", "heal_regdecrease"))
             .displayName("Heal_Decrease")
             .build();
 
@@ -25,5 +25,8 @@ public class CustomTraits {
             .builder(NamespacedId.of("accessory", "life_steal"))
             .displayName("life_steal")
             .build();
-
+    public static final CustomTrait ABSORB = CustomTrait
+            .builder(NamespacedId.of("accessory", "absorb"))
+            .displayName("absorb")
+            .build();
 }

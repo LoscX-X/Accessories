@@ -7,7 +7,11 @@ stats:
         modifier: 0.01
       accessory/defence:
         modifier: 0.01
-      accessory/heal_Decrease:
+      accessory/heal_regdecrease:
+        modifier: 0.01
+      accessory/life_steal:
+        modifier: 0.01
+      accessory/absorb:
         modifier: 0.01
 #You can add the trait to other stats to you needs.
 traits:

@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.blanoir'
-version = '1.2.1'
+version = '1.2.2'
 
 repositories {
     mavenCentral()
@@ -12,11 +12,15 @@ repositories {
         name = "papermc-repo"
         url = "https://repo.papermc.io/repository/maven-public/"
     }
+    maven {
+        url = 'https://repo.extendedclip.com/releases/'
+    }
 }
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.10-R0.1-SNAPSHOT")
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.3")
+    compileOnly 'me.clip:placeholderapi:2.11.7'
 }
 
 tasks {

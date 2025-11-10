@@ -26,3 +26,6 @@ frame:
     name: "<gray>Locked"
     lore:
       - "<dark_gray>Slot is locked"
+Life_Steal_demonstrate: true
+OUT_OF_COMBAT_SECONDS: 12
+SHIELD_REGEN_PERCENT: 0.10

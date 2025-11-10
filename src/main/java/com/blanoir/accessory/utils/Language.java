@@ -71,12 +71,11 @@ public final class Language {
         }
     }
 
-    /** 取单行消息（不读盘，只查缓存） */
+    /** 取单行消息 */
     public String lang(String key) {
         return STR.getOrDefault(key, "Missing:" + key);
     }
 
-    /** 取多行消息（不读盘，只查缓存） */
     public List<String> langLines(String key) {
         return LINES.getOrDefault(key, Collections.emptyList());
     }

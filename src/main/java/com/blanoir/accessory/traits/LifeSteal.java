@@ -12,14 +12,19 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import com.blanoir.accessory.Accessory;
+
+import java.util.List;
 
 public class LifeSteal implements BukkitTraitHandler, Listener {
     private final AuraSkillsApi auraSkills;
     private final JavaPlugin plugin;
+    private final Accessory plugins;
 
-    public LifeSteal(JavaPlugin plugin, AuraSkillsApi auraSkills) {
+    public LifeSteal(JavaPlugin plugin, AuraSkillsApi auraSkills,Accessory plugins) {
         this.auraSkills = auraSkills;
         this.plugin = plugin;
+        this.plugins = plugins;
     }
 
     @Override
@@ -61,7 +66,8 @@ public class LifeSteal implements BukkitTraitHandler, Listener {
             double newHealth = Math.min(attacker.getHealth() + healAmount, attacker.getMaxHealth());
 
             attacker.setHealth(newHealth);
-            attacker.sendActionBar("§a吸血 +" + String.format("%.1f", healAmount));
+            if(plugin.getConfig().getBoolean("Life_Steal_demonstrate")){
+            attacker.sendMessage(plugins.lang().lang("Life_steal_success")+String.format("%.1f", healAmount));}
         }
     }
 }

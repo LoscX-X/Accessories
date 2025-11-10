@@ -42,7 +42,6 @@ public class InvCreate implements InventoryHolder {
 
     @Override public Inventory getInventory() { return this.inventory; }
 
-    /** 重新把外框“锁定面板”覆盖到配置指定的槽位（可在 setContents 之后再次调用） */
     public void applyFrames() {
         ItemStack pane = makeLockedItemFromConfig();
         List<Integer> slots = plugin.getConfig().getIntegerList("frame.slots");
