@@ -68,7 +68,7 @@ public final class Accessory extends JavaPlugin {
 
         hr.startTask();
 
-        // 注册事件监听器
+        // 注册事件监听器.
         getServer().getPluginManager().registerEvents(absorb, this);
 
         // 注册 PlaceholderAPI 扩展
