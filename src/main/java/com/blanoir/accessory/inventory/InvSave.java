@@ -34,7 +34,6 @@ public class InvSave implements Listener {
         if (!(top.getHolder() instanceof InvCreate)) return;
         if (!(e.getPlayer() instanceof Player p)) return;
 
-        // 拷贝上半区内容
         ItemStack[] snapshot = top.getContents().clone();
 
         // 读 frame 槽位（默认 0,2,4,6,8），把“锁面板”清空后再保存

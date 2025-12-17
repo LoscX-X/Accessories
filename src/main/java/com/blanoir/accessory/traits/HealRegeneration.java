@@ -9,9 +9,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class HealRegeneration implements BukkitTraitHandler{
+public class HealRegeneration implements BukkitTraitHandler {
     private final AuraSkillsApi auraSkills;
     private final JavaPlugin plugin;
 
@@ -24,7 +25,7 @@ public class HealRegeneration implements BukkitTraitHandler{
     @Override
     public Trait[] getTraits() {
         // An array containing your CustomTrait instance
-        return new Trait[] {CustomTraits.HEAL_REGENERATION};
+        return new Trait[]{CustomTraits.HEAL_REGENERATION};
     }
 
     @Override
@@ -54,7 +55,15 @@ public class HealRegeneration implements BukkitTraitHandler{
                 if (cur >= max) continue;
 
                 double healAmount = Math.min(hps, max - cur);
-                ((Damageable) p).heal(healAmount);
+
+                // 🔥 关键：改为事件，让 debuff 能抵消
+                EntityRegainHealthEvent event =
+                        new EntityRegainHealthEvent(p, healAmount, EntityRegainHealthEvent.RegainReason.CUSTOM);
+                Bukkit.getPluginManager().callEvent(event);
+
+                if (!event.isCancelled()) {
+                    p.setHealth(Math.min(cur + event.getAmount(), max));
+                }
             }
         }, 20L, 20L);
     }

@@ -23,11 +23,11 @@ public class InvCommnad implements CommandExecutor {
                              String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage(plugin.lang().lang("No_permission"));
-            return true; // 命令处理结束
+            return true;
         }
 
         InvCreate gui = new InvCreate(plugin);
         player.openInventory(gui.getInventory());
-        return true; // 表示命令成功执行，无需发送错误提示
+        return true;
     }
 }

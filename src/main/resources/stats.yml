@@ -13,6 +13,10 @@ stats:
         modifier: 0.01
       accessory/absorb:
         modifier: 0.01
+      accessory/max_health_percent_reduce:
+        modifier: 0.01
+      accessory/max_health_flat_reduce:
+        modifier: 0.01
 #You can add the trait to other stats to you needs.
 traits:
   accessory/defence:

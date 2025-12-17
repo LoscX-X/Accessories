@@ -51,6 +51,8 @@ public final class Accessory extends JavaPlugin {
         registry.registerTrait(CustomTraits.DEFENCE);
         registry.registerTrait(CustomTraits.ABSORB);
         registry.registerTrait(CustomTraits.HEAL_DECREASE);
+        registry.registerTrait(CustomTraits.MAX_HEALTH_FLAT_REDUCTION);
+        registry.registerTrait(CustomTraits.MAX_HEALTH_PERCENT_REDUCTION);
         registry.registerTrait(CustomTraits.LIFE_STEAL);
         registry.registerStat(CustomStats.CUSTOM_STAT);
 
@@ -59,6 +61,11 @@ public final class Accessory extends JavaPlugin {
         Defence def = new Defence(this, api);
         LifeSteal life = new LifeSteal(this, api, this);
         Absorb absorb = new Absorb(this, api);
+        MaxHealthFlatReductionHandler flat = new MaxHealthFlatReductionHandler(this, api);
+        MaxHealthPercentReductionHandler percent = new MaxHealthPercentReductionHandler(this, api);
+
+        api.getHandlers().registerTraitHandler(flat);
+        api.getHandlers().registerTraitHandler(percent);
 
         api.getHandlers().registerTraitHandler(life);
         api.getHandlers().registerTraitHandler(hr);

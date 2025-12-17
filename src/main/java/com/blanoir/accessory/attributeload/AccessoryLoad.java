@@ -1,4 +1,5 @@
 package com.blanoir.accessory.attributeload;
+import com.blanoir.accessory.utils.LoreUtils;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.AuraSkillsBukkit;
 import dev.aurelium.auraskills.api.item.ItemManager;
@@ -13,6 +14,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -26,34 +28,50 @@ public class AccessoryLoad {
         this.itemManager = AuraSkillsBukkit.get().getItemManager();
 
     }
-public void rebuildFromInventory(Player p, Inventory inv){
-    SkillsUser user = api.getUser(p.getUniqueId());
-    if (user == null || !user.isLoaded()) return;
-    for (String name : Map.copyOf(user.getTraitModifiers()).keySet()) {
-        if (name.startsWith(PREFIX)) {
-            user.removeTraitModifier(name);
-        }
-    }
-    for(int slot = 0;slot < inv.getSize();slot++){
-        ItemStack item = inv.getItem(slot);
+    public void rebuildFromInventory(Player p, Inventory inv){
+        SkillsUser user = api.getUser(p.getUniqueId());
+        if (user == null || !user.isLoaded()) return;
 
-        if (item == null|| item.getType() == Material.AIR) continue;
-        List<TraitModifier> itemMods  = itemManager.getTraitModifiers(item, ModifierType.ITEM);
-        List<TraitModifier> armorMods = itemManager.getTraitModifiers(item, ModifierType.ARMOR);
-        applyAll(p, user, itemMods, slot);
-        applyAll(p, user, armorMods, slot);
+        // 清除旧 trait modifier
+        for (String name : Map.copyOf(user.getTraitModifiers()).keySet()) {
+            if (name.startsWith(PREFIX)) {
+                user.removeTraitModifier(name);
+            }
+        }
+
+        // 清除旧 tag
+        for (String t : new ArrayList<>(p.getScoreboardTags())) {
+            if (t.startsWith("acc_")) {
+                p.removeScoreboardTag(t);
+            }
+        }
+
+        // 循环物品
+        for(int slot = 0; slot < inv.getSize(); slot++){
+            ItemStack item = inv.getItem(slot);
+            if (item == null || item.getType() == Material.AIR) continue;
+
+            // ① 识别 Trait modifier
+            List<TraitModifier> itemMods  = itemManager.getTraitModifiers(item, ModifierType.ITEM);
+            List<TraitModifier> armorMods = itemManager.getTraitModifiers(item, ModifierType.ARMOR);
+            applyAll(p, user, itemMods, slot);
+            applyAll(p, user, armorMods, slot);
+
+            // ② 识别 Lore 中的 Tags 并加入
+            for (String tag : parseTags(item)) {
+                p.addScoreboardTag(tag);
+            }
         }
     }
+
     private void applyAll(Player p, SkillsUser user, List<TraitModifier> mods, int slot) {
         if (mods == null || mods.isEmpty()) return;
 
         for (TraitModifier m : mods) {
-            // 为了可重复重建，这里给每条修饰符生成一个稳定的唯一名
             // 结构例： accessory:slot3/heal_regeneration
             String traitId = m.trait().toString(); // 也可自行拼 NamespacedId
             String name = PREFIX + "slot" + slot + "/" + traitId;
 
-            // 保留原来的 operation 与数值；标记 NonPersistent，避免持久写库
             TraitModifier copy = new TraitModifier(name, m.trait(), m.value(), m.operation() // AuraSkillsModifier.Operation
             );
             copy.setNonPersistent();
@@ -61,4 +79,35 @@ public void rebuildFromInventory(Player p, Inventory inv){
             user.addTraitModifier(copy);
         }
     }
+    private List<String> parseTags(ItemStack item) {
+        List<String> lore = LoreUtils.plainLore(item);
+        List<String> out = new ArrayList<>();
+        boolean inTags = false;
+
+        for (String line : lore) {
+            line = line.trim();
+            if (line.equalsIgnoreCase("tags:")) {
+                inTags = true;
+                continue;
+            }
+            if (!inTags) continue;
+
+            // 检测 [xxx]
+            int start = 0;
+            while (true) {
+                int l = line.indexOf('[', start);
+                if (l == -1) break;
+                int r = line.indexOf(']', l + 1);
+                if (r == -1) break;
+
+                String tag = line.substring(l + 1, r).trim();
+                if (!tag.isEmpty()) {
+                    out.add("acc_" + tag);
+                }
+                start = r + 1;
+            }
+        }
+        return out;
+    }
+
 }
