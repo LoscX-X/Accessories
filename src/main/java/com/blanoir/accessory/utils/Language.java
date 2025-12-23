@@ -71,7 +71,7 @@ public final class Language {
         }
     }
 
-    /** 取单行消息 */
+    //取单行消息
     public String lang(String key) {
         return STR.getOrDefault(key, "Missing:" + key);
     }

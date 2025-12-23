@@ -1,4 +1,4 @@
-package com.blanoir.accessory.utils;
+package com.blanoir.accessory.hooks;
 
 import com.blanoir.accessory.traits.Absorb;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;

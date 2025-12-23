@@ -12,52 +12,47 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class Defence implements BukkitTraitHandler, Listener{
+public class Defence implements BukkitTraitHandler, Listener {
     private final AuraSkillsApi auraSkills;
-    private final JavaPlugin plugin;
 
-    // Inject API dependency in constructor
+    // 每 1 点 DEFENCE 对应的 MAGIC 减免比例（自己调）
+    private static final double PER_LEVEL_REDUCE = 0.01; // 1点=1%
+    private static final double REDUCE_CAP = 0.60;       // 最多60%
+
     public Defence(JavaPlugin plugin, AuraSkillsApi auraSkills) {
         this.auraSkills = auraSkills;
-        this.plugin = plugin;
     }
 
     @Override
     public Trait[] getTraits() {
-        // An array containing your CustomTrait instance
-        return new Trait[] {CustomTraits.DEFENCE};
+        return new Trait[]{ CustomTraits.DEFENCE };
     }
 
     @Override
     public double getBaseLevel(Player player, Trait trait) {
-        // The base value of your trait when its stat is at level 0, could be a
         return 0;
     }
 
     @Override
-    public void onReload(Player player, SkillsUser user, Trait trait) {
-        // Method called when the value of the trait's parent stat changes1
-    }
+    public void onReload(Player player, SkillsUser user, Trait trait) { }
 
-
-
-    // Example implementation of the trait's functionality (not complete)
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
-    public void onDamage(EntityDamageEvent e){
-        EntityDamageEvent.DamageCause cause = e.getCause();
-        if(!(e.getEntity() instanceof Player p)) return;
-        if(cause != EntityDamageEvent.DamageCause.ENTITY_ATTACK && cause != EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK){
-            return;
-        }
+    public void onDamage(EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof Player p)) return;
 
-        SkillsUser User = auraSkills.getUser(p.getUniqueId());
-        if(User == null || !User.isLoaded()) return;
+        // 只接管 MAGIC
+        if (e.getCause() != EntityDamageEvent.DamageCause.MAGIC) return;
 
-        double flat = User.getEffectiveTraitLevel(CustomTraits.DEFENCE); // 固定减伤值
-        if (flat <= 0) return;
+        SkillsUser user = auraSkills.getUser(p.getUniqueId());
+        if (user == null || !user.isLoaded()) return;
 
+        // AuraSkills 计算后的 trait level（double）
+        double level = user.getEffectiveTraitLevel(CustomTraits.DEFENCE);
+        if (level <= 0) return;
 
-        e.setDamage(Math.max(0.0, e.getDamage() - flat));
-            //This machine don t check the vanilla damage machine
+        double reduce = Math.min(REDUCE_CAP, level * PER_LEVEL_REDUCE); // 0~cap
+        if (reduce <= 0) return;
+
+        e.setDamage(e.getDamage() * (1.0 - reduce));
     }
 }

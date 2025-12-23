@@ -45,19 +45,19 @@ public class MaxHealthFlatReductionHandler implements BukkitTraitHandler {
 
         double flatReduce = user.getEffectiveTraitLevel(CustomTraits.MAX_HEALTH_FLAT_REDUCTION);
 
-        // ⭐ Trait 已取消 → 还原 MaxHealth
+        // Trait 已取消 → 还原 MaxHealth
         if (flatReduce == 0) {
             Double orig = originalBase.remove(player.getUniqueId());
             if (orig != null) inst.setBaseValue(orig);
             return;
         }
 
-        // ⭐ 第一次出现 Trait → 保存原始 MaxHealth
+        // 第一次出现 Trait → 保存原始 MaxHealth
         originalBase.putIfAbsent(player.getUniqueId(), inst.getBaseValue());
 
         double base = originalBase.get(player.getUniqueId());
 
-        // ⭐ 设置减少后的 MaxHealth
+        // 设置减少后的 MaxHealth
         inst.setBaseValue(Math.max(1, base - flatReduce));
     }
 }

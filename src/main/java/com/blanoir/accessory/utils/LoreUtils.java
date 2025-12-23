@@ -33,7 +33,7 @@ public final class LoreUtils {
         }
     }
 
-    /** 是否至少命中一个关键词 */
+    //是否至少命中一个关键词
     public static boolean matchesAnyKeyword(List<String> itemLore, List<String> requiredKeywords) {
         if (requiredKeywords == null || requiredKeywords.isEmpty()) return true; // 没规则=放行
         for (String need : requiredKeywords) {

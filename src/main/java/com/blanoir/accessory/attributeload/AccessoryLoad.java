@@ -4,12 +4,9 @@ import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.AuraSkillsBukkit;
 import dev.aurelium.auraskills.api.item.ItemManager;
 import dev.aurelium.auraskills.api.item.ModifierType;
-import dev.aurelium.auraskills.api.skill.Skill;
-import dev.aurelium.auraskills.api.trait.CustomTrait;
 import dev.aurelium.auraskills.api.trait.TraitModifier;
 import dev.aurelium.auraskills.api.user.SkillsUser;
 import org.bukkit.Material;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -28,6 +25,7 @@ public class AccessoryLoad {
         this.itemManager = AuraSkillsBukkit.get().getItemManager();
 
     }
+
     public void rebuildFromInventory(Player p, Inventory inv){
         SkillsUser user = api.getUser(p.getUniqueId());
         if (user == null || !user.isLoaded()) return;
@@ -79,6 +77,7 @@ public class AccessoryLoad {
             user.addTraitModifier(copy);
         }
     }
+    //为玩家添加Tags
     private List<String> parseTags(ItemStack item) {
         List<String> lore = LoreUtils.plainLore(item);
         List<String> out = new ArrayList<>();

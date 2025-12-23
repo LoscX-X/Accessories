@@ -1,7 +1,8 @@
 #the title of the gui
 title: "<gradient:#00ffa6:#00d1ff><b>Accessories</b></gradient>"
 
-size: 9  #from 9-54
+#from 9-54
+size: 9
 
 Lang: en_US
 
@@ -17,8 +18,10 @@ Accessory:
   #"num":
     #lore: ["[MORE]"]
 #As this config it will check weather the item lore has the content like [RING]
+
+#locked slot
 frame:
-  slots: [0, 2, 4, 6, 8]               #locked slot
+  slots: [0, 2, 4, 6, 8]
   item:
     type: "BLACK_STAINED_GLASS_PANE"
     custom-model-data: 12345
@@ -26,6 +29,12 @@ frame:
     name: "<gray>Locked"
     lore:
       - "<dark_gray>Slot is locked"
-Life_Steal_demonstrate: true
+
+
+Life_Steal_demonstrate: false
+
 OUT_OF_COMBAT_SECONDS: 12
 SHIELD_REGEN_PERCENT: 0.10
+
+MAGIC_SHIELD_OUT_OF_COMBAT_SECONDS: 12
+MAGIC_SHIELD_REGEN_PERCENT: 0.10

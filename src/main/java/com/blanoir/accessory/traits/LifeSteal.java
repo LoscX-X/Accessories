@@ -1,73 +1,90 @@
 package com.blanoir.accessory.traits;
 
+import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.attributeload.CustomTraits;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.bukkit.BukkitTraitHandler;
 import dev.aurelium.auraskills.api.trait.Trait;
 import dev.aurelium.auraskills.api.user.SkillsUser;
-import org.bukkit.entity.Entity;
+import org.bukkit.Bukkit;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.plugin.java.JavaPlugin;
-import com.blanoir.accessory.Accessory;
-
-import java.util.List;
+import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.bukkit.metadata.FixedMetadataValue;
 
 public class LifeSteal implements BukkitTraitHandler, Listener {
-    private final AuraSkillsApi auraSkills;
-    private final JavaPlugin plugin;
-    private final Accessory plugins;
 
-    public LifeSteal(JavaPlugin plugin, AuraSkillsApi auraSkills,Accessory plugins) {
+    private final AuraSkillsApi auraSkills;
+    private final Accessory plugin;
+    private static final String META_ACCESSORY_LIFESTEAL = "accessory_lifesteal";
+
+    public LifeSteal(Accessory plugin, AuraSkillsApi auraSkills) {
         this.auraSkills = auraSkills;
         this.plugin = plugin;
-        this.plugins = plugins;
     }
 
     @Override
     public Trait[] getTraits() {
-        return new Trait[] { CustomTraits.LIFE_STEAL };
+        return new Trait[]{ CustomTraits.LIFE_STEAL };
     }
 
     @Override
     public double getBaseLevel(Player player, Trait trait) {
-        // Default: no life steal if stat is zero
         return 0.0;
     }
 
     @Override
-    public void onReload(Player player, SkillsUser user, Trait trait) {
-    }
+    public void onReload(Player player, SkillsUser user, Trait trait) {}
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onAttack(EntityDamageByEntityEvent event) {
-        // Only player damage events
-        if (!(event.getDamager() instanceof Player attacker)) {
-            return;
-        }
+        if (!(event.getDamager() instanceof Player attacker)) return;
 
-        Entity victim = event.getEntity();
-        if (victim instanceof Player) {
-            // You can choose whether to allow life steal on players, or restrict to mobs
-        }
+        // 如果你只想近战吸血，取消注释：
+        // var c = event.getCause();
+        // if (c != EntityDamageEvent.DamageCause.ENTITY_ATTACK && c != EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK) return;
 
-        double damage = event.getFinalDamage();
-        if (damage <= 0) return;
+        double finalDamage = event.getFinalDamage();
+        if (finalDamage <= 0) return;
 
-        // Get the player's trait level (the % life steal)
         SkillsUser user = auraSkills.getUser(attacker.getUniqueId());
-        double lifeStealPercent = user.getEffectiveTraitLevel(CustomTraits.LIFE_STEAL);
+        if (user == null || !user.isLoaded()) return;
 
-        if (lifeStealPercent > 0) {
-            double healAmount = damage * (lifeStealPercent / 100.0);
-            double newHealth = Math.min(attacker.getHealth() + healAmount, attacker.getMaxHealth());
+        double pct = user.getEffectiveTraitLevel(CustomTraits.LIFE_STEAL); // 例：5 = 5%
+        if (pct <= 0) return;
 
-            attacker.setHealth(newHealth);
-            if(plugin.getConfig().getBoolean("Life_Steal_demonstrate")){
-            attacker.sendMessage(plugins.lang().lang("Life_steal_success")+String.format("%.1f", healAmount));}
+        double healAmount = finalDamage * (pct / 100.0);
+        if (healAmount <= 0) return;
+
+        var attr = attacker.getAttribute(Attribute.MAX_HEALTH);
+        if (attr == null) return;
+
+        double max = attr.getValue();
+        double cur = attacker.getHealth();
+        if (cur >= max) return;
+
+        healAmount = Math.min(healAmount, max - cur);
+
+        // 走事件：方便和 HEAL_DECREASE 等系统联动
+        attacker.setMetadata(META_ACCESSORY_LIFESTEAL, new FixedMetadataValue(plugin, true));
+        try {
+            EntityRegainHealthEvent regain =
+                    new EntityRegainHealthEvent(attacker, healAmount, EntityRegainHealthEvent.RegainReason.CUSTOM);
+            Bukkit.getPluginManager().callEvent(regain);
+
+            if (!regain.isCancelled() && regain.getAmount() > 0) {
+                attacker.setHealth(Math.min(cur + regain.getAmount(), max));
+            }
+        } finally {
+            attacker.removeMetadata(META_ACCESSORY_LIFESTEAL, plugin);
+        }
+
+        if (plugin.getConfig().getBoolean("Life_Steal_demonstrate")) {
+            attacker.sendMessage(plugin.lang().lang("Life_steal_success") + String.format("%.1f", healAmount));
         }
     }
 }

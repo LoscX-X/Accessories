@@ -36,4 +36,8 @@ public class CustomTraits {
             .builder(NamespacedId.of("accessory", "absorb"))
             .displayName("absorb")
             .build();
+    public static final CustomTrait MAGICABSORB = CustomTrait
+            .builder(NamespacedId.of("accessory", "magicabsorb"))
+            .displayName("magicabsorb")
+            .build();
 }

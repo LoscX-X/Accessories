@@ -1,6 +1,7 @@
 package com.blanoir.accessory.traits;
 
 import com.blanoir.accessory.attributeload.CustomTraits;
+import com.blanoir.accessory.utils.ShieldUtil;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.bukkit.BukkitTraitHandler;
 import dev.aurelium.auraskills.api.trait.Trait;
@@ -11,6 +12,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -90,7 +92,7 @@ public class Absorb implements BukkitTraitHandler, Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityDamage(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
-
+        if (event.getCause() == EntityDamageEvent.DamageCause.MAGIC) return;
         UUID uuid = player.getUniqueId();
         lastDamageTime.put(uuid, System.currentTimeMillis()); // 标记战斗状态
 
@@ -150,13 +152,6 @@ public class Absorb implements BukkitTraitHandler, Listener {
 
     // PAPI 支持：读取当前护盾
     public double getCurrentShield(Player player) {
-        UUID uuid = player.getUniqueId();
-        double current = shieldMap.getOrDefault(uuid, 0.0);
-        double max = getMaxShield(player);
-        if (current > max) {
-            shieldMap.put(uuid, max);
-            return max;
-        }
-        return current;
+        return ShieldUtil.getCurrentShield(player, shieldMap, this::getMaxShield);
     }
 }
