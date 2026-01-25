@@ -10,10 +10,13 @@ commands:
     usage: /acc
     aliases: [ acc ]
   accessory:
-    description: Accessory Reload command
-    usage: /accessory reload
+    description: Accessory management command
+    usage: /accessory reload | /accessory clear <player>
     aliases: [ acre ]
 permissions:
   accessory.reload:
     description: Allow Reloaded
+    default: op
+  accessory.clear:
+    description: Allow clearing player accessories
     default: op

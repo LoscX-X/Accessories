@@ -1,9 +1,20 @@
 package com.blanoir.accessory.inventory;
 
 import com.blanoir.accessory.Accessory;
+import com.blanoir.accessory.attributeload.AccessoryLoad;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryView;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.file.YamlConfiguration;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
 
 public class InvReload implements CommandExecutor {
     private final Accessory plugin;
@@ -11,19 +22,84 @@ public class InvReload implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        // ① 用语言文件的无权限提示
+        if (args.length > 0 && "clear".equalsIgnoreCase(args[0])) {
+            return handleClear(sender, args);
+        }
+        return handleReload(sender, args);
+    }
+
+    private boolean handleReload(CommandSender sender, String[] args) {
         if (!sender.hasPermission("accessory.reload")) {
-            sender.sendMessage(plugin.lang().lang("No_permission")); // Message.No_permission
+            sender.sendMessage(plugin.lang().lang("No_permission"));
             return true;
         }
-
-        // ② 先重载 config（Lang 可能在 config.yml 改了）
+        if (args.length > 0 && !"reload".equalsIgnoreCase(args[0])) {
+            sender.sendMessage(plugin.lang().lang("Reload_usage"));
+            return true;
+        }
         plugin.reloadConfig();
-        // ③ 再重载语言缓存（只此一处读盘，其余时间走内存）
         plugin.lang().reload();
-
-        // ④ 成功提示也走语言（可带占位符）
         sender.sendMessage(plugin.lang().lang("Reload_success"));
         return true;
+    }
+
+    private boolean handleClear(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("accessory.clear")) {
+            sender.sendMessage(plugin.lang().lang("No_permission"));
+            return true;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(plugin.lang().lang("Clear_usage"));
+            return true;
+        }
+        String targetName = args[1];
+        OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+        if (target.getName() == null && !target.hasPlayedBefore() && !target.isOnline()) {
+            sender.sendMessage(plugin.lang().lang("Player_not_found"));
+            return true;
+        }
+        if (!saveEmptyAccessory(target)) {
+            sender.sendMessage(plugin.lang().lang("Clear_failed"));
+            return true;
+        }
+        Player online = target.getPlayer();
+        if (online != null) {
+            clearOpenAccessoryInventory(online);
+            Inventory empty = Bukkit.createInventory(null, accessorySize());
+            new AccessoryLoad().rebuildFromInventory(online, empty);
+        }
+        sender.sendMessage(plugin.lang().lang("Clear_success"));
+        return true;
+    }
+
+    private boolean saveEmptyAccessory(OfflinePlayer target) {
+        File dir = new File(plugin.getDataFolder(), "contains");
+        if (!dir.exists()) dir.mkdirs();
+        File file = new File(dir, target.getUniqueId() + ".yml");
+        YamlConfiguration cfg = new YamlConfiguration();
+        cfg.set("contents", List.of());
+        try {
+            cfg.save(file);
+            return true;
+        } catch (IOException ex) {
+            plugin.getLogger().severe("Clear failed: " + target.getName());
+            ex.printStackTrace();
+            return false;
+        }
+    }
+
+    private void clearOpenAccessoryInventory(Player player) {
+        InventoryView view = player.getOpenInventory();
+        if (view == null) return;
+        if (!(view.getTopInventory().getHolder() instanceof InvCreate holder)) return;
+        Inventory top = view.getTopInventory();
+        top.clear();
+        holder.applyFrames();
+    }
+
+    private int accessorySize() {
+        int size = plugin.getConfig().getInt("size", 9);
+        size = Math.max(9, Math.min(54, size));
+        return size - (size % 9);
     }
 }
