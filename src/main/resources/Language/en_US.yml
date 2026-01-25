@@ -1,6 +1,11 @@
 Message:
   No_permission: "&cYou do not have permission to use this command."
   Reload_success: "&a[Accessory] Reloaded successfully."
+  Reload_usage: "&cUsage: /accessory reload"
   Item_not_match: "&cThis item doesnot match the slot"
   Item_locked: "&cThis slot is locked"
   Life_steal_success: "Life steal +"
+  Clear_usage: "&cUsage: /accessory clear <player>"
+  Clear_success: "&a[Accessory] Cleared the player's accessories."
+  Clear_failed: "&c[Accessory] Clear failed."
+  Player_not_found: "&cPlayer not found."

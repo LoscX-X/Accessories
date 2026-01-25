@@ -1,5 +1,10 @@
 Message:
   No_permission: "&c你没有权限使用该指令!"
   Reload_success: "&a[Accessory] 成功重载."
+  Reload_usage: "&c用法: /accessory reload"
   Item_not_match: "&c这个饰品无法放入到饰品栏种!"
   Item_locked: "&c这个格子已被锁定!"
+  Clear_usage: "&c用法: /accessory clear <玩家名>"
+  Clear_success: "&a[Accessory] 已清空该玩家的饰品."
+  Clear_failed: "&c[Accessory] 清空失败."
+  Player_not_found: "&c未找到该玩家."
