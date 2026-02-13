@@ -1,7 +1,7 @@
-package com.blanoir.accessory.hooks;
+package com.blanoir.accessory.bridge;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.inventory.AccessoryQuickEquipService;
+import com.blanoir.accessory.api.AccessoryQuickEquipService;
 import com.blanoir.keybind.event.KeyActionEvent; // ✅ 需要你把 KeyBind 作为 compileOnly / depend
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;

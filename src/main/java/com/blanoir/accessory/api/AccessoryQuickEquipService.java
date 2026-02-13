@@ -1,4 +1,4 @@
-package com.blanoir.accessory.inventory;
+package com.blanoir.accessory.api;
 
 import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.attributeload.AccessoryLoad;

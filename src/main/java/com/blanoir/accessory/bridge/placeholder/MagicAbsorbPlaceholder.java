@@ -1,4 +1,4 @@
-package com.blanoir.accessory.hooks;
+package com.blanoir.accessory.bridge.placeholder;
 
 import com.blanoir.accessory.traits.MagicAbsorb;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
