@@ -1,5 +1,5 @@
 name: Accessory
-version: '1.3.6'
+version: '2.0.0'
 main: com.blanoir.accessory.Accessory
 api-version: '1.21'
 depend: [AuraSkills]
