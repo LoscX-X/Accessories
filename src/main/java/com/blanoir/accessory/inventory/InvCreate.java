@@ -52,6 +52,18 @@ public class InvCreate implements InventoryHolder {
         }
     }
 
+    public void applyDisabledSlots(List<Integer> slots) {
+        if (slots == null || slots.isEmpty()) return;
+
+        ItemStack pane = makeDisabledItemFromConfig();
+        int invSize = inventory.getSize();
+        for (int s : slots) {
+            if (s >= 0 && s < invSize) {
+                inventory.setItem(s, pane.clone());
+            }
+        }
+    }
+
     /** 生成带 PDC 锁标记的外框物品：类型/CMD/隐藏提示/名称/ lore 均从 config 读，失败回退为黑玻璃 */
     private ItemStack makeLockedItemFromConfig() {
         var cfg = plugin.getConfig();
@@ -97,6 +109,46 @@ public class InvCreate implements InventoryHolder {
         }
 
         //“locked”标记
+        meta.getPersistentDataContainer().set(
+                new NamespacedKey(plugin, "locked"),
+                PersistentDataType.BYTE, (byte) 1
+        );
+
+        it.setItemMeta(meta);
+        return it;
+    }
+
+    private ItemStack makeDisabledItemFromConfig() {
+        var cfg = plugin.getConfig();
+
+        String typeStr = cfg.getString("disabled-slot.item.type", "RED_STAINED_GLASS_PANE");
+        Material mat = Material.matchMaterial(typeStr, false);
+        if (mat == null || !mat.isItem()) {
+            mat = Material.RED_STAINED_GLASS_PANE;
+        }
+
+        ItemStack it = new ItemStack(mat);
+        ItemMeta meta = it.getItemMeta();
+
+        boolean hide = cfg.getBoolean("disabled-slot.item.hide-tooltip", true);
+        try { meta.setHideTooltip(hide); } catch (NoSuchMethodError ignored) {}
+
+        String mmName = cfg.getString("disabled-slot.item.name", "<red>Slot Disabled");
+        meta.displayName(MiniMessage.miniMessage().deserialize(mmName));
+
+        List<String> mmLore = cfg.getStringList("disabled-slot.item.lore");
+        if (mmLore != null && !mmLore.isEmpty()) {
+            List<Component> lore = new ArrayList<>(mmLore.size());
+            for (String line : mmLore) {
+                lore.add(MiniMessage.miniMessage().deserialize(line));
+            }
+            try { meta.lore(lore); } catch (NoSuchMethodError ignored) {}
+        }
+
+        meta.getPersistentDataContainer().set(
+                new NamespacedKey(plugin, "disabled"),
+                PersistentDataType.BYTE, (byte) 1
+        );
         meta.getPersistentDataContainer().set(
                 new NamespacedKey(plugin, "locked"),
                 PersistentDataType.BYTE, (byte) 1

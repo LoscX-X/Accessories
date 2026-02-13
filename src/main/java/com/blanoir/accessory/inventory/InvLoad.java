@@ -36,6 +36,8 @@ public class InvLoad {
 
         // 关键：内容还原后再把“锁定格子”重铺一遍
         holder.applyFrames();
+        var service = ((Accessory) plugin).service();
+        if (service != null) holder.applyDisabledSlots(service.getDisabledSlots());
 
         p.openInventory(inv);
     }

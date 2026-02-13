@@ -21,10 +21,12 @@ public class InvSave implements Listener {
 
     private final JavaPlugin plugin;
     private final NamespacedKey LOCKED;
+    private final NamespacedKey DISABLED;
 
     public InvSave(JavaPlugin plugin) {
         this.plugin = plugin;
         this.LOCKED = new NamespacedKey(plugin, "locked"); // 复用同一个 key 是推荐做法
+        this.DISABLED = new NamespacedKey(plugin, "disabled");
     }
 
     @EventHandler
@@ -47,6 +49,15 @@ public class InvSave implements Listener {
             ItemMeta meta = it.getItemMeta();
             if (meta != null && meta.getPersistentDataContainer().has(LOCKED, PersistentDataType.BYTE)) {
                 snapshot[s] = null; // 不把外框存进文件
+            }
+        }
+
+        for (int s = 0; s < snapshot.length; s++) {
+            ItemStack it = snapshot[s];
+            if (it == null) continue;
+            ItemMeta meta = it.getItemMeta();
+            if (meta != null && meta.getPersistentDataContainer().has(DISABLED, PersistentDataType.BYTE)) {
+                snapshot[s] = null;
             }
         }
 
