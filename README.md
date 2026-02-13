@@ -7,6 +7,27 @@ Use this to show the absorb amount in hotbar with the placeholderAPI.
 
 You can fully customize the GUI (title, size, locked-frame slots) and configure which items are allowed in each slot by lore keywords.
 
+### External API (for other plugins)
+
+Get plugin service:
+
+```java
+Accessory accessory = (Accessory) Bukkit.getPluginManager().getPlugin("Accessory");
+AccessoryService service = accessory.service();
+```
+
+Disable a slot and show red pane in GUI:
+
+```java
+service.setSlotEnabled(3, false);
+```
+
+Batch set disabled slots:
+
+```java
+service.setDisabledSlots(List.of(1, 3, 5));
+```
+
 Getting Started:.<br>
 Dependencies:.<br>
 1.AuraSkills(required).<br>

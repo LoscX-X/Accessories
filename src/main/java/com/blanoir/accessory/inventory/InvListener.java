@@ -37,10 +37,14 @@ public class InvListener implements Listener {
     private boolean isSlotConfigured(int slot) {
         return plugin.getConfig().isConfigurationSection("Accessory." + slot);
     }
+    private boolean isSlotDisabled(int slot) {
+        return plugin.service() != null && plugin.service().isSlotDisabled(slot);
+    }
     private List<String> requiredLore(int slot) {
         return plugin.getConfig().getStringList("Accessory." + slot + ".lore");
     }
     private boolean canPlaceInSlot(int slot, ItemStack item) {
+        if (isSlotDisabled(slot)) return false;
         // 未配置的槽位：直接不允许放入（更安全的默认）
         if (!isSlotConfigured(slot)) return false;
 
@@ -116,9 +120,10 @@ public class InvListener implements Listener {
         // 只处理上半区
         if (raw < topSize) {
             boolean isFrame = FRAME.contains(raw);
+            boolean isDisabled = isSlotDisabled(raw);
             ItemStack cur = e.getCurrentItem();
 
-            if (isFrame) {
+            if (isFrame || isDisabled) {
                 switch (e.getAction()) {
                     // 这些是“往格子里放”的动作 → 禁止
                     case PLACE_ALL, PLACE_SOME, PLACE_ONE,
@@ -170,6 +175,11 @@ public class InvListener implements Listener {
         for (var en : e.getNewItems().entrySet()) {
             int raw = en.getKey();
             if (raw < topSize && FRAME.contains(raw)) {
+                e.setCancelled(true);
+                p.sendMessage(plugin.lang().lang("Item_locked"));
+                return;
+            }
+            if (raw < topSize && isSlotDisabled(raw)) {
                 e.setCancelled(true);
                 p.sendMessage(plugin.lang().lang("Item_locked"));
                 return;

@@ -13,15 +13,54 @@ import org.bukkit.inventory.InventoryView;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public final class AccessoryService {
 
     private final Accessory plugin;
+    private final Set<Integer> disabledSlots = new LinkedHashSet<>();
 
     public AccessoryService(Accessory plugin) {
         this.plugin = plugin;
+    }
+
+    /** 外部 API：启用/禁用某个槽位，并立即刷新在线玩家已打开的 Accessory UI */
+    public synchronized void setSlotEnabled(int slot, boolean enabled) {
+        int size = accessorySize();
+        if (slot < 0 || slot >= size) return;
+
+        if (enabled) disabledSlots.remove(slot);
+        else disabledSlots.add(slot);
+
+        refreshOpenAccessoryInventories();
+    }
+
+    /** 外部 API：批量禁用槽位，并刷新已打开的 UI */
+    public synchronized void setDisabledSlots(Collection<Integer> slots) {
+        disabledSlots.clear();
+        if (slots != null) {
+            int size = accessorySize();
+            for (Integer slot : slots) {
+                if (slot == null) continue;
+                if (slot >= 0 && slot < size) disabledSlots.add(slot);
+            }
+        }
+        refreshOpenAccessoryInventories();
+    }
+
+    /** 外部 API：读取当前禁用槽位快照 */
+    public synchronized List<Integer> getDisabledSlots() {
+        return new ArrayList<>(disabledSlots);
+    }
+
+    /** 外部 API：快速判断槽位是否禁用 */
+    public synchronized boolean isSlotDisabled(int slot) {
+        return disabledSlots.contains(slot);
     }
 
     /** 清空某玩家的 accessory 背包（在线/离线都支持） */
@@ -63,6 +102,20 @@ public final class AccessoryService {
         if (holder instanceof InvCreate invHolder) {
             view.getTopInventory().clear();
             invHolder.applyFrames();
+            invHolder.applyDisabledSlots(getDisabledSlots());
+        }
+    }
+
+    public void refreshOpenAccessoryInventories() {
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            InventoryView view = online.getOpenInventory();
+            if (view == null) continue;
+
+            InventoryHolder holder = view.getTopInventory().getHolder();
+            if (!(holder instanceof InvCreate invHolder)) continue;
+
+            invHolder.applyFrames();
+            invHolder.applyDisabledSlots(getDisabledSlots());
         }
     }
 

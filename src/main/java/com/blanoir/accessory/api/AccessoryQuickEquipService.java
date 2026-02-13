@@ -39,6 +39,8 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
         int slot = findAccessorySlot(hand);
         if (slot == -1) return false;
 
+        if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) return false;
+
         // 防止把饰品塞进外框锁定槽（如果你 frame 槽位和 accessory 槽位配置冲突）
         if (isFrameSlot(slot)) return false;
 
@@ -49,6 +51,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
     public boolean equipToSlot(Player p, int slot) {
         int size = guiSize();
         if (slot < 0 || slot >= size) return false;
+        if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) return false;
 
         // 1) 读当前饰品 contents
         ItemStack[] contents = loadContents(p, size);
