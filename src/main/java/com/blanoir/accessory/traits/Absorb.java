@@ -1,6 +1,7 @@
 package com.blanoir.accessory.traits;
 
 import com.blanoir.accessory.attributeload.CustomTraits;
+import com.blanoir.accessory.events.AbsorbShieldRegenEvent;
 import com.blanoir.accessory.utils.ShieldUtil;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.bukkit.BukkitTraitHandler;
@@ -164,12 +165,17 @@ public class Absorb implements BukkitTraitHandler, Listener {
         if (maxShield <= 0) return;
 
         double current = shieldMap.getOrDefault(uuid, 0.0);
+        if (current >= maxShield) return;
 
-        if (current < maxShield) {
-            current += maxShield * SHIELD_REGEN_PERCENT;
-            if (current > maxShield) current = maxShield;
-            shieldMap.put(uuid, current);
-        }
+        double regenAmount = maxShield * SHIELD_REGEN_PERCENT;
+        AbsorbShieldRegenEvent regenEvent = new AbsorbShieldRegenEvent(player, current, maxShield, regenAmount);
+        Bukkit.getPluginManager().callEvent(regenEvent);
+        if (regenEvent.isCancelled()) return;
+
+        double finalRegenAmount = Math.max(0.0, regenEvent.getAmount());
+        if (finalRegenAmount <= 0.0) return;
+
+        shieldMap.put(uuid, Math.min(maxShield, current + finalRegenAmount));
     }
 
 

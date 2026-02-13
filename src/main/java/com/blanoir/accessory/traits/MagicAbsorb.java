@@ -1,6 +1,7 @@
 package com.blanoir.accessory.traits;
 
 import com.blanoir.accessory.attributeload.CustomTraits;
+import com.blanoir.accessory.events.MagicShieldRegenEvent;
 import com.blanoir.accessory.utils.ShieldUtil;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.bukkit.BukkitTraitHandler;
@@ -153,9 +154,15 @@ public class MagicAbsorb implements BukkitTraitHandler, Listener {
         double cur = shieldMap.getOrDefault(uuid, 0.0);
         if (cur >= max) return;
 
-        cur += max * SHIELD_REGEN_PERCENT;
-        if (cur > max) cur = max;
-        shieldMap.put(uuid, cur);
+        double regenAmount = max * SHIELD_REGEN_PERCENT;
+        MagicShieldRegenEvent regenEvent = new MagicShieldRegenEvent(player, cur, max, regenAmount);
+        Bukkit.getPluginManager().callEvent(regenEvent);
+        if (regenEvent.isCancelled()) return;
+
+        double finalRegenAmount = Math.max(0.0, regenEvent.getAmount());
+        if (finalRegenAmount <= 0.0) return;
+
+        shieldMap.put(uuid, Math.min(max, cur + finalRegenAmount));
     }
 
     public double getCurrentShield(Player player) {

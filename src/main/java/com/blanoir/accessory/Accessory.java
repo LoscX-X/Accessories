@@ -95,8 +95,6 @@ public final class Accessory extends JavaPlugin {
         registry.registerTrait(CustomTraits.DEFENCE);
         registry.registerTrait(CustomTraits.ABSORB);
         registry.registerTrait(CustomTraits.HEAL_DECREASE);
-        registry.registerTrait(CustomTraits.MAX_HEALTH_FLAT_REDUCTION);
-        registry.registerTrait(CustomTraits.MAX_HEALTH_PERCENT_REDUCTION);
         registry.registerTrait(CustomTraits.LIFE_STEAL);
         registry.registerStat(CustomStats.CUSTOM_STAT);
         registry.registerTrait(CustomTraits.MAGICABSORB);
@@ -106,8 +104,6 @@ public final class Accessory extends JavaPlugin {
         LifeSteal life = new LifeSteal(this, api);
         Absorb absorb = new Absorb(this, api);
         MagicAbsorb ms = new MagicAbsorb(this, api);
-        MaxHealthFlatReductionHandler flat = new MaxHealthFlatReductionHandler(this, api);
-        MaxHealthPercentReductionHandler percent = new MaxHealthPercentReductionHandler(this, api);
         var cmd = getCommand("shieldcur");
         if (cmd != null) {
             var exec = new ShieldCurCommand(absorb);
@@ -117,8 +113,6 @@ public final class Accessory extends JavaPlugin {
         MmPlaceHolder.registerShieldPlaceholder(this, absorb);
 
         var handlers = api.getHandlers();
-        handlers.registerTraitHandler(flat);
-        handlers.registerTraitHandler(percent);
         handlers.registerTraitHandler(ms);
         handlers.registerTraitHandler(life);
         handlers.registerTraitHandler(hr);
