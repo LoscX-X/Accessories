@@ -22,7 +22,6 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
     private final Accessory plugin;
     private final NamespacedKey LOCKED;
 
-    // ✅ 改这里：把 plugin 传进去
     private final AccessoryLoad accessoryLoad;
 
     public AccessoryQuickEquipService(Accessory plugin) {

@@ -17,6 +17,7 @@ Accessory:
     lore: ["[Talisman]"]
   #"num":
     #lore: ["[MORE]"]
+
 #As this config it will check weather the item lore has the content like [RING]
 
 #locked slot
@@ -34,7 +35,9 @@ frame:
 Life_Steal_demonstrate: false
 
 OUT_OF_COMBAT_SECONDS: 12
+
 SHIELD_REGEN_PERCENT: 0.10
 
 MAGIC_SHIELD_OUT_OF_COMBAT_SECONDS: 12
+
 MAGIC_SHIELD_REGEN_PERCENT: 0.10
