@@ -17,15 +17,15 @@ public class CustomTraits {
             .build();
     public static final CustomTrait HEAL_REGENERATION = CustomTrait
             .builder(NamespacedId.of("accessory", "heal_regeneration"))
-            .displayName("Health_Regeneration")
+            .displayName("生命恢复")
             .build();
     public static final CustomTrait DEFENCE = CustomTrait
             .builder(NamespacedId.of("accessory", "defence"))
-            .displayName("Defense")
+            .displayName("抵御")
             .build();
     public static final CustomTrait HEAL_DECREASE = CustomTrait
             .builder(NamespacedId.of("accessory", "heal_regdecrease"))
-            .displayName("Heal_Decrease")
+            .displayName("生命恢复衰减")
             .build();
 
     public static final CustomTrait LIFE_STEAL = CustomTrait
@@ -34,10 +34,10 @@ public class CustomTraits {
             .build();
     public static final CustomTrait ABSORB = CustomTrait
             .builder(NamespacedId.of("accessory", "absorb"))
-            .displayName("absorb")
+            .displayName("护盾")
             .build();
     public static final CustomTrait MAGICABSORB = CustomTrait
             .builder(NamespacedId.of("accessory", "magicabsorb"))
-            .displayName("magicabsorb")
+            .displayName("魔法护盾")
             .build();
 }

@@ -66,7 +66,7 @@ public class InvReload implements CommandExecutor {
         if (online != null) {
             clearOpenAccessoryInventory(online);
             Inventory empty = Bukkit.createInventory(null, accessorySize());
-            new AccessoryLoad().rebuildFromInventory(online, empty);
+            new AccessoryLoad(this.plugin).rebuildFromInventory(online, empty);
         }
         sender.sendMessage(plugin.lang().lang("Clear_success"));
         return true;

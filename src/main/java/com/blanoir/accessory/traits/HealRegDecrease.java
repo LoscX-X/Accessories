@@ -41,13 +41,12 @@ public class HealRegDecrease implements BukkitTraitHandler, Listener {
 
         var r = event.getRegainReason();
 
-        // 只削弱我们自己的那条 CUSTOM（不碰其他插件的 CUSTOM）
-        if (r == EntityRegainHealthEvent.RegainReason.CUSTOM && !player.hasMetadata(META_ACCESSORY_REGEN )&& !player.hasMetadata(META_ACCESSORY_LIFESTEAL)) {
+        // 保护：CUSTOM 只处理我们自己的回血（避免削弱其他插件的 CUSTOM）
+        if (r == EntityRegainHealthEvent.RegainReason.CUSTOM
+                && !player.hasMetadata(META_ACCESSORY_REGEN)
+                && !player.hasMetadata(META_ACCESSORY_LIFESTEAL)) {
             return;
         }
-
-        // 如果你还想削弱原版/药水回血，再在这里加 case；否则就只留 CUSTOM
-        if (r != EntityRegainHealthEvent.RegainReason.CUSTOM) return;
 
         SkillsUser user = auraSkills.getUser(player.getUniqueId());
         if (user == null || !user.isLoaded()) return;
@@ -55,6 +54,8 @@ public class HealRegDecrease implements BukkitTraitHandler, Listener {
         double dec = user.getEffectiveTraitLevel(CustomTraits.HEAL_DECREASE);
         if (dec <= 0) return;
 
+        // ✅ 对所有回血生效：原版/药水/食物/金苹果/信标/自定义等，统一减去 dec
         event.setAmount(Math.max(0.0, event.getAmount() - dec));
     }
+
 }

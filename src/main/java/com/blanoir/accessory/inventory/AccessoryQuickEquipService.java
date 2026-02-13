@@ -17,14 +17,17 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-public final class AccessoryQuickEquipService {
-    private final AccessoryLoad accessoryLoad = new AccessoryLoad();
+public final class AccessoryQuickEquipService {    //这个可以不用管
     private final Accessory plugin;
     private final NamespacedKey LOCKED;
+
+    // ✅ 改这里：把 plugin 传进去
+    private final AccessoryLoad accessoryLoad;
 
     public AccessoryQuickEquipService(Accessory plugin) {
         this.plugin = plugin;
         this.LOCKED = new NamespacedKey(plugin, "locked");
+        this.accessoryLoad = new AccessoryLoad(plugin);
     }
 
     /** 给 KeyEvent / 右键 调用：尝试把主手物品穿戴到饰品槽 */

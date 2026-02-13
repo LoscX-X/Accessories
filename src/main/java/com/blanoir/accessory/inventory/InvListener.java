@@ -26,7 +26,7 @@ public class InvListener implements Listener {
 
     public InvListener(Accessory plugin) {
         this.plugin = plugin;
-        this.effects = new AccessoryLoad();
+        this.effects = new AccessoryLoad(plugin);
         this.LOCKED = new NamespacedKey(plugin, "locked"); //在构造器里用已赋值的 plugin
     }
 

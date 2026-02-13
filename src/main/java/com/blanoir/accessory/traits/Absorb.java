@@ -57,7 +57,9 @@ public class Absorb implements BukkitTraitHandler, Listener {
                     // 脱战且未满护盾 → 恢复逻辑
                     long lastHit = lastDamageTime.getOrDefault(uuid, 0L);
                     if (System.currentTimeMillis() - lastHit > OUT_OF_COMBAT_SECONDS * 1000L) {
-                        regenShield(player);
+                        if (!player.getScoreboardTags().contains("acc_noabsorb")){
+                            regenShield(player);
+                        }
                     }
                 }
             }
@@ -99,16 +101,28 @@ public class Absorb implements BukkitTraitHandler, Listener {
         double shield = shieldMap.getOrDefault(uuid, 0.0);
         if (shield <= 0) return; // 没有护盾则不干预伤害
 
-        double damage = event.getDamage();
-        if (shield >= damage) {
-            shieldMap.put(uuid, shield - damage);
-            event.setDamage(0); // 完全吸收
+        double finalDamage = event.getFinalDamage();
+        if (finalDamage <= 0) return;
+
+        double base = event.getDamage();
+
+        if (shield >= finalDamage) {
+            // —— 完全吸收 ——
+            shieldMap.put(uuid, shield - finalDamage);
+
+            // 关键：把 base 缩放到 0，而不是 setDamage(finalDamage)
+            event.setDamage(0.0);
+
         } else {
+            // —— 部分吸收 ——
+            double newFinal = finalDamage - shield;
             shieldMap.put(uuid, 0.0);
-            event.setDamage(damage - shield); // 部分吸收
+
+            // 关键：比例缩放 base，保证最终伤害 = newFinal
+            double scale = newFinal / finalDamage;
+            event.setDamage(base * scale);
         }
     }
-
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
@@ -137,8 +151,16 @@ public class Absorb implements BukkitTraitHandler, Listener {
     // 护盾恢复逻辑：按百分比补给
     private void regenShield(Player player) {
         UUID uuid = player.getUniqueId();
+
+        // ✅ 如果有 Mythic Aura：Anti_absorb -> 不恢复
+        if (hasMythicAura(player, "Anti_absorb")) {
+            return;
+        }
+
         double maxShield = getMaxShield(player);
-        double SHIELD_REGEN_PERCENT = plugin.getConfig().getDouble("SHIELD_REGEN_PERCENT",0.1);
+        double SHIELD_REGEN_PERCENT = plugin.getConfig()
+                .getDouble("SHIELD_REGEN_PERCENT", 0.1);
+
         if (maxShield <= 0) return;
 
         double current = shieldMap.getOrDefault(uuid, 0.0);
@@ -150,8 +172,42 @@ public class Absorb implements BukkitTraitHandler, Listener {
         }
     }
 
+
     // PAPI 支持：读取当前护盾
     public double getCurrentShield(Player player) {
         return ShieldUtil.getCurrentShield(player, shieldMap, this::getMaxShield);
     }
+    public void addShield(org.bukkit.entity.Player player, double delta) {
+        java.util.UUID uuid = player.getUniqueId();
+        double max = getMaxShield(player);
+        if (max <= 0) return;
+
+        double cur = shieldMap.getOrDefault(uuid, 0.0);
+        double v = cur + delta;
+        v = Math.max(0.0, Math.min(v, max));
+        shieldMap.put(uuid, v);
+    }
+
+    // ratio: 0.4 = +40% max; -0.2 = -20% max
+    public void addShieldPercent(org.bukkit.entity.Player player, double ratio) {
+        double max = getMaxShield(player);
+        if (max <= 0) return;
+        addShield(player, max * ratio);
+    }
+    private boolean hasMythicAura(Player player, String auraName) {
+        try {
+            var am = io.lumine.mythic.bukkit.MythicBukkit.inst()
+                    .getSkillManager()
+                    .getAuraManager();
+
+            var ae = io.lumine.mythic.bukkit.BukkitAdapter.adapt(player);
+
+            return am.getHasAura(ae, auraName);
+
+        } catch (Throwable t) {
+            // Mythic 没装 / 出错时保险
+            return false;
+        }
+    }
+
 }

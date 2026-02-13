@@ -1,6 +1,10 @@
 package com.blanoir.accessory;
 
+import com.blanoir.accessory.api.AccessoryService;
 import com.blanoir.accessory.attributeload.CustomStats;
+import com.blanoir.accessory.bridge.MmPlaceHolder;
+import com.blanoir.accessory.bridge.MythicBridgeListener;
+import com.blanoir.accessory.bridge.RealAttackMechanic;
 import com.blanoir.accessory.hooks.AccessoryKeybindHook;
 import com.blanoir.accessory.hooks.MagicAbsorbPlaceholder;
 import com.blanoir.accessory.traits.*;
@@ -10,6 +14,7 @@ import com.blanoir.accessory.inventory.InvLoad;
 import com.blanoir.accessory.inventory.InvReload;
 import com.blanoir.accessory.inventory.InvSave;
 import com.blanoir.accessory.hooks.AbsorbPlaceholder;
+import com.blanoir.accessory.utils.ShieldCurCommand;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -22,6 +27,7 @@ public final class Accessory extends JavaPlugin {
 
     private Language lang;
     private File statsFile;
+    private AccessoryService accessoryService;
 
     public Language lang() { return lang; }
 
@@ -40,8 +46,13 @@ public final class Accessory extends JavaPlugin {
 
         hookPlaceholderApi(bundle.absorb(),bundle.ms());
         hookKeyBind();
-    }
+        this.accessoryService = new AccessoryService(this);
+        getServer().getPluginManager().registerEvents(new MythicBridgeListener(this), this);
 
+    }
+    public AccessoryService service() {
+        return accessoryService;
+    }
     @Override
     public void onDisable() {
         getLogger().info("Bye");
@@ -97,6 +108,13 @@ public final class Accessory extends JavaPlugin {
         MagicAbsorb ms = new MagicAbsorb(this, api);
         MaxHealthFlatReductionHandler flat = new MaxHealthFlatReductionHandler(this, api);
         MaxHealthPercentReductionHandler percent = new MaxHealthPercentReductionHandler(this, api);
+        var cmd = getCommand("shieldcur");
+        if (cmd != null) {
+            var exec = new ShieldCurCommand(absorb);
+            cmd.setExecutor(exec);
+            cmd.setTabCompleter(exec);
+        }
+        MmPlaceHolder.registerShieldPlaceholder(this, absorb);
 
         var handlers = api.getHandlers();
         handlers.registerTraitHandler(flat);
