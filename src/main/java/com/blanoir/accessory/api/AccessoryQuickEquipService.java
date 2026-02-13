@@ -2,6 +2,7 @@ package com.blanoir.accessory.api;
 
 import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.attributeload.AccessoryLoad;
+import com.blanoir.accessory.events.AccessoryPlaceEvent;
 import com.blanoir.accessory.utils.LoreUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -60,6 +61,18 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
 
         ItemStack placed = hand.clone();
         placed.setAmount(1);
+
+        AccessoryPlaceEvent placeEvent = new AccessoryPlaceEvent(
+                p,
+                slot,
+                placed.clone(),
+                old == null ? null : old.clone()
+        );
+        Bukkit.getPluginManager().callEvent(placeEvent);
+        if (placeEvent.isCancelled()) {
+            return false;
+        }
+
         contents[slot] = placed;
 
         // 3) 扣主手 1（稳，不用 e.getItem 引用）

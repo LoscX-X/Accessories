@@ -3,6 +3,7 @@ package com.blanoir.accessory.inventory;
 
 import com.blanoir.accessory.utils.LoreUtils;
 import com.blanoir.accessory.attributeload.AccessoryLoad;
+import com.blanoir.accessory.events.AccessoryPlaceEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -58,6 +59,17 @@ public class InvListener implements Listener {
     private void scheduleRefresh(Player p, InventoryView view) {
         Inventory top = view.getTopInventory();
         Bukkit.getScheduler().runTask(plugin, () -> effects.rebuildFromInventory(p, top)); // 下一 tick
+    }
+
+    private boolean callPlaceEvent(Player player, Inventory top, int slot, ItemStack item) {
+        AccessoryPlaceEvent event = new AccessoryPlaceEvent(
+                player,
+                slot,
+                item.clone(),
+                top.getItem(slot) == null ? null : top.getItem(slot).clone()
+        );
+        Bukkit.getPluginManager().callEvent(event);
+        return !event.isCancelled();
     }
     private List<Integer> frameSlots(InventoryView view) {
         int size = view.getTopInventory().getSize();
@@ -130,6 +142,10 @@ public class InvListener implements Listener {
                             p.sendMessage(plugin.lang().lang("Item_not_match"));
                             return;
                         }
+                        if (going != null && !going.getType().isAir() && !callPlaceEvent(p, top, raw, going)) {
+                            e.setCancelled(true);
+                            return;
+                        }
                     }
                     default -> {}
                 }
@@ -167,6 +183,10 @@ public class InvListener implements Listener {
             if (!canPlaceInSlot(raw, en.getValue())) {
                 e.setCancelled(true);
                 p.sendMessage(plugin.lang().lang("Item_not_match"));
+                return;
+            }
+            if (!callPlaceEvent(p, top, raw, en.getValue())) {
+                e.setCancelled(true);
                 return;
             }
         }
