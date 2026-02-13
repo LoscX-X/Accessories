@@ -15,8 +15,4 @@ stats:
         modifier: 0.01
       accessory/magicabsorb:
         modifier: 0.01
-      accessory/max_health_percent_reduce: #Do not use this
-        modifier: 0.01
-      accessory/max_health_flat_reduce: #Do not use this
-        modifier: 0.01
 

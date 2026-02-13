@@ -1,20 +1,9 @@
 package com.blanoir.accessory.attributeload;
 
-import com.blanoir.accessory.Accessory;
-import dev.aurelium.auraskills.api.item.ItemContext;
 import dev.aurelium.auraskills.api.registry.NamespacedId;
-import dev.aurelium.auraskills.api.stat.CustomStat;
 import dev.aurelium.auraskills.api.trait.CustomTrait;
 
 public class CustomTraits {
-    public static final CustomTrait MAX_HEALTH_PERCENT_REDUCTION = CustomTrait
-            .builder(NamespacedId.of("accessory", "max_health_percent_reduce"))
-            .displayName("Health_Regeneration")
-            .build();
-    public static final CustomTrait MAX_HEALTH_FLAT_REDUCTION = CustomTrait
-            .builder(NamespacedId.of("accessory", "max_health_flat_reduce"))
-            .displayName("Health_Regeneration")
-            .build();
     public static final CustomTrait HEAL_REGENERATION = CustomTrait
             .builder(NamespacedId.of("accessory", "heal_regeneration"))
             .displayName("生命恢复")
