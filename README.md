@@ -20,6 +20,16 @@ Disable a slot and show red pane in GUI:
 
 ```java
 service.setSlotEnabled(3, false);
+// or
+service.applySlotDisable(3);
+```
+
+Enable a previously disabled slot:
+
+```java
+service.setSlotEnabled(3, true);
+// or
+service.removeSlotDisable(3);
 ```
 
 Batch set disabled slots:
