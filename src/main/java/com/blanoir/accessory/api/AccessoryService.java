@@ -40,6 +40,16 @@ public final class AccessoryService {
         refreshOpenAccessoryInventories();
     }
 
+    /** 外部 API：禁用指定槽位 */
+    public synchronized void applySlotDisable(int slot) {
+        setSlotEnabled(slot, false);
+    }
+
+    /** 外部 API：取消禁用指定槽位 */
+    public synchronized void removeSlotDisable(int slot) {
+        setSlotEnabled(slot, true);
+    }
+
     /** 外部 API：批量禁用槽位，并刷新已打开的 UI */
     public synchronized void setDisabledSlots(Collection<Integer> slots) {
         disabledSlots.clear();
