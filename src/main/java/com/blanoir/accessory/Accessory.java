@@ -104,6 +104,7 @@ public final class Accessory extends JavaPlugin {
 
         registry.registerTrait(CustomTraits.HEAL_REGENERATION);
         registry.registerTrait(CustomTraits.DEFENCE);
+        registry.registerTrait(CustomTraits.HEALTH);
         registry.registerTrait(CustomTraits.ABSORB);
         registry.registerTrait(CustomTraits.HEAL_DECREASE);
         registry.registerTrait(CustomTraits.LIFE_STEAL);
@@ -112,6 +113,7 @@ public final class Accessory extends JavaPlugin {
         HealRegeneration hr = new HealRegeneration(this, api);
         HealRegDecrease dec = new HealRegDecrease(this, api);
         Defence def = new Defence(this, api);
+        Health health = new Health(this, api);
         LifeSteal life = new LifeSteal(this, api);
         Absorb absorb = new Absorb(this, api);
         MagicAbsorb ms = new MagicAbsorb(this, api);
@@ -136,10 +138,12 @@ public final class Accessory extends JavaPlugin {
         handlers.registerTraitHandler(hr);
         handlers.registerTraitHandler(dec);
         handlers.registerTraitHandler(def);
+        handlers.registerTraitHandler(health);
         handlers.registerTraitHandler(absorb);
         getServer().getPluginManager().registerEvents(ms, this);
         // 事件监听器（Absorb 需要监听事件）
         getServer().getPluginManager().registerEvents(absorb, this);
+        getServer().getPluginManager().registerEvents(health, this);
         getServer().getPluginManager().registerEvents(dec, this);
         return new AuraBundle(hr, absorb, ms);
     }

@@ -29,4 +29,8 @@ public class CustomTraits {
             .builder(NamespacedId.of("accessory", "magicabsorb"))
             .displayName("魔法护盾")
             .build();
+    public static final CustomTrait HEALTH = CustomTrait
+            .builder(NamespacedId.of("accessory", "health"))
+            .displayName("生命值")
+            .build();
 }
