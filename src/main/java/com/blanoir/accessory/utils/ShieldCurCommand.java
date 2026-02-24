@@ -31,7 +31,7 @@ public final class ShieldCurCommand implements CommandExecutor, TabCompleter {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
         if (!sender.hasPermission(permissionNode)) {
-            sender.sendMessage(ChatColor.RED + "你没有这个权限，执行不了这个命令噢：" + permissionNode);
+            sender.sendMessage(ChatColor.RED + "权限不足: " + permissionNode);
             return true;
         }
 
@@ -47,13 +47,13 @@ public final class ShieldCurCommand implements CommandExecutor, TabCompleter {
         try {
             val = Double.parseDouble(args[2]);
         } catch (NumberFormatException e) {
-            sender.sendMessage(ChatColor.RED + "这个数值看起来不太对：" + args[2] + "，请输入数字。比如 10 或 -25。");
+            sender.sendMessage(ChatColor.RED + "参数错误: 数值格式无效 -> " + args[2]);
             return true;
         }
 
         List<Player> targets = resolveTargets(sender, target);
         if (targets.isEmpty()) {
-            sender.sendMessage(ChatColor.RED + "没找到目标玩家：" + target + "，你可以试试 me / all / 在线玩家名。");
+            sender.sendMessage(ChatColor.RED + "目标不存在或不在线: " + target);
             return true;
         }
 
@@ -70,21 +70,21 @@ public final class ShieldCurCommand implements CommandExecutor, TabCompleter {
                     affected++;
                 }
                 default -> {
-                    sender.sendMessage(ChatColor.RED + "我不认识这个参数：" + mode + "。可用的只有 give 和 givep。");
+                    sender.sendMessage(ChatColor.RED + "参数错误: 未知模式 " + mode + " (可用: give, givep)");
                     usage(sender, label);
                     return true;
                 }
             }
         }
 
-        sender.sendMessage(ChatColor.GREEN + "搞定！已对 " + affected + " 名玩家执行 " + mode + " " + target + " " + val);
+        sender.sendMessage(ChatColor.GREEN + "执行成功: 已对 " + affected + " 名玩家应用操作。模式=" + mode + ", 目标=" + target + ", 数值=" + val);
         return true;
     }
 
     private void usage(CommandSender sender, String label) {
-        sender.sendMessage(ChatColor.YELLOW + "这个命令可以这样用：");
-        sender.sendMessage(ChatColor.GRAY + "/" + label + " give  <me|玩家|all> <数值>   例如: 10、-10");
-        sender.sendMessage(ChatColor.GRAY + "/" + label + " givep <me|玩家|all> <百分比> 例如: 40、-40");
+        sender.sendMessage(ChatColor.YELLOW + "命令格式:");
+        sender.sendMessage(ChatColor.GRAY + "/" + label + " give  <me|玩家|all> <数值>");
+        sender.sendMessage(ChatColor.GRAY + "/" + label + " givep <me|玩家|all> <百分比>");
     }
 
     private List<Player> resolveTargets(CommandSender sender, String target) {

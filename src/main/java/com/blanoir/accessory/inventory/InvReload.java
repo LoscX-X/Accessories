@@ -39,7 +39,6 @@ public class InvReload implements CommandExecutor, TabCompleter {
             return handleReload(sender, args);
         }
         sender.sendMessage(plugin.lang().lang("Accessory_unknown"));
-        sender.sendMessage(plugin.lang().lang("Accessory_help"));
         return true;
     }
 

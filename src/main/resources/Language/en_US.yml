@@ -6,9 +6,8 @@ Message:
   Clear_success: "&a[Accessory] Cleared the player's accessories."
   Clear_failed: "&c[Accessory] Failed to clear the player's accessories."
   Player_not_found: "&cPlayer not found."
-  Accessory_unknown: "&cI couldn't understand that subcommand. Try /accessory open, /accessory reload, or /accessory clear <player>."
-  Accessory_help: "&eTip: You can also use /acc to open your accessory bag quickly."
-  Only_player_open: "&cThis command has to be used by a player in-game; console can't open inventories."
+  Accessory_unknown: "&cUnknown subcommand. Available: /accessory, /accessory reload, /accessory clear <player>."
+  Only_player_open: "&cThis command can only be executed by an in-game player."
 
   Item_not_match: "&cThis item does not match this slot's requirements."
   Item_locked: "&cThis slot is locked."

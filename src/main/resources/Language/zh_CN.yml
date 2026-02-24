@@ -6,9 +6,8 @@ Message:
   Clear_success: "&a[Accessory] 已清空该玩家的饰品。"
   Clear_failed: "&c[Accessory] 清空该玩家饰品失败。"
   Player_not_found: "&c未找到该玩家。"
-  Accessory_unknown: "&c这个子命令我没看懂，试试 /accessory open、/accessory reload 或 /accessory clear <玩家名>"
-  Accessory_help: "&e小提示：你也可以直接输入 /acc 快速打开饰品背包。"
-  Only_player_open: "&c这个命令得由玩家在游戏里执行，控制台没法打开背包。"
+  Accessory_unknown: "&c未知子命令。可用命令: /accessory, /accessory reload, /accessory clear <玩家名>"
+  Only_player_open: "&c该指令仅限玩家在游戏内执行。"
 
   Item_not_match: "&c该饰品不符合当前槽位要求。"
   Item_locked: "&c该槽位已锁定。"
