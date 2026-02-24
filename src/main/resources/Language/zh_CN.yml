@@ -6,6 +6,8 @@ Message:
   Clear_success: "&a[Accessory] 已清空该玩家的饰品。"
   Clear_failed: "&c[Accessory] 清空该玩家饰品失败。"
   Player_not_found: "&c未找到该玩家。"
+  Accessory_unknown: "&c未知子命令。可用命令: /accessory, /accessory reload, /accessory clear <玩家名>"
+  Only_player_open: "&c该指令仅限玩家在游戏内执行。"
 
   Item_not_match: "&c该饰品不符合当前槽位要求。"
   Item_locked: "&c该槽位已锁定。"

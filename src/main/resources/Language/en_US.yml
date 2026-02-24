@@ -6,6 +6,8 @@ Message:
   Clear_success: "&a[Accessory] Cleared the player's accessories."
   Clear_failed: "&c[Accessory] Failed to clear the player's accessories."
   Player_not_found: "&cPlayer not found."
+  Accessory_unknown: "&cUnknown subcommand. Available: /accessory, /accessory reload, /accessory clear <player>."
+  Only_player_open: "&cThis command can only be executed by an in-game player."
 
   Item_not_match: "&cThis item does not match this slot's requirements."
   Item_locked: "&cThis slot is locked."
