@@ -5,23 +5,29 @@ api-version: '1.21'
 depend: [AuraSkills]
 softdepend: [PlaceholderAPI, KeyBind, MythicMobs]
 commands:
-  shieldcur:
-    description: Modify current absorb shield (does not change max)
-    usage: /shieldcur <give|givep> <me|player|all> <value>
-    permission: accessory.shieldcur
+  shield:
+    description: 调整当前物理护盾（不改上限）
+    usage: /shield <give|givep> <me|player|all> <value>
+    permission: accessory.shield
+  magicshield:
+    description: 调整当前魔法护盾（不改上限）
+    usage: /magicshield <give|givep> <me|player|all> <value>
+    permission: accessory.magicshield
 
-  inv:
-    description: Open the own accessory bag
-    usage: /acc
-    aliases: [ acc ]
   accessory:
-    description: Accessory management command
-    usage: /accessory reload | /accessory clear <player>
-    aliases: [ acre ]
+    description: 打开你的饰品背包，或执行管理命令
+    usage: /accessory [open|reload|clear <player>]
+    aliases: [ acc, acre ]
 permissions:
   accessory.reload:
     description: Allow Reloaded
     default: op
   accessory.clear:
     description: Allow clearing player accessories
+    default: op
+  accessory.shield:
+    description: Allow adjusting physical shield
+    default: op
+  accessory.magicshield:
+    description: Allow adjusting magic shield
     default: op
