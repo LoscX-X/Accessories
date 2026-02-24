@@ -9,6 +9,8 @@ stats:
         modifier: 0.01
       accessory/defence:
         modifier: 0.01
+      accessory/health:
+        modifier: 0.01
       accessory/life_steal:
         modifier: 0.01
       accessory/absorb:
