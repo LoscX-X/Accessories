@@ -6,6 +6,9 @@ size: 9
 
 Lang: en_US
 
+# Enable console debug logs for accessory skill recognition and PDC write.
+skill-debug: false
+
 Accessory:
   "1":
     lore: ["[Ring]"]
