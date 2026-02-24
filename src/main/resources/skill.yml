@@ -5,7 +5,7 @@ items:
     skills:
       - skill: ExampleAttackSkill
         trigger: onAttack
-        target: victim
+        target: targeted
       - skill: ExampleTimerSkill
         trigger: onTimer
         period: 20

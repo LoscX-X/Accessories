@@ -139,6 +139,9 @@ public final class AccessorySkillEngine {
 
             for (SkillEntry entry : entries) {
                 TargetType target = entry.target() == null ? TargetType.defaultFor(entry.trigger()) : entry.target();
+                if (!target.supports(entry.trigger())) {
+                    target = TargetType.defaultFor(entry.trigger());
+                }
                 ResolvedEntry resolved = new ResolvedEntry(entry.skill(), entry.trigger(), target);
                 byTrigger.computeIfAbsent(entry.trigger(), k -> new ArrayList<>()).add(resolved);
                 if (entry.trigger() == TriggerType.ON_TIMER) {
@@ -186,7 +189,7 @@ public final class AccessorySkillEngine {
     }
 
     public void triggerAttack(Player caster, Entity victim) {
-        trigger(caster, TriggerType.ON_ATTACK, targetForEvent(TargetType.VICTIM, caster, victim, null));
+        trigger(caster, TriggerType.ON_ATTACK, targetForEvent(TargetType.TARGETED, caster, victim, null));
     }
 
     public void triggerDamaged(Player caster, Entity attacker) {
@@ -194,7 +197,7 @@ public final class AccessorySkillEngine {
     }
 
     public void triggerKill(Player caster, Entity victim) {
-        trigger(caster, TriggerType.ON_KILL, targetForEvent(TargetType.VICTIM, caster, victim, null));
+        trigger(caster, TriggerType.ON_KILL, targetForEvent(TargetType.TARGETED, caster, victim, null));
     }
 
     public void triggerShoot(Player caster, Entity projectile) {
@@ -210,7 +213,7 @@ public final class AccessorySkillEngine {
     private Entity targetForEvent(TargetType configured, Player caster, Entity victim, Entity attacker) {
         return switch (configured) {
             case SELF -> caster;
-            case VICTIM -> victim;
+            case TARGETED -> victim;
             case ATTACKER -> attacker;
             case PROJECTILE -> victim;
             case NONE -> null;
@@ -272,12 +275,13 @@ public final class AccessorySkillEngine {
     }
 
     public enum TargetType {
-        SELF, VICTIM, ATTACKER, PROJECTILE, NONE;
+        SELF, TARGETED, ATTACKER, PROJECTILE, NONE;
 
         static TargetType from(String raw) {
             return switch (raw) {
                 case "self" -> SELF;
-                case "victim" -> VICTIM;
+                case "targeted" -> TARGETED;
+                case "victim" -> TARGETED;
                 case "attacker" -> ATTACKER;
                 case "projectile" -> PROJECTILE;
                 case "none" -> NONE;
@@ -285,9 +289,18 @@ public final class AccessorySkillEngine {
             };
         }
 
+        boolean supports(TriggerType trigger) {
+            return switch (this) {
+                case SELF, NONE -> true;
+                case TARGETED -> trigger == TriggerType.ON_ATTACK || trigger == TriggerType.ON_KILL;
+                case ATTACKER -> trigger == TriggerType.ON_DAMAGED;
+                case PROJECTILE -> trigger == TriggerType.ON_SHOOT;
+            };
+        }
+
         static TargetType defaultFor(TriggerType trigger) {
             return switch (trigger) {
-                case ON_ATTACK, ON_KILL -> VICTIM;
+                case ON_ATTACK, ON_KILL -> TARGETED;
                 case ON_DAMAGED -> ATTACKER;
                 case ON_SHOOT -> PROJECTILE;
                 case ON_TIMER -> SELF;
