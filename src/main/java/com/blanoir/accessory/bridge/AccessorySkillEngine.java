@@ -146,7 +146,8 @@ public final class AccessorySkillEngine {
 
             equippedItemIds.add(itemId);
 
-            if (slotChanged(previousSnapshot, slot, itemHash) && stampItem(item, itemId)) {
+            if ((slotChanged(previousSnapshot, slot, itemHash) || needsStamp(item, itemId))
+                    && stampItem(item, itemId)) {
                 debug("饰品写入 PDC 成功: player=" + player.getName() + ", slot=" + slot + ", itemId=" + itemId + ", signature=" + skillSignature);
                 inv.setItem(slot, item);
             }
@@ -213,6 +214,22 @@ public final class AccessorySkillEngine {
         }
         if (dirty) item.setItemMeta(meta);
         return dirty;
+    }
+
+    private boolean needsStamp(ItemStack item, String itemId) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return false;
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        String currentId = pdc.get(dunItemId, PersistentDataType.STRING);
+        Integer currentSig = pdc.get(dunItemSig, PersistentDataType.INTEGER);
+        return !itemId.equals(currentId) || currentSig == null || currentSig != skillSignature;
+    }
+
+    public boolean stampKnownAccessoryItem(ItemStack item) {
+        if (item == null || item.getType().isAir()) return false;
+        String itemId = resolveItemId(item);
+        if (itemId == null || itemId.isBlank()) return false;
+        return stampItem(item, itemId);
     }
 
     public void triggerAttack(Player caster, Entity victim) {
