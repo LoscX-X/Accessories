@@ -168,4 +168,23 @@ public class MagicAbsorb implements BukkitTraitHandler, Listener {
     public double getCurrentShield(Player player) {
         return ShieldUtil.getCurrentShield(player, shieldMap, this::getMaxShield);
     }
+
+
+    public void addShield(Player player, double delta) {
+        UUID uuid = player.getUniqueId();
+        double max = getMaxShield(player);
+        if (max <= 0) return;
+
+        double cur = shieldMap.getOrDefault(uuid, 0.0);
+        double value = cur + delta;
+        value = Math.max(0.0, Math.min(value, max));
+        shieldMap.put(uuid, value);
+    }
+
+    // ratio: 0.4 = +40% max; -0.2 = -20% max
+    public void addShieldPercent(Player player, double ratio) {
+        double max = getMaxShield(player);
+        if (max <= 0) return;
+        addShield(player, max * ratio);
+    }
 }

@@ -11,7 +11,6 @@ import com.blanoir.accessory.bridge.placeholder.MagicAbsorbPlaceholder;
 import com.blanoir.accessory.traits.*;
 import com.blanoir.accessory.attributeload.CustomTraits;
 import com.blanoir.accessory.inventory.InvListener;
-import com.blanoir.accessory.inventory.InvLoad;
 import com.blanoir.accessory.inventory.InvReload;
 import com.blanoir.accessory.inventory.InvSave;
 import com.blanoir.accessory.bridge.placeholder.AbsorbPlaceholder;
@@ -92,12 +91,12 @@ public final class Accessory extends JavaPlugin {
     }
 
     private void registerCommands() {
-        getCommand("inv").setExecutor((sender, cmd, label, args) -> {
-            if (!(sender instanceof Player p)) return true;
-            new InvLoad(this).openFor(p);
-            return true;
-        });
-        getCommand("accessory").setExecutor(new InvReload(this));
+        var accessoryCmd = new InvReload(this);
+        var accessory = getCommand("accessory");
+        if (accessory != null) {
+            accessory.setExecutor(accessoryCmd);
+            accessory.setTabCompleter(accessoryCmd);
+        }
     }
 
     private AuraBundle initAuraSkills(AuraSkillsApi api) {
@@ -116,11 +115,18 @@ public final class Accessory extends JavaPlugin {
         LifeSteal life = new LifeSteal(this, api);
         Absorb absorb = new Absorb(this, api);
         MagicAbsorb ms = new MagicAbsorb(this, api);
-        var cmd = getCommand("shieldcur");
-        if (cmd != null) {
+        var shieldCmd = getCommand("shield");
+        if (shieldCmd != null) {
             var exec = new ShieldCurCommand(absorb);
-            cmd.setExecutor(exec);
-            cmd.setTabCompleter(exec);
+            shieldCmd.setExecutor(exec);
+            shieldCmd.setTabCompleter(exec);
+        }
+
+        var magicShieldCmd = getCommand("magicshield");
+        if (magicShieldCmd != null) {
+            var exec = new ShieldCurCommand(ms::addShield, ms::addShieldPercent, "accessory.magicshield");
+            magicShieldCmd.setExecutor(exec);
+            magicShieldCmd.setTabCompleter(exec);
         }
         MmPlaceHolder.registerShieldPlaceholder(this, absorb);
 
