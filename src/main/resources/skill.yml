@@ -1,0 +1,13 @@
+signature: 1
+
+items:
+  example_ring:
+    skills:
+      - skill: ExampleAttackSkill
+        trigger: onAttack
+        target: targeted
+      - skill: ExampleTimerSkill
+        trigger: onTimer
+        period: 20
+        target: self
+        conditions: {}

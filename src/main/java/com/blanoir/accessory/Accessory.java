@@ -5,6 +5,8 @@ import com.blanoir.accessory.attributeload.CustomStats;
 import com.blanoir.accessory.bridge.MmPlaceHolder;
 import com.blanoir.accessory.bridge.MythicBridgeListener;
 import com.blanoir.accessory.bridge.AccessoryKeybindHook;
+import com.blanoir.accessory.bridge.AccessorySkillEngine;
+import com.blanoir.accessory.bridge.AccessorySkillListener;
 import com.blanoir.accessory.bridge.placeholder.MagicAbsorbPlaceholder;
 import com.blanoir.accessory.traits.*;
 import com.blanoir.accessory.attributeload.CustomTraits;
@@ -27,8 +29,10 @@ public final class Accessory extends JavaPlugin {
     private Language lang;
     private File statsFile;
     private AccessoryService accessoryService;
+    private AccessorySkillEngine skillEngine;
 
     public Language lang() { return lang; }
+    public AccessorySkillEngine skillEngine() { return skillEngine; }
 
     @Override
     public void onEnable() {
@@ -38,15 +42,24 @@ public final class Accessory extends JavaPlugin {
         registerCommands();
         registerListeners();
 
+        this.skillEngine = new AccessorySkillEngine(this);
+        saveResource("skill.yml", false);
+        this.skillEngine.loadConfig();
+
         AuraSkillsApi api = AuraSkillsApi.get();
         var bundle = initAuraSkills(api);
 
         startTasks(bundle);
+        this.skillEngine.startTimer();
 
         hookPlaceholderApi(bundle.absorb(),bundle.ms());
         hookKeyBind();
         this.accessoryService = new AccessoryService(this);
         getServer().getPluginManager().registerEvents(new MythicBridgeListener(this), this);
+        getServer().getPluginManager().registerEvents(new AccessorySkillListener(this), this);
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            this.skillEngine.refreshFromStored(online);
+        }
 
     }
     public AccessoryService service() {

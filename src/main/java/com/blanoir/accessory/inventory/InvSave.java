@@ -1,5 +1,7 @@
 package com.blanoir.accessory.inventory;
 
+import com.blanoir.accessory.Accessory;
+
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -70,6 +72,11 @@ public class InvSave implements Listener {
         cfg.set("contents", Arrays.asList(snapshot)); // List<ItemStack>
         try {
             cfg.save(file);
+            if (plugin instanceof Accessory accessory && accessory.skillEngine() != null) {
+                Inventory tmp = org.bukkit.Bukkit.createInventory(null, top.getSize());
+                tmp.setContents(snapshot.clone());
+                accessory.skillEngine().refreshPlayer(p, tmp);
+            }
         } catch (IOException ex) {
             plugin.getLogger().severe("Save failed: " + p.getName());
             ex.printStackTrace();

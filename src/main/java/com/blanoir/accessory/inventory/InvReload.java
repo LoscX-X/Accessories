@@ -39,6 +39,10 @@ public class InvReload implements CommandExecutor {
         }
         plugin.reloadConfig();
         plugin.lang().reload();
+        plugin.skillEngine().loadConfig();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            plugin.skillEngine().refreshFromStored(online);
+        }
         sender.sendMessage(plugin.lang().lang("Reload_success"));
         return true;
     }
@@ -67,6 +71,7 @@ public class InvReload implements CommandExecutor {
             clearOpenAccessoryInventory(online);
             Inventory empty = Bukkit.createInventory(null, accessorySize());
             new AccessoryLoad(this.plugin).rebuildFromInventory(online, empty);
+            plugin.skillEngine().refreshPlayer(online, empty);
         }
         sender.sendMessage(plugin.lang().lang("Clear_success"));
         return true;

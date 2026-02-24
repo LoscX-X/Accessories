@@ -62,7 +62,10 @@ public class InvListener implements Listener {
 
     private void scheduleRefresh(Player p, InventoryView view) {
         Inventory top = view.getTopInventory();
-        Bukkit.getScheduler().runTask(plugin, () -> effects.rebuildFromInventory(p, top)); // 下一 tick
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            effects.rebuildFromInventory(p, top);
+            plugin.skillEngine().refreshPlayer(p, top);
+        }); // 下一 tick
     }
 
     private boolean callPlaceEvent(Player player, Inventory top, int slot, ItemStack item) {
@@ -158,7 +161,7 @@ public class InvListener implements Listener {
         }
 
         // 下一 tick 再重建效果，避免与本次修改冲突（官方也提示本事件阶段并非所有库存操作都安全）。:contentReference[oaicite:3]{index=3}
-        Bukkit.getScheduler().runTask(plugin, () -> effects.rebuildFromInventory(p, top));
+        scheduleRefresh(p, e.getView());
     }
 
 
@@ -201,6 +204,6 @@ public class InvListener implements Listener {
             }
         }
 
-        Bukkit.getScheduler().runTask(plugin, () -> effects.rebuildFromInventory(p, top));
+        scheduleRefresh(p, e.getView());
     }
 }
