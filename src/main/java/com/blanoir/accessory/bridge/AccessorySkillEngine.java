@@ -26,6 +26,7 @@ public final class AccessorySkillEngine {
     private final NamespacedKey dunItemSig;
     private final Map<String, List<SkillEntry>> skillsByItemId = new HashMap<>();
     private final Map<UUID, PlayerLoadout> loadouts = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<Integer, Integer>> accessorySlotSnapshots = new ConcurrentHashMap<>();
     private final Set<UUID> shootHandledProjectiles = ConcurrentHashMap.newKeySet();
 
     private int skillSignature = 1;
@@ -95,6 +96,7 @@ public final class AccessorySkillEngine {
 
     public void onQuit(Player player) {
         loadouts.remove(player.getUniqueId());
+        accessorySlotSnapshots.remove(player.getUniqueId());
     }
 
     public void refreshFromStored(Player player) {
@@ -124,8 +126,16 @@ public final class AccessorySkillEngine {
         Set<String> equippedItemIds = new LinkedHashSet<>();
         List<TimerEntry> timers = new ArrayList<>();
 
+        Map<Integer, Integer> previousSnapshot = accessorySlotSnapshots.get(player.getUniqueId());
+        Map<Integer, Integer> currentSnapshot = new HashMap<>();
+
         for (int slot = 0; slot < inv.getSize(); slot++) {
+            if (!isAccessorySlot(slot)) continue;
+
             ItemStack item = inv.getItem(slot);
+            int itemHash = item == null ? 0 : item.hashCode();
+            currentSnapshot.put(slot, itemHash);
+
             if (item == null || item.getType().isAir()) continue;
 
             String itemId = resolveItemId(item);
@@ -134,8 +144,10 @@ public final class AccessorySkillEngine {
             if (entries == null || entries.isEmpty()) continue;
 
             equippedItemIds.add(itemId);
-            stampItem(item, itemId);
-            inv.setItem(slot, item);
+
+            if (slotChanged(previousSnapshot, slot, itemHash) && stampItem(item, itemId)) {
+                inv.setItem(slot, item);
+            }
 
             for (SkillEntry entry : entries) {
                 TargetType target = entry.target() == null ? TargetType.defaultFor(entry.trigger()) : entry.target();
@@ -151,7 +163,19 @@ public final class AccessorySkillEngine {
             }
         }
 
+        accessorySlotSnapshots.put(player.getUniqueId(), currentSnapshot);
         loadouts.put(player.getUniqueId(), new PlayerLoadout(equippedItemIds, byTrigger, timers));
+    }
+
+    private boolean isAccessorySlot(int slot) {
+        return plugin.getConfig().isConfigurationSection("Accessory." + slot)
+                && (plugin.service() == null || !plugin.service().isSlotDisabled(slot));
+    }
+
+    private boolean slotChanged(Map<Integer, Integer> previousSnapshot, int slot, int currentHash) {
+        if (previousSnapshot == null) return false;
+        Integer previousHash = previousSnapshot.get(slot);
+        return previousHash == null || previousHash != currentHash;
     }
 
     private String resolveItemId(ItemStack item) {
@@ -170,9 +194,9 @@ public final class AccessorySkillEngine {
         return null;
     }
 
-    private void stampItem(ItemStack item, String itemId) {
+    private boolean stampItem(ItemStack item, String itemId) {
         ItemMeta meta = item.getItemMeta();
-        if (meta == null) return;
+        if (meta == null) return false;
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
         boolean dirty = false;
@@ -186,6 +210,7 @@ public final class AccessorySkillEngine {
             dirty = true;
         }
         if (dirty) item.setItemMeta(meta);
+        return dirty;
     }
 
     public void triggerAttack(Player caster, Entity victim) {
