@@ -23,8 +23,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class AccessorySkillEngine {
 
     private final Accessory plugin;
-    private final NamespacedKey dunItemId;
-    private final NamespacedKey dunItemSig;
+    private final NamespacedKey accItemId;
+    private final NamespacedKey accItemVersion;
+    private final NamespacedKey legacyDunItemId;
     private final Map<String, List<SkillEntry>> skillsByItemId = new HashMap<>();
     private final Map<String, String> itemIdByName = new HashMap<>();
     private final Map<UUID, PlayerLoadout> loadouts = new ConcurrentHashMap<>();
@@ -36,8 +37,9 @@ public final class AccessorySkillEngine {
 
     public AccessorySkillEngine(Accessory plugin) {
         this.plugin = plugin;
-        this.dunItemId = new NamespacedKey(plugin, "dun_item_id");
-        this.dunItemSig = new NamespacedKey(plugin, "dun_item_sig");
+        this.accItemId = new NamespacedKey(plugin, "acc_item_id");
+        this.accItemVersion = new NamespacedKey(plugin, "acc_item_version");
+        this.legacyDunItemId = new NamespacedKey(plugin, "dun_item_id");
     }
 
     public void loadConfig() {
@@ -193,6 +195,17 @@ public final class AccessorySkillEngine {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return null;
 
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        String pdcItemId = pdc.get(accItemId, PersistentDataType.STRING);
+        if (pdcItemId != null && !pdcItemId.isBlank()) {
+            return pdcItemId;
+        }
+
+        String legacyItemId = pdc.get(legacyDunItemId, PersistentDataType.STRING);
+        if (legacyItemId != null && !legacyItemId.isBlank()) {
+            return legacyItemId;
+        }
+
         String displayName = meta.hasDisplayName() ? meta.getDisplayName() : null;
         if (displayName == null || displayName.isBlank()) return null;
 
@@ -200,7 +213,8 @@ public final class AccessorySkillEngine {
     }
 
     private String normalizeItemName(String raw) {
-        return ChatColor.stripColor(raw == null ? "" : raw).trim();
+        String noColor = ChatColor.stripColor(raw == null ? "" : raw);
+        return noColor.replaceAll("<[^>]*>", "").trim();
     }
 
     private boolean stampItem(ItemStack item, String itemId) {
@@ -209,13 +223,13 @@ public final class AccessorySkillEngine {
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
         boolean dirty = false;
-        if (!itemId.equals(pdc.get(dunItemId, PersistentDataType.STRING))) {
-            pdc.set(dunItemId, PersistentDataType.STRING, itemId);
+        if (!itemId.equals(pdc.get(accItemId, PersistentDataType.STRING))) {
+            pdc.set(accItemId, PersistentDataType.STRING, itemId);
             dirty = true;
         }
-        Integer sig = pdc.get(dunItemSig, PersistentDataType.INTEGER);
+        Integer sig = pdc.get(accItemVersion, PersistentDataType.INTEGER);
         if (sig == null || sig != skillSignature) {
-            pdc.set(dunItemSig, PersistentDataType.INTEGER, skillSignature);
+            pdc.set(accItemVersion, PersistentDataType.INTEGER, skillSignature);
             dirty = true;
         }
         if (dirty) item.setItemMeta(meta);
@@ -226,8 +240,8 @@ public final class AccessorySkillEngine {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return false;
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
-        String currentId = pdc.get(dunItemId, PersistentDataType.STRING);
-        Integer currentSig = pdc.get(dunItemSig, PersistentDataType.INTEGER);
+        String currentId = pdc.get(accItemId, PersistentDataType.STRING);
+        Integer currentSig = pdc.get(accItemVersion, PersistentDataType.INTEGER);
         return !itemId.equals(currentId) || currentSig == null || currentSig != skillSignature;
     }
 
