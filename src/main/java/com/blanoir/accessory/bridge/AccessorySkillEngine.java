@@ -140,12 +140,14 @@ public final class AccessorySkillEngine {
 
             String itemId = resolveItemId(item);
             if (itemId == null || itemId.isBlank()) continue;
+            debug("识别到饰品物品: player=" + player.getName() + ", slot=" + slot + ", itemId=" + itemId);
             List<SkillEntry> entries = skillsByItemId.get(itemId);
             if (entries == null || entries.isEmpty()) continue;
 
             equippedItemIds.add(itemId);
 
             if (slotChanged(previousSnapshot, slot, itemHash) && stampItem(item, itemId)) {
+                debug("饰品写入 PDC 成功: player=" + player.getName() + ", slot=" + slot + ", itemId=" + itemId + ", signature=" + skillSignature);
                 inv.setItem(slot, item);
             }
 
@@ -268,6 +270,11 @@ public final class AccessorySkillEngine {
                 meta.setEntityTarget(BukkitAdapter.adapt(target));
             }
         });
+    }
+
+    private void debug(String message) {
+        if (!plugin.getConfig().getBoolean("skill-debug", false)) return;
+        plugin.getLogger().info("[SkillDebug] " + message);
     }
 
     private record PlayerLoadout(Set<String> equippedItemIds,
