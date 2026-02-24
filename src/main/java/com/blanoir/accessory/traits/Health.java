@@ -4,6 +4,7 @@ import com.blanoir.accessory.attributeload.CustomTraits;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.bukkit.BukkitTraitHandler;
 import dev.aurelium.auraskills.api.trait.Trait;
+import dev.aurelium.auraskills.api.trait.TraitModifier;
 import dev.aurelium.auraskills.api.user.SkillsUser;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -48,12 +49,36 @@ public class Health implements BukkitTraitHandler, Listener {
         AttributeInstance maxHealth = player.getAttribute(Attribute.MAX_HEALTH);
         if (maxHealth == null) return;
 
-        double extra = user.getEffectiveTraitLevel(CustomTraits.HEALTH);
-        double target = Math.max(1.0, 20.0 + extra);
+        double baseMax = maxHealth.getDefaultValue() > 0 ? maxHealth.getDefaultValue() : 20.0;
+        double oldMax = Math.max(1.0, maxHealth.getBaseValue());
+        double oldCurrent = player.getHealth();
 
-        maxHealth.setBaseValue(target);
-        if (player.getHealth() > target) {
-            player.setHealth(target);
+        double add = 0.0;
+        double multiply = 1.0;
+        double addPercent = 0.0;
+
+        for (TraitModifier modifier : user.getTraitModifiers().values()) {
+            if (!modifier.trait().equals(CustomTraits.HEALTH)) continue;
+
+            double value = modifier.value();
+            String op = modifier.operation().name();
+            if ("MULTIPLY".equals(op)) {
+                multiply *= value;
+            } else if ("ADD_PERCENT".equals(op)) {
+                addPercent += value;
+            } else {
+                add += value;
+            }
         }
+
+        double factor = multiply * (1.0 + addPercent);
+        double newMax = Math.max(1.0, (baseMax + add) * factor);
+        maxHealth.setBaseValue(newMax);
+
+        double newCurrent = (oldCurrent + add) * factor;
+        if (oldMax > 0 && add == 0.0 && factor != 1.0) {
+            newCurrent = oldCurrent * (newMax / oldMax);
+        }
+        player.setHealth(Math.max(0.0, Math.min(newCurrent, newMax)));
     }
 }
