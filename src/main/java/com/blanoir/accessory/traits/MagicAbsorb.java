@@ -65,7 +65,7 @@ public class MagicAbsorb implements BukkitTraitHandler, Listener {
 
                     long lastHit = lastDamageTime.getOrDefault(uuid, 0L);
                     if (System.currentTimeMillis() - lastHit > OUT_OF_COMBAT_SECONDS * 1000L) {
-                        if (!player.getScoreboardTags().contains("acc_nomabsorb")) {
+                        if (!player.getScoreboardTags().contains("nomabsorb")) {
                         regenShield(player);
                         }
                     }

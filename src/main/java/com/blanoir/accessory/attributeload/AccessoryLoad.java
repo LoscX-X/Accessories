@@ -17,11 +17,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class AccessoryLoad {
 
@@ -31,6 +34,7 @@ public class AccessoryLoad {
     // 我们写入玩家 AttributeModifier 的 key path 前缀（用于清理）
     // 实际存储为：<pluginNamespace>:accessory/slotX/...
     private static final String ATTR_PATH_PREFIX = "accessory/";
+    private static final String PLAYER_TAGS_PDC_KEY = "applied_tags";
 
     private final JavaPlugin plugin;
     private final AuraSkillsApi api;
@@ -56,12 +60,10 @@ public class AccessoryLoad {
         // 2) 清除旧 accessory AttributeModifier（我们自己加的）
         clearAccessoryAttributes(p);
 
-        // 3) 清除旧 tag
-        for (String t : new ArrayList<>(p.getScoreboardTags())) {
-            if (t.startsWith("acc_")) {
-                p.removeScoreboardTag(t);
-            }
-        }
+        // 3) 清除旧 tag（仅清除本插件上次应用的）
+        clearAppliedTags(p);
+
+        Set<String> currentTags = new LinkedHashSet<>();
 
         // 4) 循环物品：Trait + Attribute + Tags
         for (int slot = 0; slot < inv.getSize(); slot++) {
@@ -80,8 +82,38 @@ public class AccessoryLoad {
             // ③ Lore Tags
             for (String tag : parseTags(item)) {
                 p.addScoreboardTag(tag);
+                currentTags.add(tag);
             }
         }
+
+        saveAppliedTags(p, currentTags);
+    }
+
+    private void clearAppliedTags(Player p) {
+        NamespacedKey key = new NamespacedKey(plugin, PLAYER_TAGS_PDC_KEY);
+        String raw = p.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+        if (raw == null || raw.isBlank()) return;
+
+        for (String tag : raw.split("\\n")) {
+            String cleaned = tag.trim();
+            if (!cleaned.isEmpty()) {
+                p.removeScoreboardTag(cleaned);
+            }
+        }
+    }
+
+    private void saveAppliedTags(Player p, Set<String> tags) {
+        NamespacedKey key = new NamespacedKey(plugin, PLAYER_TAGS_PDC_KEY);
+        if (tags.isEmpty()) {
+            p.getPersistentDataContainer().remove(key);
+            return;
+        }
+
+        p.getPersistentDataContainer().set(
+                key,
+                PersistentDataType.STRING,
+                String.join("\n", tags)
+        );
     }
 
     private void applyAll(SkillsUser user, List<TraitModifier> mods, int slot) {
@@ -166,15 +198,8 @@ public class AccessoryLoad {
     private List<String> parseTags(ItemStack item) {
         List<String> lore = LoreUtils.plainLore(item);
         List<String> out = new ArrayList<>();
-        boolean inTags = false;
-
         for (String line : lore) {
             line = line.trim();
-            if (line.equalsIgnoreCase("tags:")) {
-                inTags = true;
-                continue;
-            }
-            if (!inTags) continue;
 
             int start = 0;
             while (true) {
@@ -185,7 +210,7 @@ public class AccessoryLoad {
 
                 String tag = line.substring(l + 1, r).trim();
                 if (!tag.isEmpty()) {
-                    out.add("acc_" + tag);
+                    out.add(tag);
                 }
                 start = r + 1;
             }

@@ -58,7 +58,7 @@ public class Absorb implements BukkitTraitHandler, Listener {
                     // 脱战且未满护盾 → 恢复逻辑
                     long lastHit = lastDamageTime.getOrDefault(uuid, 0L);
                     if (System.currentTimeMillis() - lastHit > OUT_OF_COMBAT_SECONDS * 1000L) {
-                        if (!player.getScoreboardTags().contains("acc_noabsorb")){
+                        if (!player.getScoreboardTags().contains("noabsorb")){
                             regenShield(player);
                         }
                     }
