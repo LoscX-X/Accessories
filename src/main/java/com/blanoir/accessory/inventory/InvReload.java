@@ -18,7 +18,11 @@ import java.util.List;
 
 public class InvReload implements CommandExecutor {
     private final Accessory plugin;
-    public InvReload(Accessory plugin) { this.plugin = plugin; }
+    private final AccessoryLoad accessoryLoad;
+    public InvReload(Accessory plugin) {
+        this.plugin = plugin;
+        this.accessoryLoad = new AccessoryLoad(plugin);
+    }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -41,10 +45,34 @@ public class InvReload implements CommandExecutor {
         plugin.lang().reload();
         plugin.skillEngine().loadConfig();
         for (Player online : Bukkit.getOnlinePlayers()) {
-            plugin.skillEngine().refreshFromStored(online);
+            Inventory stored = loadStoredInventory(online, accessorySize());
+            this.accessoryLoad.rebuildFromInventory(online, stored);
+            plugin.skillEngine().refreshPlayer(online, stored);
         }
         sender.sendMessage(plugin.lang().lang("Reload_success"));
         return true;
+    }
+
+    private Inventory loadStoredInventory(Player player, int size) {
+        Inventory tmp = Bukkit.createInventory(null, size);
+        File file = new File(plugin.getDataFolder(), "contains/" + player.getUniqueId() + ".yml");
+        if (!file.exists()) {
+            return tmp;
+        }
+
+        YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
+        List<?> raw = cfg.getList("contents");
+        if (raw == null || raw.isEmpty()) {
+            return tmp;
+        }
+
+        for (int i = 0; i < Math.min(size, raw.size()); i++) {
+            Object it = raw.get(i);
+            if (it instanceof org.bukkit.inventory.ItemStack stack) {
+                tmp.setItem(i, stack);
+            }
+        }
+        return tmp;
     }
 
     private boolean handleClear(CommandSender sender, String[] args) {
