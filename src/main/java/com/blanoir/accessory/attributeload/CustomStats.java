@@ -11,6 +11,7 @@ public class CustomStats {
             .builder(NamespacedId.of("accessory", "custom_stat"))
                     .trait(CustomTraits.HEAL_REGENERATION, 0.001)
                     .trait(CustomTraits.DEFENCE, 0.001)
+                    .trait(CustomTraits.HEALTH, 0.001)
                     .displayName("custom_stat")
                     .description("this used to load the stats automaticlly.")
                     .color("<green>")
