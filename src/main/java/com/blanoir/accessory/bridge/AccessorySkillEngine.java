@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.ChatColor;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -25,6 +26,7 @@ public final class AccessorySkillEngine {
     private final NamespacedKey dunItemId;
     private final NamespacedKey dunItemSig;
     private final Map<String, List<SkillEntry>> skillsByItemId = new HashMap<>();
+    private final Map<String, String> itemIdByName = new HashMap<>();
     private final Map<UUID, PlayerLoadout> loadouts = new ConcurrentHashMap<>();
     private final Map<UUID, Map<Integer, Integer>> accessorySlotSnapshots = new ConcurrentHashMap<>();
     private final Set<UUID> shootHandledProjectiles = ConcurrentHashMap.newKeySet();
@@ -40,6 +42,7 @@ public final class AccessorySkillEngine {
 
     public void loadConfig() {
         skillsByItemId.clear();
+        itemIdByName.clear();
         File file = new File(plugin.getDataFolder(), "skill.yml");
         YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
         this.skillSignature = Math.max(1, cfg.getInt("signature", 1));
@@ -48,6 +51,11 @@ public final class AccessorySkillEngine {
         if (items == null) return;
 
         for (String itemId : items.getKeys(false)) {
+            String itemName = Objects.toString(cfg.getString("items." + itemId + ".name"), itemId).trim();
+            if (!itemName.isEmpty()) {
+                itemIdByName.put(normalizeItemName(itemName), itemId);
+            }
+
             List<?> raw = cfg.getList("items." + itemId + ".skills");
             if (raw == null || raw.isEmpty()) continue;
 
@@ -184,17 +192,15 @@ public final class AccessorySkillEngine {
     private String resolveItemId(ItemStack item) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return null;
-        PersistentDataContainer pdc = meta.getPersistentDataContainer();
 
-        String id = pdc.get(dunItemId, PersistentDataType.STRING);
-        if (id != null && skillsByItemId.containsKey(id)) return id;
+        String displayName = meta.hasDisplayName() ? meta.getDisplayName() : null;
+        if (displayName == null || displayName.isBlank()) return null;
 
-        for (NamespacedKey key : pdc.getKeys()) {
-            if (!key.getKey().endsWith("item_id")) continue;
-            String val = pdc.get(key, PersistentDataType.STRING);
-            if (val != null && skillsByItemId.containsKey(val)) return val;
-        }
-        return null;
+        return itemIdByName.get(normalizeItemName(displayName));
+    }
+
+    private String normalizeItemName(String raw) {
+        return ChatColor.stripColor(raw == null ? "" : raw).trim();
     }
 
     private boolean stampItem(ItemStack item, String itemId) {
