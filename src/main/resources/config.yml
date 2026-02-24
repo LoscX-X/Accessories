@@ -1,29 +1,36 @@
-#the title of the gui
+# GUI title shown at the top of the accessory inventory.
 title: "<gradient:#00ffa6:#00d1ff><b>Accessories</b></gradient>"
 
-#from 9-54
+# GUI size in slots. Must be a multiple of 9 (minimum 9, maximum 54).
 size: 9
 
-Lang: en_US
+# Language file name in /plugins/Accessory/Language without extension.
+# Available by default: en_US, zh_CN
+Lang: "en_US"
 
-# Enable console debug logs for accessory skill recognition and PDC write.
+# Enable detailed debug logs for accessory skill recognition and PDC writes.
 skill-debug: false
 
+# Slot rules: each slot index maps to lore keywords required for allowed items.
+# Matching is case-insensitive.
 Accessory:
   "1":
-    lore: ["[Ring]"]
+    lore:
+      - "[Ring]"
   "3":
-    lore: ["[Necklace]"]
+    lore:
+      - "[Necklace]"
   "5":
-    lore: ["[Bracelet]"]
+    lore:
+      - "[Bracelet]"
   "7":
-    lore: ["[Talisman]"]
-  #"num":
-    #lore: ["[MORE]"]
+    lore:
+      - "[Talisman]"
+  # "slot_index":
+  #   lore:
+  #     - "[CustomKeyword]"
 
-#As this config it will check weather the item lore has the content like [RING]
-
-#locked slot
+# Locked slot frame style.
 frame:
   slots: [0, 2, 4, 6, 8]
   item:
@@ -34,22 +41,22 @@ frame:
     lore:
       - "<dark_gray>Slot is locked"
 
-# Runtime-disabled slots UI (controlled by AccessoryService API)
+# Style for slots disabled at runtime via AccessoryService API.
 disabled-slot:
   item:
     type: "RED_STAINED_GLASS_PANE"
     hide-tooltip: true
     name: "<red>Slot Disabled"
     lore:
-      - "<dark_red>This slot is disabled by external plugin"
+      - "<dark_red>This slot is disabled by an external plugin"
 
-
+# Display combat life-steal debug demonstration values.
 Life_Steal_demonstrate: false
 
+# Physical shield regeneration settings.
 OUT_OF_COMBAT_SECONDS: 12
-
 SHIELD_REGEN_PERCENT: 0.10
 
+# Magic shield regeneration settings.
 MAGIC_SHIELD_OUT_OF_COMBAT_SECONDS: 12
-
 MAGIC_SHIELD_REGEN_PERCENT: 0.10
