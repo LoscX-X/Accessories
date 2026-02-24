@@ -37,7 +37,8 @@ public class InvCreate implements InventoryHolder {
         applyFrames();
     }
 
-    @Override public Inventory getInventory() { return this.inventory; }
+    @Override
+    public Inventory getInventory() { return this.inventory; }
 
     public void applyFrames() {
         ItemStack pane = makeLockedItemFromConfig();

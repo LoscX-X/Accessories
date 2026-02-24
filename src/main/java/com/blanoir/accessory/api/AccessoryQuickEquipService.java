@@ -34,7 +34,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
     /** 给 KeyEvent / 右键 调用：尝试把主手物品穿戴到饰品槽 */
     public boolean tryEquipMainHand(Player p) {
         ItemStack hand = p.getInventory().getItemInMainHand();
-        if (hand == null || hand.getType().isAir()) return false;
+        if (hand.getType().isAir()) return false;
 
         int slot = findAccessorySlot(hand);
         if (slot == -1) return false;
@@ -60,7 +60,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
 
         // 2) 放入新饰品（只放 1 个）
         ItemStack hand = p.getInventory().getItemInMainHand();
-        if (hand == null || hand.getType().isAir()) return false;
+        if (hand.getType().isAir()) return false;
 
         ItemStack placed = hand.clone();
         placed.setAmount(1);
