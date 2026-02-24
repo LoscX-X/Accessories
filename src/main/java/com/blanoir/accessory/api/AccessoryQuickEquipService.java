@@ -94,6 +94,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
         Inventory tmp = Bukkit.createInventory(null, size);
         tmp.setContents(contents.clone());
         accessoryLoad.rebuildFromInventory(p, tmp);
+        plugin.skillEngine().refreshPlayer(p, tmp);
 
         // 7) 反馈
         p.sendActionBar(plugin.lang().lang("Accessory_equipped"));

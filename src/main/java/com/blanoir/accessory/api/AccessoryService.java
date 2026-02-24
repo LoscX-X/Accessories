@@ -83,6 +83,7 @@ public final class AccessoryService {
             clearOpenAccessoryInventory(online);
             Inventory empty = Bukkit.createInventory((InventoryHolder) null, accessorySize());
             new AccessoryLoad(plugin).rebuildFromInventory(online, empty);
+            plugin.skillEngine().refreshPlayer(online, empty);
         }
         return true;
     }
