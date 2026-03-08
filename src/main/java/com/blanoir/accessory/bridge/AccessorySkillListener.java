@@ -32,8 +32,16 @@ public final class AccessorySkillListener implements Listener {
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void onAttack(EntityDamageByEntityEvent event) {
-        Player attacker = playerFromDamager(event.getDamager());
-        if (attacker == null) return;
+
+        var cause = event.getCause();
+        if (cause != EntityDamageEvent.DamageCause.ENTITY_ATTACK
+                && cause != EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK) {
+            return;
+        }
+
+        // damager 本体为玩家
+        if (!(event.getDamager() instanceof Player attacker)) return;
+
         plugin.skillEngine().triggerAttack(attacker, event.getEntity());
     }
 
