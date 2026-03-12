@@ -2,8 +2,7 @@ name: Accessory
 version: '2.0.0'
 main: com.blanoir.accessory.Accessory
 api-version: '1.21'
-depend: [AuraSkills]
-softdepend: [PlaceholderAPI, KeyBind, MythicMobs]
+softdepend: [AuraSkills, PlaceholderAPI, KeyBind, MythicMobs]
 commands:
   shield:
     description: 调整当前物理护盾（不改上限）

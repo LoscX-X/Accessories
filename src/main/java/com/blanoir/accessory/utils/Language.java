@@ -1,5 +1,7 @@
 package com.blanoir.accessory.utils;
 
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -13,6 +15,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public final class Language {
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.legacySection();
+
     private final JavaPlugin plugin;
     private static final String SUBFOLDER = "Language"; // 改成 "Language" 也行，和你的资源目录保持一致
 
@@ -81,7 +86,16 @@ public final class Language {
     }
 
     private static String colorize(String s) {
-        return ChatColor.translateAlternateColorCodes('&', s == null ? "" : s);
+        String raw = s == null ? "" : s;
+        String legacy = ChatColor.translateAlternateColorCodes('&', raw);
+        if (!raw.contains("<") || !raw.contains(">")) {
+            return legacy;
+        }
+        try {
+            return LEGACY_SERIALIZER.serialize(MINI_MESSAGE.deserialize(raw));
+        } catch (Exception ignored) {
+            return legacy;
+        }
     }
     private static List<String> colorize(List<String> src) {
         List<String> out = new ArrayList<>(src.size());
