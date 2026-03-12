@@ -45,13 +45,12 @@ public final class Accessory extends JavaPlugin {
         initSkillConfigs();
         this.skillEngine.loadConfig();
 
-        AuraSkillsApi api = AuraSkillsApi.get();
-        var bundle = initAuraSkills(api);
+        AuraBundle bundle = initAuraSkillsSafe();
 
         startTasks(bundle);
         this.skillEngine.startTimer();
 
-        hookPlaceholderApi(bundle.absorb(),bundle.ms());
+        hookPlaceholderApi(bundle);
         hookKeyBind();
         this.accessoryService = new AccessoryService(this);
         getServer().getPluginManager().registerEvents(new MythicBridgeListener(this), this);
@@ -108,6 +107,24 @@ public final class Accessory extends JavaPlugin {
         }
     }
 
+    private AuraBundle initAuraSkillsSafe() {
+        if (Bukkit.getPluginManager().getPlugin("AuraSkills") == null) {
+            getLogger().warning("[Accessory] AuraSkills not found, using vanilla item attributes only.");
+            return AuraBundle.disabled();
+        }
+        try {
+            AuraSkillsApi api = AuraSkillsApi.get();
+            if (api == null) {
+                getLogger().warning("[Accessory] AuraSkills API unavailable, using vanilla item attributes only.");
+                return AuraBundle.disabled();
+            }
+            return initAuraSkills(api);
+        } catch (Throwable t) {
+            getLogger().warning("[Accessory] AuraSkills hook failed, using vanilla item attributes only: " + t.getClass().getSimpleName());
+            return AuraBundle.disabled();
+        }
+    }
+
     private AuraBundle initAuraSkills(AuraSkillsApi api) {
         var registry = api.useRegistry("accessory", getDataFolder());
 
@@ -158,18 +175,23 @@ public final class Accessory extends JavaPlugin {
     }
 
     private void startTasks(AuraBundle bundle) {
-        bundle.hr().startTask();
-
+        if (bundle.hr() != null) {
+            bundle.hr().startTask();
+        }
     }
 
-    private void hookPlaceholderApi(Absorb absorb, MagicAbsorb magicAbsorb) {
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            new AbsorbPlaceholder(absorb).register();
-            new MagicAbsorbPlaceholder(magicAbsorb).register();
-            getLogger().info("PlaceholderAPI expansions registered!");
-        } else {
+    private void hookPlaceholderApi(AuraBundle bundle) {
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null) {
             getLogger().warning("PlaceholderAPI not found! Placeholders will not work!");
+            return;
         }
+        if (bundle.absorb() == null || bundle.ms() == null) {
+            getLogger().warning("[Accessory] AuraSkills unavailable, skip Absorb placeholders.");
+            return;
+        }
+        new AbsorbPlaceholder(bundle.absorb()).register();
+        new MagicAbsorbPlaceholder(bundle.ms()).register();
+        getLogger().info("PlaceholderAPI expansions registered!");
     }
 
 
@@ -188,5 +210,9 @@ public final class Accessory extends JavaPlugin {
 
 
     // 只收纳你后续还要用到的对象（避免全局字段乱飘）
-    private record AuraBundle(HealRegeneration hr, Absorb absorb, MagicAbsorb ms) {}
+    private record AuraBundle(HealRegeneration hr, Absorb absorb, MagicAbsorb ms) {
+        private static AuraBundle disabled() {
+            return new AuraBundle(null, null, null);
+        }
+    }
 }
