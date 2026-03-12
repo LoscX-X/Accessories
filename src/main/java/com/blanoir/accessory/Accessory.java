@@ -89,7 +89,7 @@ public final class Accessory extends JavaPlugin {
         if (!skillFolder.exists()) {
             skillFolder.mkdirs();
         }
-        saveResource("skill.yml", false);
+        saveResource("skill/skill.yml", false);
         saveResource("skill/example.yml", false);
     }
 

@@ -86,7 +86,7 @@ public final class AccessorySkillEngine {
     private List<YamlConfiguration> collectSkillConfigs() {
         List<YamlConfiguration> configs = new ArrayList<>();
 
-        File rootFile = new File(plugin.getDataFolder(), "skill.yml");
+        File rootFile = new File(plugin.getDataFolder(), "skill/skill.yml");
         if (rootFile.exists()) {
             configs.add(YamlConfiguration.loadConfiguration(rootFile));
         }
