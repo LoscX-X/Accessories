@@ -1,0 +1,11 @@
+# skill 文件夹中的任意 *.yml 都会被自动加载（按文件名排序）。
+# 可以将不同装备、不同职业或不同主题技能拆分在多个配置文件中。
+signature: 1
+
+items:
+  example_necklace:
+    name: "&d示例项链"
+    skills:
+      - skill: ExampleDefenceSkill
+        trigger: onDamaged
+        target: self

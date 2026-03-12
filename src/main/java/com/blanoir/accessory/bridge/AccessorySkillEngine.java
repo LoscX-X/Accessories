@@ -45,39 +45,63 @@ public final class AccessorySkillEngine {
     public void loadConfig() {
         skillsByItemId.clear();
         itemIdByName.clear();
-        File file = new File(plugin.getDataFolder(), "skill.yml");
-        YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
-        this.skillSignature = Math.max(1, cfg.getInt("signature", 1));
 
-        ConfigurationSection items = cfg.getConfigurationSection("items");
-        if (items == null) return;
+        List<YamlConfiguration> skillConfigs = collectSkillConfigs();
+        int signature = 1;
 
-        for (String itemId : items.getKeys(false)) {
-            String itemName = Objects.toString(cfg.getString("items." + itemId + ".name"), itemId).trim();
-            if (!itemName.isEmpty()) {
-                itemIdByName.put(normalizeItemName(itemName), itemId);
-            }
+        for (YamlConfiguration cfg : skillConfigs) {
+            signature = Math.max(signature, cfg.getInt("signature", 1));
 
-            List<?> raw = cfg.getList("items." + itemId + ".skills");
-            if (raw == null || raw.isEmpty()) continue;
+            ConfigurationSection items = cfg.getConfigurationSection("items");
+            if (items == null) continue;
 
-            List<SkillEntry> parsed = new ArrayList<>();
-            for (Object one : raw) {
-                if (!(one instanceof Map<?, ?> m)) continue;
-                String skill = Objects.toString(m.get("skill"), "").trim();
-                TriggerType trigger = TriggerType.from(Objects.toString(m.get("trigger"), ""));
-                if (skill.isEmpty() || trigger == null) continue;
+            for (String itemId : items.getKeys(false)) {
+                String itemName = Objects.toString(cfg.getString("items." + itemId + ".name"), itemId).trim();
+                if (!itemName.isEmpty()) {
+                    itemIdByName.put(normalizeItemName(itemName), itemId);
+                }
 
-                int period = toInt(m.get("period"), 0);
-                TargetType target = TargetType.from(Objects.toString(m.get("target"), ""));
-                Object conditions = m.get("conditions");
-                parsed.add(new SkillEntry(skill, trigger, period, target, conditions));
-            }
+                List<?> raw = cfg.getList("items." + itemId + ".skills");
+                if (raw == null || raw.isEmpty()) continue;
 
-            if (!parsed.isEmpty()) {
-                skillsByItemId.put(itemId, List.copyOf(parsed));
+                List<SkillEntry> parsed = skillsByItemId.computeIfAbsent(itemId, key -> new ArrayList<>());
+                for (Object one : raw) {
+                    if (!(one instanceof Map<?, ?> m)) continue;
+                    String skill = Objects.toString(m.get("skill"), "").trim();
+                    TriggerType trigger = TriggerType.from(Objects.toString(m.get("trigger"), ""));
+                    if (skill.isEmpty() || trigger == null) continue;
+
+                    int period = toInt(m.get("period"), 0);
+                    TargetType target = TargetType.from(Objects.toString(m.get("target"), ""));
+                    Object conditions = m.get("conditions");
+                    parsed.add(new SkillEntry(skill, trigger, period, target, conditions));
+                }
             }
         }
+
+        this.skillSignature = signature;
+        skillsByItemId.replaceAll((itemId, entries) -> List.copyOf(entries));
+    }
+
+    private List<YamlConfiguration> collectSkillConfigs() {
+        List<YamlConfiguration> configs = new ArrayList<>();
+
+        File rootFile = new File(plugin.getDataFolder(), "skill.yml");
+        if (rootFile.exists()) {
+            configs.add(YamlConfiguration.loadConfiguration(rootFile));
+        }
+
+        File skillFolder = new File(plugin.getDataFolder(), "skill");
+        File[] ymlFiles = skillFolder.listFiles((dir, name) -> name.toLowerCase(Locale.ROOT).endsWith(".yml"));
+        if (ymlFiles == null || ymlFiles.length == 0) {
+            return configs;
+        }
+
+        Arrays.sort(ymlFiles, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
+        for (File ymlFile : ymlFiles) {
+            configs.add(YamlConfiguration.loadConfiguration(ymlFile));
+        }
+        return configs;
     }
 
     private int toInt(Object val, int def) {

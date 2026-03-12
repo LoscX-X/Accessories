@@ -1,11 +1,34 @@
+# 全局签名：用于标记当前技能配置版本。
+# 当签名变化时，插件会重新写入饰品物品上的 PDC 标记。
 signature: 1
 
+# items 下每个键为饰品唯一 ID。
+# 该 ID 需要与饰品识别逻辑（PDC dun_item_id / acc_item_id 或 name）匹配。
 items:
   example_ring:
+    # 可选：饰品显示名（用于通过物品名称兜底识别）
+    # 建议与游戏内显示名一致，可包含颜色代码。
+    name: "&b示例戒指"
+
+    # 该饰品拥有的技能列表（可配置多个）
     skills:
+      # skill: MythicMobs 技能名
+      # trigger: 触发方式
+      #   - onAttack: 玩家造成伤害时触发
+      #   - onDamaged: 玩家受伤时触发
+      #   - onInteract: 玩家交互时触发
+      #   - onKill: 玩家击杀实体时触发
+      #   - onShoot: 玩家发射投射物时触发
+      #   - onTimer: 周期触发
+      # target: 目标类型（不同 trigger 支持范围不同）
+      #   - self: 施法者自己
+      #   - targeted: 当前目标（例如攻击目标）
+      # period: 仅 onTimer 生效，单位 tick（20 tick = 1 秒）
+      # conditions: 预留字段，兼容后续扩展
       - skill: ExampleAttackSkill
         trigger: onAttack
         target: targeted
+
       - skill: ExampleTimerSkill
         trigger: onTimer
         period: 20
