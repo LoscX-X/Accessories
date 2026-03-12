@@ -42,7 +42,7 @@ public final class Accessory extends JavaPlugin {
         registerListeners();
 
         this.skillEngine = new AccessorySkillEngine(this);
-        saveResource("skill.yml", false);
+        initSkillConfigs();
         this.skillEngine.loadConfig();
 
         AuraSkillsApi api = AuraSkillsApi.get();
@@ -82,6 +82,15 @@ public final class Accessory extends JavaPlugin {
 
     private void initLang() {
         lang = new Language(this);
+    }
+
+    private void initSkillConfigs() {
+        File skillFolder = new File(getDataFolder(), "skill");
+        if (!skillFolder.exists()) {
+            skillFolder.mkdirs();
+        }
+        saveResource("skill.yml", false);
+        saveResource("skill/example.yml", false);
     }
 
     private void registerListeners() {
