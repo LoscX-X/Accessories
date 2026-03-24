@@ -3,7 +3,6 @@ package com.blanoir.accessory.bridge.aura;
 import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.attribute.aura.CustomStats;
 import com.blanoir.accessory.attribute.aura.CustomTraits;
-import com.blanoir.accessory.bridge.myhic.MmPlaceHolder;
 import com.blanoir.accessory.bridge.placeholder.AbsorbPlaceholder;
 import com.blanoir.accessory.bridge.placeholder.MagicAbsorbPlaceholder;
 import com.blanoir.accessory.command.ShieldCurCommand;
@@ -76,7 +75,7 @@ public final class AuraSkillsHook {
 
             plugin.getLogger().info("[Accessory][Aura] Step 5: registering Mythic placeholder bridge");
             if (Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
-                MmPlaceHolder.registerShieldPlaceholder(plugin, absorb);
+                tryRegisterMythicPlaceholder(absorb);
             } else {
                 plugin.getLogger().warning("[Accessory] MythicMobs not found, skip Mythic placeholder bridge.");
             }
@@ -112,6 +111,18 @@ public final class AuraSkillsHook {
                 cause.printStackTrace();
                 cause = cause.getCause();
             }
+        }
+    }
+
+    private void tryRegisterMythicPlaceholder(Absorb absorb) {
+        try {
+            Class<?> mmPlaceHolderClass = Class.forName("com.blanoir.accessory.bridge.myhic.MmPlaceHolder");
+            mmPlaceHolderClass
+                    .getMethod("registerShieldPlaceholder", org.bukkit.plugin.java.JavaPlugin.class, Absorb.class)
+                    .invoke(null, plugin, absorb);
+        } catch (Throwable t) {
+            plugin.getLogger().warning("[Accessory][Aura] Mythic placeholder bridge failed, AuraSkills traits remain enabled.");
+            t.printStackTrace();
         }
     }
 

@@ -202,13 +202,28 @@ public class Absorb implements BukkitTraitHandler, Listener {
     }
     private boolean hasMythicAura(Player player, String auraName) {
         try {
-            var am = io.lumine.mythic.bukkit.MythicBukkit.inst()
-                    .getSkillManager()
-                    .getAuraManager();
+            if (Bukkit.getPluginManager().getPlugin("MythicMobs") == null) {
+                return false;
+            }
 
-            var ae = io.lumine.mythic.bukkit.BukkitAdapter.adapt(player);
+            Class<?> mythicBukkitClass = Class.forName("io.lumine.mythic.bukkit.MythicBukkit");
+            Object mythicInstance = mythicBukkitClass.getMethod("inst").invoke(null);
+            Object skillManager = mythicInstance.getClass().getMethod("getSkillManager").invoke(mythicInstance);
+            Object auraManager = skillManager.getClass().getMethod("getAuraManager").invoke(skillManager);
 
-            return am.getHasAura(ae, auraName);
+            Class<?> bukkitAdapterClass = Class.forName("io.lumine.mythic.bukkit.BukkitAdapter");
+            Object abstractEntity = bukkitAdapterClass.getMethod("adapt", org.bukkit.entity.Entity.class).invoke(null, player);
+
+            for (var method : auraManager.getClass().getMethods()) {
+                if (!method.getName().equals("getHasAura")) continue;
+                Class<?>[] parameterTypes = method.getParameterTypes();
+                if (parameterTypes.length != 2) continue;
+                if (!parameterTypes[1].equals(String.class)) continue;
+                if (!parameterTypes[0].isAssignableFrom(abstractEntity.getClass())) continue;
+                Object hasAura = method.invoke(auraManager, abstractEntity, auraName);
+                return hasAura instanceof Boolean && (Boolean) hasAura;
+            }
+            return false;
 
         } catch (Throwable t) {
             // Mythic 没装 / 出错时保险
