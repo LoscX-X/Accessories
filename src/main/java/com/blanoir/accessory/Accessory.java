@@ -41,22 +41,23 @@ public final class Accessory extends JavaPlugin {
         registerCommands();
         registerListeners();
 
-        this.skillEngine = new AccessorySkillEngine(this);
-        initSkillConfigs();
-        this.skillEngine.loadConfig();
+        initMythicBridge();
 
         AuraBundle bundle = initAuraSkillsSafe();
 
         startTasks(bundle);
-        this.skillEngine.startTimer();
+        if (this.skillEngine != null) {
+            this.skillEngine.startTimer();
+        }
 
         hookPlaceholderApi(bundle);
         hookKeyBind();
         this.accessoryService = new AccessoryService(this);
-        getServer().getPluginManager().registerEvents(new MythicBridgeListener(this), this);
-        getServer().getPluginManager().registerEvents(new AccessorySkillListener(this), this);
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            this.skillEngine.refreshFromStored(online);
+        if (this.skillEngine != null) {
+            getServer().getPluginManager().registerEvents(new AccessorySkillListener(this), this);
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                this.skillEngine.refreshFromStored(online);
+            }
         }
 
     }
@@ -90,6 +91,19 @@ public final class Accessory extends JavaPlugin {
         }
         saveResource("skill/skill.yml", false);
         saveResource("skill/example.yml", false);
+    }
+
+    private void initMythicBridge() {
+        if (Bukkit.getPluginManager().getPlugin("MythicMobs") == null) {
+            getLogger().warning("[Accessory] MythicMobs not found, Mythic skill bridge disabled.");
+            this.skillEngine = null;
+            return;
+        }
+        this.skillEngine = new AccessorySkillEngine(this);
+        initSkillConfigs();
+        this.skillEngine.loadConfig();
+        getServer().getPluginManager().registerEvents(new MythicBridgeListener(this), this);
+        getLogger().info("[Accessory] MythicMobs hook enabled.");
     }
 
     private void registerListeners() {
@@ -156,7 +170,11 @@ public final class Accessory extends JavaPlugin {
             magicShieldCmd.setExecutor(exec);
             magicShieldCmd.setTabCompleter(exec);
         }
-        MmPlaceHolder.registerShieldPlaceholder(this, absorb);
+        if (Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
+            MmPlaceHolder.registerShieldPlaceholder(this, absorb);
+        } else {
+            getLogger().warning("[Accessory] MythicMobs not found, skip Mythic placeholder bridge.");
+        }
 
         var handlers = api.getHandlers();
         handlers.registerTraitHandler(ms);

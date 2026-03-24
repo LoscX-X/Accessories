@@ -64,7 +64,9 @@ public class InvListener implements Listener {
         Inventory top = view.getTopInventory();
         Bukkit.getScheduler().runTask(plugin, () -> {
             effects.rebuildFromInventory(p, top);
-            plugin.skillEngine().refreshPlayer(p, top);
+            if (plugin.skillEngine() != null) {
+                plugin.skillEngine().refreshPlayer(p, top);
+            }
         }); // 下一 tick
     }
 
