@@ -4,6 +4,7 @@ import com.blanoir.accessory.api.AccessoryService;
 import com.blanoir.accessory.bridge.MythicBridgeListener;
 import com.blanoir.accessory.bridge.AccessoryKeybindHook;
 import com.blanoir.accessory.bridge.AccessorySkillEngine;
+import com.blanoir.accessory.bridge.AuraSkillsHook;
 import com.blanoir.accessory.bridge.AccessorySkillListener;
 import com.blanoir.accessory.inventory.InvListener;
 import com.blanoir.accessory.inventory.InvReload;
@@ -21,7 +22,7 @@ public final class Accessory extends JavaPlugin {
     private File statsFile;
     private AccessoryService accessoryService;
     private AccessorySkillEngine skillEngine;
-    private AuraSkillsHook.HookBundle auraBundle = AuraSkillsHook.HookBundle.disabled();
+
 
     public Language lang() { return lang; }
     public AccessorySkillEngine skillEngine() { return skillEngine; }
