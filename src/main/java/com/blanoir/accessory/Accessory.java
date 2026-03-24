@@ -107,7 +107,7 @@ public final class Accessory extends JavaPlugin {
         try {
             new AuraSkillsHook(this).load();
         } catch (Throwable t) {
-            getLogger().warning("[Accessory] AuraSkills hook failed, using vanilla item attributes only: " + t.getClass().getSimpleName());
+            getLogger().warning("[Accessory] AuraSkills hook failed, using vanilla item attributes only.");
             t.printStackTrace();
         }
     }
