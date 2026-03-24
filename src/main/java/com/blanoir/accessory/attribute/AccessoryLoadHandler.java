@@ -1,4 +1,4 @@
-package com.blanoir.accessory.attributeload;
+package com.blanoir.accessory.attribute;
 
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;

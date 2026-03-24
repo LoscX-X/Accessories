@@ -1,7 +1,7 @@
 package com.blanoir.accessory.api;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.attributeload.AccessoryLoad;
+import com.blanoir.accessory.attribute.AccessoryLoad;
 import com.blanoir.accessory.inventory.InvCreate;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;

@@ -1,4 +1,4 @@
-package com.blanoir.accessory.attributeload;
+package com.blanoir.accessory.attribute.aura;
 
 import dev.aurelium.auraskills.api.registry.NamespacedId;
 import dev.aurelium.auraskills.api.trait.CustomTrait;

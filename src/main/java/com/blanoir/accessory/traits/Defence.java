@@ -1,6 +1,6 @@
 package com.blanoir.accessory.traits;
 
-import com.blanoir.accessory.attributeload.CustomTraits;
+import com.blanoir.accessory.attribute.aura.CustomTraits;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.bukkit.BukkitTraitHandler;
 import dev.aurelium.auraskills.api.trait.Trait;

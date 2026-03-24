@@ -2,7 +2,7 @@
 package com.blanoir.accessory.inventory;
 
 import com.blanoir.accessory.utils.LoreUtils;
-import com.blanoir.accessory.attributeload.AccessoryLoad;
+import com.blanoir.accessory.attribute.AccessoryLoad;
 import com.blanoir.accessory.events.AccessoryPlaceEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;

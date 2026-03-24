@@ -1,4 +1,4 @@
-package com.blanoir.accessory.utils;
+package com.blanoir.accessory.command;
 
 import com.blanoir.accessory.traits.Absorb;
 import org.bukkit.Bukkit;

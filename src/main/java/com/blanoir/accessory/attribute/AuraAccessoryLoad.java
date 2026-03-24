@@ -1,4 +1,4 @@
-package com.blanoir.accessory.attributeload;
+package com.blanoir.accessory.attribute;
 
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.AuraSkillsBukkit;

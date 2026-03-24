@@ -1,9 +1,8 @@
-package com.blanoir.accessory.attributeload;
+package com.blanoir.accessory.attribute.aura;
 
 import dev.aurelium.auraskills.api.item.ItemContext;
 import dev.aurelium.auraskills.api.registry.NamespacedId;
 import dev.aurelium.auraskills.api.stat.CustomStat;
-import dev.aurelium.auraskills.api.trait.Trait;
 
 public class CustomStats {
 

@@ -1,7 +1,7 @@
 package com.blanoir.accessory.api;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.attributeload.AccessoryLoad;
+import com.blanoir.accessory.attribute.AccessoryLoad;
 import com.blanoir.accessory.events.AccessoryPlaceEvent;
 import com.blanoir.accessory.utils.LoreUtils;
 import org.bukkit.Bukkit;

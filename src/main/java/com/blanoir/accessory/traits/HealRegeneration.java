@@ -1,13 +1,12 @@
 package com.blanoir.accessory.traits;
 
-import com.blanoir.accessory.attributeload.CustomTraits;
+import com.blanoir.accessory.attribute.aura.CustomTraits;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.bukkit.BukkitTraitHandler;
 import dev.aurelium.auraskills.api.trait.Trait;
 import dev.aurelium.auraskills.api.user.SkillsUser;
 import org.bukkit.Bukkit;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.metadata.FixedMetadataValue;

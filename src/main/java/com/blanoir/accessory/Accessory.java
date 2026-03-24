@@ -1,10 +1,10 @@
 package com.blanoir.accessory;
 
 import com.blanoir.accessory.api.AccessoryService;
-import com.blanoir.accessory.bridge.MythicBridgeListener;
+import com.blanoir.accessory.bridge.myhic.MythicBridgeListener;
 import com.blanoir.accessory.bridge.AccessoryKeybindHook;
 import com.blanoir.accessory.bridge.AccessorySkillEngine;
-import com.blanoir.accessory.bridge.AuraSkillsHook;
+import com.blanoir.accessory.bridge.aura.AuraSkillsHook;
 import com.blanoir.accessory.bridge.AccessorySkillListener;
 import com.blanoir.accessory.inventory.InvListener;
 import com.blanoir.accessory.inventory.InvReload;
@@ -96,19 +96,19 @@ public final class Accessory extends JavaPlugin {
 
     private void checkAndScheduleAuraHook() {
         if (Bukkit.getPluginManager().getPlugin("AuraSkills") == null) {
-            getLogger().warning("[Accessory] AuraSkills not found, using vanilla item attributes only.");
+            getLogger().warning("[Accessory] AuraSkills not found.");
             return;
         }
+
         Bukkit.getScheduler().runTask(this, this::initAuraHook);
     }
 
     private void initAuraHook() {
         try {
-            Class<?> hookClass = Class.forName("com.blanoir.accessory.bridge.AuraSkillsHook");
-            Object hook = hookClass.getConstructor(Accessory.class).newInstance(this);
-            hookClass.getMethod("load").invoke(hook);
+            new AuraSkillsHook(this).load();
         } catch (Throwable t) {
             getLogger().warning("[Accessory] AuraSkills hook failed, using vanilla item attributes only: " + t.getClass().getSimpleName());
+            t.printStackTrace();
         }
     }
 

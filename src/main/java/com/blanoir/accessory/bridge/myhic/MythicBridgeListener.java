@@ -1,4 +1,4 @@
-package com.blanoir.accessory.bridge;
+package com.blanoir.accessory.bridge.myhic;
 
 import io.lumine.mythic.bukkit.events.MythicMechanicLoadEvent;
 import org.bukkit.event.EventHandler;

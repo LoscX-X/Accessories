@@ -1,8 +1,7 @@
-package com.blanoir.accessory.bridge;
+package com.blanoir.accessory.bridge.myhic;
 import com.blanoir.accessory.traits.Absorb;
 import io.lumine.mythic.api.MythicProvider;
 import io.lumine.mythic.api.skills.placeholders.PlaceholderManager;
-import io.lumine.mythic.bukkit.BukkitAdapter;
 import io.lumine.mythic.core.skills.placeholders.Placeholder;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;

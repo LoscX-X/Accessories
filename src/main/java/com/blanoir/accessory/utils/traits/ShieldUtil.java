@@ -1,4 +1,4 @@
-package com.blanoir.accessory.utils;
+package com.blanoir.accessory.utils.traits;
 
 import org.bukkit.entity.Player;
 

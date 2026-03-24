@@ -1,4 +1,4 @@
-package com.blanoir.accessory.bridge;
+package com.blanoir.accessory.bridge.myhic;
 
 import io.lumine.mythic.api.adapters.AbstractEntity;
 import io.lumine.mythic.api.skills.ITargetedEntitySkill;

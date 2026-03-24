@@ -1,8 +1,9 @@
-package com.blanoir.accessory.bridge;
+package com.blanoir.accessory.bridge.aura;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.attributeload.CustomStats;
-import com.blanoir.accessory.attributeload.CustomTraits;
+import com.blanoir.accessory.attribute.aura.CustomStats;
+import com.blanoir.accessory.attribute.aura.CustomTraits;
+import com.blanoir.accessory.bridge.myhic.MmPlaceHolder;
 import com.blanoir.accessory.bridge.placeholder.AbsorbPlaceholder;
 import com.blanoir.accessory.bridge.placeholder.MagicAbsorbPlaceholder;
 import com.blanoir.accessory.traits.Absorb;
@@ -12,7 +13,7 @@ import com.blanoir.accessory.traits.HealRegeneration;
 import com.blanoir.accessory.traits.Health;
 import com.blanoir.accessory.traits.LifeSteal;
 import com.blanoir.accessory.traits.MagicAbsorb;
-import com.blanoir.accessory.utils.ShieldCurCommand;
+import com.blanoir.accessory.command.ShieldCurCommand;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import org.bukkit.Bukkit;
 

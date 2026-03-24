@@ -1,7 +1,7 @@
 package com.blanoir.accessory.inventory;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.attributeload.AccessoryLoad;
+import com.blanoir.accessory.attribute.AccessoryLoad;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.TabCompleter;
