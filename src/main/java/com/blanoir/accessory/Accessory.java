@@ -5,12 +5,9 @@ import com.blanoir.accessory.bridge.MythicBridgeListener;
 import com.blanoir.accessory.bridge.AccessoryKeybindHook;
 import com.blanoir.accessory.bridge.AccessorySkillEngine;
 import com.blanoir.accessory.bridge.AccessorySkillListener;
-import com.blanoir.accessory.bridge.AuraSkillsHook;
-import com.blanoir.accessory.bridge.placeholder.MagicAbsorbPlaceholder;
 import com.blanoir.accessory.inventory.InvListener;
 import com.blanoir.accessory.inventory.InvReload;
 import com.blanoir.accessory.inventory.InvSave;
-import com.blanoir.accessory.bridge.placeholder.AbsorbPlaceholder;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -99,17 +96,19 @@ public final class Accessory extends JavaPlugin {
     private void checkAndScheduleAuraHook() {
         if (Bukkit.getPluginManager().getPlugin("AuraSkills") == null) {
             getLogger().warning("[Accessory] AuraSkills not found, using vanilla item attributes only.");
-            this.auraBundle = AuraSkillsHook.HookBundle.disabled();
-            hookPlaceholderApi(this.auraBundle);
             return;
         }
         Bukkit.getScheduler().runTask(this, this::initAuraHook);
     }
 
     private void initAuraHook() {
-        this.auraBundle = new AuraSkillsHook(this).load();
-        startTasks(this.auraBundle);
-        hookPlaceholderApi(this.auraBundle);
+        try {
+            Class<?> hookClass = Class.forName("com.blanoir.accessory.bridge.AuraSkillsHook");
+            Object hook = hookClass.getConstructor(Accessory.class).newInstance(this);
+            hookClass.getMethod("load").invoke(hook);
+        } catch (Throwable t) {
+            getLogger().warning("[Accessory] AuraSkills hook failed, using vanilla item attributes only: " + t.getClass().getSimpleName());
+        }
     }
 
     private void registerListeners() {
@@ -126,28 +125,6 @@ public final class Accessory extends JavaPlugin {
             accessory.setTabCompleter(accessoryCmd);
         }
     }
-
-    private void startTasks(AuraSkillsHook.HookBundle bundle) {
-        if (bundle.hr() != null) {
-            bundle.hr().startTask();
-        }
-    }
-
-    private void hookPlaceholderApi(AuraSkillsHook.HookBundle bundle) {
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null) {
-            getLogger().warning("PlaceholderAPI not found! Placeholders will not work!");
-            return;
-        }
-        if (bundle.absorb() == null || bundle.ms() == null) {
-            getLogger().warning("[Accessory] AuraSkills unavailable, skip Absorb placeholders.");
-            return;
-        }
-        new AbsorbPlaceholder(bundle.absorb()).register();
-        new MagicAbsorbPlaceholder(bundle.ms()).register();
-        getLogger().info("PlaceholderAPI expansions registered!");
-    }
-
-
 
     private void hookKeyBind() {
         if (Bukkit.getPluginManager().getPlugin("KeyBind") != null) {

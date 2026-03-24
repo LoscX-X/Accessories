@@ -3,6 +3,8 @@ package com.blanoir.accessory.bridge;
 import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.attributeload.CustomStats;
 import com.blanoir.accessory.attributeload.CustomTraits;
+import com.blanoir.accessory.bridge.placeholder.AbsorbPlaceholder;
+import com.blanoir.accessory.bridge.placeholder.MagicAbsorbPlaceholder;
 import com.blanoir.accessory.traits.Absorb;
 import com.blanoir.accessory.traits.Defence;
 import com.blanoir.accessory.traits.HealRegDecrease;
@@ -22,12 +24,12 @@ public final class AuraSkillsHook {
         this.plugin = plugin;
     }
 
-    public HookBundle load() {
+    public void load() {
         try {
             AuraSkillsApi api = AuraSkillsApi.get();
             if (api == null) {
                 plugin.getLogger().warning("[Accessory] AuraSkills API unavailable, using vanilla item attributes only.");
-                return HookBundle.disabled();
+                return;
             }
 
             var registry = api.useRegistry("accessory", plugin.getDataFolder());
@@ -82,17 +84,22 @@ public final class AuraSkillsHook {
             plugin.getServer().getPluginManager().registerEvents(health, plugin);
             plugin.getServer().getPluginManager().registerEvents(dec, plugin);
 
+            hr.startTask();
+            hookPlaceholderApi(absorb, ms);
+
             plugin.getLogger().info("[Accessory] AuraSkills hook enabled (delayed init).");
-            return new HookBundle(hr, absorb, ms);
         } catch (Throwable t) {
             plugin.getLogger().warning("[Accessory] AuraSkills hook failed, using vanilla item attributes only: " + t.getClass().getSimpleName());
-            return HookBundle.disabled();
         }
     }
 
-    public record HookBundle(HealRegeneration hr, Absorb absorb, MagicAbsorb ms) {
-        public static HookBundle disabled() {
-            return new HookBundle(null, null, null);
+    private void hookPlaceholderApi(Absorb absorb, MagicAbsorb ms) {
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null) {
+            plugin.getLogger().warning("PlaceholderAPI not found! Placeholders will not work!");
+            return;
         }
+        new AbsorbPlaceholder(absorb).register();
+        new MagicAbsorbPlaceholder(ms).register();
+        plugin.getLogger().info("PlaceholderAPI expansions registered!");
     }
 }
