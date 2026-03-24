@@ -107,7 +107,6 @@ public final class AccessoryService {
 
     private void clearOpenAccessoryInventory(Player player) {
         InventoryView view = player.getOpenInventory();
-        if (view == null) return;
 
         InventoryHolder holder = view.getTopInventory().getHolder();
         if (holder instanceof InvCreate invHolder) {
@@ -120,7 +119,6 @@ public final class AccessoryService {
     public void refreshOpenAccessoryInventories() {
         for (Player online : Bukkit.getOnlinePlayers()) {
             InventoryView view = online.getOpenInventory();
-            if (view == null) continue;
 
             InventoryHolder holder = view.getTopInventory().getHolder();
             if (!(holder instanceof InvCreate invHolder)) continue;
@@ -135,4 +133,5 @@ public final class AccessoryService {
         size = Math.max(9, Math.min(54, size));
         return size - size % 9;
     }
+
 }
