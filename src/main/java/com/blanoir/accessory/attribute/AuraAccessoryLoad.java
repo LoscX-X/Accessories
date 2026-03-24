@@ -1,6 +1,7 @@
 package com.blanoir.accessory.attribute;
 
 import dev.aurelium.auraskills.api.AuraSkillsApi;
+import dev.aurelium.auraskills.api.AuraSkillsBukkit;
 import dev.aurelium.auraskills.api.item.ItemManager;
 import dev.aurelium.auraskills.api.item.ModifierType;
 import dev.aurelium.auraskills.api.trait.TraitModifier;
@@ -21,7 +22,7 @@ final class AuraAccessoryLoad extends BaseAccessoryLoad {
     AuraAccessoryLoad(JavaPlugin plugin, AuraSkillsApi api) {
         super(plugin);
         this.api = api;
-        this.itemManager = api.getItemManager();
+        this.itemManager = AuraSkillsBukkit.get().getItemManager();
     }
 
     @Override
