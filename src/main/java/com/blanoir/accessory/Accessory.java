@@ -21,6 +21,7 @@ public final class Accessory extends JavaPlugin {
     private File statsFile;
     private AccessoryService accessoryService;
     private AccessorySkillEngine skillEngine;
+    private AuraSkillsHook.HookBundle auraBundle = AuraSkillsHook.HookBundle.disabled();
 
     public Language lang() { return lang; }
     public AccessorySkillEngine skillEngine() { return skillEngine; }
