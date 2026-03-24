@@ -64,7 +64,9 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
 
         ItemStack placed = hand.clone();
         placed.setAmount(1);
-        plugin.skillEngine().stampKnownAccessoryItem(placed);
+        if (plugin.skillEngine() != null) {
+            plugin.skillEngine().stampKnownAccessoryItem(placed);
+        }
 
         AccessoryPlaceEvent placeEvent = new AccessoryPlaceEvent(
                 p,
@@ -95,7 +97,9 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
         Inventory tmp = Bukkit.createInventory(null, size);
         tmp.setContents(contents.clone());
         accessoryLoad.rebuildFromInventory(p, tmp);
-        plugin.skillEngine().refreshPlayer(p, tmp);
+        if (plugin.skillEngine() != null) {
+            plugin.skillEngine().refreshPlayer(p, tmp);
+        }
 
         // 7) 反馈
         p.sendActionBar(plugin.lang().lang("Accessory_equipped"));
@@ -108,7 +112,9 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
 
     /** lore -> 找到目标槽位：Accessory.<slot>.lore */
     public int findAccessorySlot(ItemStack item) {
-        plugin.skillEngine().stampKnownAccessoryItem(item);
+        if (plugin.skillEngine() != null) {
+            plugin.skillEngine().stampKnownAccessoryItem(item);
+        }
         List<String> lore = LoreUtils.plainLore(item);
         if (lore == null || lore.isEmpty()) return -1;
 
