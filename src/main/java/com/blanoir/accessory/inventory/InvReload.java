@@ -62,11 +62,15 @@ public class InvReload implements CommandExecutor, TabCompleter {
         }
         plugin.reloadConfig();
         plugin.lang().reload();
-        plugin.skillEngine().loadConfig();
+        if (plugin.skillEngine() != null) {
+            plugin.skillEngine().loadConfig();
+        }
         for (Player online : Bukkit.getOnlinePlayers()) {
             Inventory stored = loadStoredInventory(online, accessorySize());
             this.accessoryLoad.rebuildFromInventory(online, stored);
-            plugin.skillEngine().refreshPlayer(online, stored);
+            if (plugin.skillEngine() != null) {
+                plugin.skillEngine().refreshPlayer(online, stored);
+            }
         }
         sender.sendMessage(plugin.lang().lang("Reload_success"));
         return true;
@@ -118,7 +122,9 @@ public class InvReload implements CommandExecutor, TabCompleter {
             clearOpenAccessoryInventory(online);
             Inventory empty = Bukkit.createInventory(null, accessorySize());
             new AccessoryLoad(this.plugin).rebuildFromInventory(online, empty);
-            plugin.skillEngine().refreshPlayer(online, empty);
+            if (plugin.skillEngine() != null) {
+                plugin.skillEngine().refreshPlayer(online, empty);
+            }
         }
         sender.sendMessage(plugin.lang().lang("Clear_success"));
         return true;
