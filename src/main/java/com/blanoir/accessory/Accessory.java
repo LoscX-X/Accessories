@@ -1,21 +1,13 @@
 package com.blanoir.accessory;
 
 import com.blanoir.accessory.api.AccessoryService;
-import com.blanoir.accessory.attributeload.CustomStats;
-import com.blanoir.accessory.bridge.MmPlaceHolder;
 import com.blanoir.accessory.bridge.MythicBridgeListener;
 import com.blanoir.accessory.bridge.AccessoryKeybindHook;
 import com.blanoir.accessory.bridge.AccessorySkillEngine;
 import com.blanoir.accessory.bridge.AccessorySkillListener;
-import com.blanoir.accessory.bridge.placeholder.MagicAbsorbPlaceholder;
-import com.blanoir.accessory.traits.*;
-import com.blanoir.accessory.attributeload.CustomTraits;
 import com.blanoir.accessory.inventory.InvListener;
 import com.blanoir.accessory.inventory.InvReload;
 import com.blanoir.accessory.inventory.InvSave;
-import com.blanoir.accessory.bridge.placeholder.AbsorbPlaceholder;
-import com.blanoir.accessory.utils.ShieldCurCommand;
-import dev.aurelium.auraskills.api.AuraSkillsApi;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -41,24 +33,10 @@ public final class Accessory extends JavaPlugin {
         registerCommands();
         registerListeners();
 
-        this.skillEngine = new AccessorySkillEngine(this);
-        initSkillConfigs();
-        this.skillEngine.loadConfig();
-
-        AuraBundle bundle = initAuraSkillsSafe();
-
-        startTasks(bundle);
-        this.skillEngine.startTimer();
-
-        hookPlaceholderApi(bundle);
+        checkAndScheduleMythicHook();
+        checkAndScheduleAuraHook();
         hookKeyBind();
         this.accessoryService = new AccessoryService(this);
-        getServer().getPluginManager().registerEvents(new MythicBridgeListener(this), this);
-        getServer().getPluginManager().registerEvents(new AccessorySkillListener(this), this);
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            this.skillEngine.refreshFromStored(online);
-        }
-
     }
     public AccessoryService service() {
         return accessoryService;
@@ -92,6 +70,46 @@ public final class Accessory extends JavaPlugin {
         saveResource("skill/example.yml", false);
     }
 
+    private void checkAndScheduleMythicHook() {
+        if (Bukkit.getPluginManager().getPlugin("MythicMobs") == null) {
+            getLogger().warning("[Accessory] MythicMobs not found, Mythic skill bridge disabled.");
+            this.skillEngine = null;
+            return;
+        }
+        Bukkit.getScheduler().runTask(this, this::initMythicBridgeHook);
+    }
+
+    private void initMythicBridgeHook() {
+        this.skillEngine = new AccessorySkillEngine(this);
+        initSkillConfigs();
+        this.skillEngine.loadConfig();
+        this.skillEngine.startTimer();
+        getServer().getPluginManager().registerEvents(new MythicBridgeListener(this), this);
+        getServer().getPluginManager().registerEvents(new AccessorySkillListener(this), this);
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            this.skillEngine.refreshFromStored(online);
+        }
+        getLogger().info("[Accessory] MythicMobs hook enabled (delayed init).");
+    }
+
+    private void checkAndScheduleAuraHook() {
+        if (Bukkit.getPluginManager().getPlugin("AuraSkills") == null) {
+            getLogger().warning("[Accessory] AuraSkills not found, using vanilla item attributes only.");
+            return;
+        }
+        Bukkit.getScheduler().runTask(this, this::initAuraHook);
+    }
+
+    private void initAuraHook() {
+        try {
+            Class<?> hookClass = Class.forName("com.blanoir.accessory.bridge.AuraSkillsHook");
+            Object hook = hookClass.getConstructor(Accessory.class).newInstance(this);
+            hookClass.getMethod("load").invoke(hook);
+        } catch (Throwable t) {
+            getLogger().warning("[Accessory] AuraSkills hook failed, using vanilla item attributes only: " + t.getClass().getSimpleName());
+        }
+    }
+
     private void registerListeners() {
         var pm = getServer().getPluginManager();
         pm.registerEvents(new InvSave(this), this);
@@ -107,95 +125,6 @@ public final class Accessory extends JavaPlugin {
         }
     }
 
-    private AuraBundle initAuraSkillsSafe() {
-        if (Bukkit.getPluginManager().getPlugin("AuraSkills") == null) {
-            getLogger().warning("[Accessory] AuraSkills not found, using vanilla item attributes only.");
-            return AuraBundle.disabled();
-        }
-        try {
-            AuraSkillsApi api = AuraSkillsApi.get();
-            if (api == null) {
-                getLogger().warning("[Accessory] AuraSkills API unavailable, using vanilla item attributes only.");
-                return AuraBundle.disabled();
-            }
-            return initAuraSkills(api);
-        } catch (Throwable t) {
-            getLogger().warning("[Accessory] AuraSkills hook failed, using vanilla item attributes only: " + t.getClass().getSimpleName());
-            return AuraBundle.disabled();
-        }
-    }
-
-    private AuraBundle initAuraSkills(AuraSkillsApi api) {
-        var registry = api.useRegistry("accessory", getDataFolder());
-
-        registry.registerTrait(CustomTraits.HEAL_REGENERATION);
-        registry.registerTrait(CustomTraits.DEFENCE);
-        registry.registerTrait(CustomTraits.HEALTH);
-        registry.registerTrait(CustomTraits.ABSORB);
-        registry.registerTrait(CustomTraits.HEAL_DECREASE);
-        registry.registerTrait(CustomTraits.LIFE_STEAL);
-        registry.registerStat(CustomStats.CUSTOM_STAT);
-        registry.registerTrait(CustomTraits.MAGICABSORB);
-        HealRegeneration hr = new HealRegeneration(this, api);
-        HealRegDecrease dec = new HealRegDecrease(this, api);
-        Defence def = new Defence(this, api);
-        Health health = new Health(this, api);
-        LifeSteal life = new LifeSteal(this, api);
-        Absorb absorb = new Absorb(this, api);
-        MagicAbsorb ms = new MagicAbsorb(this, api);
-        var shieldCmd = getCommand("shield");
-        if (shieldCmd != null) {
-            var exec = new ShieldCurCommand(absorb);
-            shieldCmd.setExecutor(exec);
-            shieldCmd.setTabCompleter(exec);
-        }
-
-        var magicShieldCmd = getCommand("magicshield");
-        if (magicShieldCmd != null) {
-            var exec = new ShieldCurCommand(ms::addShield, ms::addShieldPercent, "accessory.magicshield");
-            magicShieldCmd.setExecutor(exec);
-            magicShieldCmd.setTabCompleter(exec);
-        }
-        MmPlaceHolder.registerShieldPlaceholder(this, absorb);
-
-        var handlers = api.getHandlers();
-        handlers.registerTraitHandler(ms);
-        handlers.registerTraitHandler(life);
-        handlers.registerTraitHandler(hr);
-        handlers.registerTraitHandler(dec);
-        handlers.registerTraitHandler(def);
-        handlers.registerTraitHandler(health);
-        handlers.registerTraitHandler(absorb);
-        getServer().getPluginManager().registerEvents(ms, this);
-        // 事件监听器（Absorb 需要监听事件）
-        getServer().getPluginManager().registerEvents(absorb, this);
-        getServer().getPluginManager().registerEvents(health, this);
-        getServer().getPluginManager().registerEvents(dec, this);
-        return new AuraBundle(hr, absorb, ms);
-    }
-
-    private void startTasks(AuraBundle bundle) {
-        if (bundle.hr() != null) {
-            bundle.hr().startTask();
-        }
-    }
-
-    private void hookPlaceholderApi(AuraBundle bundle) {
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null) {
-            getLogger().warning("PlaceholderAPI not found! Placeholders will not work!");
-            return;
-        }
-        if (bundle.absorb() == null || bundle.ms() == null) {
-            getLogger().warning("[Accessory] AuraSkills unavailable, skip Absorb placeholders.");
-            return;
-        }
-        new AbsorbPlaceholder(bundle.absorb()).register();
-        new MagicAbsorbPlaceholder(bundle.ms()).register();
-        getLogger().info("PlaceholderAPI expansions registered!");
-    }
-
-
-
     private void hookKeyBind() {
         if (Bukkit.getPluginManager().getPlugin("KeyBind") != null) {
             getServer().getPluginManager().registerEvents(
@@ -205,14 +134,6 @@ public final class Accessory extends JavaPlugin {
             getLogger().info("[Accessory] KeyBind hook enabled: action=accessory.try_equip");
         } else {
             getLogger().warning("[Accessory] KeyBind not found, payload equip disabled.");
-        }
-    }
-
-
-    // 只收纳你后续还要用到的对象（避免全局字段乱飘）
-    private record AuraBundle(HealRegeneration hr, Absorb absorb, MagicAbsorb ms) {
-        private static AuraBundle disabled() {
-            return new AuraBundle(null, null, null);
         }
     }
 }
