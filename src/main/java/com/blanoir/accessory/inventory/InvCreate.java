@@ -12,6 +12,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,13 +39,14 @@ public class InvCreate implements InventoryHolder {
         applyFrames();
     }
 
+    @NotNull
     @Override
     public Inventory getInventory() { return this.inventory; }
 
     public void applyFrames() {
         ItemStack pane = makeLockedItemFromConfig();
         List<Integer> slots = plugin.getConfig().getIntegerList("frame.slots");
-        if (slots == null || slots.isEmpty()) slots = List.of(0, 2, 4, 6, 8);
+        if (slots.isEmpty()) slots = List.of(0, 2, 4, 6, 8);
 
         int invSize = inventory.getSize();
         for (int s : slots) {
@@ -101,7 +104,7 @@ public class InvCreate implements InventoryHolder {
 
         // lore（MiniMessage）
         List<String> mmLore = cfg.getStringList("frame.item.lore");
-        if (mmLore != null && !mmLore.isEmpty()) {
+        if (!mmLore.isEmpty()) {
             List<Component> lore = new ArrayList<>(mmLore.size());
             for (String line : mmLore) {
                 lore.add(MiniMessage.miniMessage().deserialize(line));

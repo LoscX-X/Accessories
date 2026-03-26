@@ -32,7 +32,7 @@ public class InvListener implements Listener {
     }
 
     private boolean isAccessoryTop(InventoryView view) {
-        return view.getTopInventory().getHolder() instanceof InvCreate;
+        return !(view.getTopInventory().getHolder() instanceof InvCreate);
     }
     private boolean isSlotConfigured(int slot) {
         return plugin.getConfig().isConfigurationSection("Accessory." + slot);
@@ -44,13 +44,13 @@ public class InvListener implements Listener {
         return plugin.getConfig().getStringList("Accessory." + slot + ".lore");
     }
     private boolean canPlaceInSlot(int slot, ItemStack item) {
-        if (isSlotDisabled(slot)) return false;
+        if (isSlotDisabled(slot)) return true;
         // 未配置的槽位：直接不允许放入（更安全的默认）
-        if (!isSlotConfigured(slot)) return false;
+        if (!isSlotConfigured(slot)) return true;
 
         // 只做你现有的 lore 匹配；需要更多条件可在这里扩展
         List<String> need = requiredLore(slot);
-        return LoreUtils.matchesAnyKeyword(LoreUtils.plainLore(item), need);
+        return !LoreUtils.matchesAnyKeyword(LoreUtils.plainLore(item), need);
     }
 
     private boolean isLocked(ItemStack it) {
@@ -78,14 +78,13 @@ public class InvListener implements Listener {
                 top.getItem(slot) == null ? null : top.getItem(slot).clone()
         );
         Bukkit.getPluginManager().callEvent(event);
-        return !event.isCancelled();
+        return event.isCancelled();
     }
     private List<Integer> frameSlots(InventoryView view) {
         int size = view.getTopInventory().getSize();
 
         // 1) 读配置（为空则按空列表处理）
         List<Integer> raw = plugin.getConfig().getIntegerList("frame.slots");
-        if (raw == null) raw = List.of();
 
         // 2) 去重且保持配置顺序（LinkedHashSet 保序）【避免重复槽位】
         LinkedHashSet<Integer> set = new LinkedHashSet<>(); // preserves insertion order
@@ -107,7 +106,7 @@ public class InvListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        if (!isAccessoryTop(e.getView())) return;
+        if (isAccessoryTop(e.getView())) return;
 
         Inventory top = e.getView().getTopInventory();
         int topSize = top.getSize();
@@ -147,12 +146,12 @@ public class InvListener implements Listener {
                         ItemStack going = (e.getAction() == InventoryAction.HOTBAR_SWAP)
                                 ? p.getInventory().getItem(e.getHotbarButton())
                                 : e.getCursor();
-                        if (going != null && !going.getType().isAir() && !canPlaceInSlot(raw, going)) {
+                        if (going != null && !going.getType().isAir() && canPlaceInSlot(raw, going)) {
                             e.setCancelled(true);
                             p.sendMessage(plugin.lang().lang("Item_not_match"));
                             return;
                         }
-                        if (going != null && !going.getType().isAir() && !callPlaceEvent(p, top, raw, going)) {
+                        if (going != null && !going.getType().isAir() && callPlaceEvent(p, top, raw, going)) {
                             e.setCancelled(true);
                             return;
                         }
@@ -170,7 +169,7 @@ public class InvListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onDrag(InventoryDragEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        if (!isAccessoryTop(e.getView())) return;
+        if (isAccessoryTop(e.getView())) return;
 
         Inventory top = e.getView().getTopInventory();
         int topSize = top.getSize();
@@ -195,12 +194,12 @@ public class InvListener implements Listener {
         for (var en : e.getNewItems().entrySet()) {
             int raw = en.getKey();
             if (raw >= topSize) continue;
-            if (!canPlaceInSlot(raw, en.getValue())) {
+            if (canPlaceInSlot(raw, en.getValue())) {
                 e.setCancelled(true);
                 p.sendMessage(plugin.lang().lang("Item_not_match"));
                 return;
             }
-            if (!callPlaceEvent(p, top, raw, en.getValue())) {
+            if (callPlaceEvent(p, top, raw, en.getValue())) {
                 e.setCancelled(true);
                 return;
             }

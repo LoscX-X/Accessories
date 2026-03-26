@@ -42,7 +42,7 @@ public class InvSave implements Listener {
 
         // 读 frame 槽位（默认 0,2,4,6,8），把“锁面板”清空后再保存
         List<Integer> frameSlots = plugin.getConfig().getIntegerList("frame.slots");
-        if (frameSlots == null || frameSlots.isEmpty()) frameSlots = List.of(0, 2, 4, 6, 8);
+        if (frameSlots.isEmpty()) frameSlots = List.of(0, 2, 4, 6, 8);
 
         for (int s : frameSlots) {
             if (s < 0 || s >= snapshot.length) continue;

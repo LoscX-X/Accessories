@@ -21,8 +21,6 @@ import java.util.*;
 public final class AccessoryQuickEquipService {    //这个可以不用管
     private final Accessory plugin;
     private final NamespacedKey LOCKED;
-
-    // ✅ 改这里：把 plugin 传进去
     private final AccessoryLoad accessoryLoad;
 
     public AccessoryQuickEquipService(Accessory plugin) {
@@ -31,27 +29,31 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
         this.accessoryLoad = new AccessoryLoad(plugin);
     }
 
-    /** 给 KeyEvent / 右键 调用：尝试把主手物品穿戴到饰品槽 */
-    public boolean tryEquipMainHand(Player p) {
+    /**
+     * 给 KeyEvent / 右键 调用：尝试把主手物品穿戴到饰品槽
+     */
+    public void tryEquipMainHand(Player p) {
         ItemStack hand = p.getInventory().getItemInMainHand();
-        if (hand.getType().isAir()) return false;
+        if (hand.getType().isAir()) return;
 
         int slot = findAccessorySlot(hand);
-        if (slot == -1) return false;
+        if (slot == -1) return;
 
-        if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) return false;
+        if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) return;
 
         // 防止把饰品塞进外框锁定槽（如果你 frame 槽位和 accessory 槽位配置冲突）
-        if (isFrameSlot(slot)) return false;
+        if (isFrameSlot(slot)) return;
 
-        return equipToSlot(p, slot);
+        equipToSlot(p, slot);
     }
 
-    /** 核心：把主手物品 equip 到指定 slot（会替换旧的） */
-    public boolean equipToSlot(Player p, int slot) {
+    /**
+     * 核心：把主手物品 equip 到指定 slot（会替换旧的）
+     */
+    public void equipToSlot(Player p, int slot) {
         int size = guiSize();
-        if (slot < 0 || slot >= size) return false;
-        if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) return false;
+        if (slot < 0 || slot >= size) return;
+        if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) return;
 
         // 1) 读当前饰品 contents
         ItemStack[] contents = loadContents(p, size);
@@ -60,7 +62,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
 
         // 2) 放入新饰品（只放 1 个）
         ItemStack hand = p.getInventory().getItemInMainHand();
-        if (hand.getType().isAir()) return false;
+        if (hand.getType().isAir()) return;
 
         ItemStack placed = hand.clone();
         placed.setAmount(1);
@@ -76,7 +78,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
         );
         Bukkit.getPluginManager().callEvent(placeEvent);
         if (placeEvent.isCancelled()) {
-            return false;
+            return;
         }
 
         contents[slot] = placed;
@@ -104,10 +106,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
         // 7) 反馈
         p.sendActionBar(plugin.lang().lang("Accessory_equipped"));
 
-        // 8) （可选）你之后做 HUD 同步，就在这里调用
-        // plugin.getHudSync().sync(p, contents);
 
-        return true;
     }
 
     /** lore -> 找到目标槽位：Accessory.<slot>.lore */
@@ -116,7 +115,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
             plugin.skillEngine().stampKnownAccessoryItem(item);
         }
         List<String> lore = LoreUtils.plainLore(item);
-        if (lore == null || lore.isEmpty()) return -1;
+        if (lore.isEmpty()) return -1;
 
         var sec = plugin.getConfig().getConfigurationSection("Accessory");
         if (sec == null) return -1;
@@ -127,7 +126,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
             catch (NumberFormatException ignored) { continue; }
 
             List<String> need = plugin.getConfig().getStringList("Accessory." + slot + ".lore");
-            if (need == null || need.isEmpty()) continue;
+            if (need.isEmpty()) continue;
 
             if (LoreUtils.matchesAnyKeyword(lore, need)) return slot;
         }
@@ -194,7 +193,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
 
     private void decrementMainHand(Player p) {
         ItemStack cur = p.getInventory().getItemInMainHand();
-        if (cur == null || cur.getType().isAir()) return;
+        if (cur.getType().isAir()) return;
 
         int amt = cur.getAmount();
         if (amt <= 1) p.getInventory().setItemInMainHand(null);
@@ -206,7 +205,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
 
     private boolean isFrameSlot(int slot) {
         List<Integer> frames = plugin.getConfig().getIntegerList("frame.slots");
-        if (frames == null || frames.isEmpty()) frames = List.of(0,2,4,6,8);
+        if (frames.isEmpty()) frames = List.of(0,2,4,6,8);
         return frames.contains(slot);
     }
 }

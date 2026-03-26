@@ -12,6 +12,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,14 +29,14 @@ public class InvReload implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, String[] args) {
         if (args.length == 0 || "open".equalsIgnoreCase(args[0])) {
             return handleOpen(sender);
         }
-        if (args.length > 0 && "clear".equalsIgnoreCase(args[0])) {
+        if ("clear".equalsIgnoreCase(args[0])) {
             return handleClear(sender, args);
         }
-        if (args.length > 0 && "reload".equalsIgnoreCase(args[0])) {
+        if ("reload".equalsIgnoreCase(args[0])) {
             return handleReload(sender, args);
         }
         sender.sendMessage(plugin.lang().lang("Accessory_unknown"));
@@ -148,7 +149,6 @@ public class InvReload implements CommandExecutor, TabCompleter {
 
     private void clearOpenAccessoryInventory(Player player) {
         InventoryView view = player.getOpenInventory();
-        if (view == null) return;
         if (!(view.getTopInventory().getHolder() instanceof InvCreate holder)) return;
         Inventory top = view.getTopInventory();
         top.clear();
@@ -162,7 +162,10 @@ public class InvReload implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(@NotNull CommandSender sender,
+                                      @NotNull Command command,
+                                      @NotNull String alias,
+                                      String[] args) {
         if (args.length == 1) {
             return filter(args[0], List.of("open", "reload", "clear"));
         }

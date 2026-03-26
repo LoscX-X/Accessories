@@ -16,7 +16,7 @@ public final class AccessoryKeybindHook implements Listener {
 
     @EventHandler
     public void onKey(KeyActionEvent e) {
-        // 你客户端发 payload 的 action 就用这个字符串
+        // 客户端发payload的action
         if (!"accessory.try_equip".equalsIgnoreCase(e.getAction())) return;
 
         equip.tryEquipMainHand(e.getPlayer());
