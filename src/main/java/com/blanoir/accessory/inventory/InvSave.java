@@ -1,85 +1,99 @@
 package com.blanoir.accessory.inventory;
 
 import com.blanoir.accessory.Accessory;
-
+import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Keeps player accessory data in memory while online.
+ * Save to YAML only when player quits (or on plugin disable handled by Accessory#onDisable).
+ */
 public class InvSave implements Listener {
 
-    private final JavaPlugin plugin;
-    private final NamespacedKey LOCKED;
-    private final NamespacedKey DISABLED;
+    private final Accessory plugin;
+    private final NamespacedKey locked;
+    private final NamespacedKey disabled;
 
-    public InvSave(JavaPlugin plugin) {
+    public InvSave(Accessory plugin) {
         this.plugin = plugin;
-        this.LOCKED = new NamespacedKey(plugin, "locked"); // 复用同一个 key 是推荐做法
-        this.DISABLED = new NamespacedKey(plugin, "disabled");
+        this.locked = new NamespacedKey(plugin, "locked");
+        this.disabled = new NamespacedKey(plugin, "disabled");
     }
 
     @EventHandler
-    public void onClose(InventoryCloseEvent e) {
-        // 只处理你自己的 GUI（用 Holder 判断最可靠）
-        Inventory top = e.getView().getTopInventory(); // 只拿上半区
-        if (!(top.getHolder() instanceof InvCreate)) return;
-        if (!(e.getPlayer() instanceof Player p)) return;
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        plugin.inventoryStore().preload(player.getUniqueId(), plugin.accessorySize());
+    }
 
-        ItemStack[] snapshot = top.getContents().clone();
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        plugin.inventoryStore().saveAndRemove(player.getUniqueId(), plugin.accessorySize());
+    }
 
-        // 读 frame 槽位（默认 0,2,4,6,8），把“锁面板”清空后再保存
+    @EventHandler
+    public void onClose(InventoryCloseEvent event) {
+        Inventory top = event.getView().getTopInventory();
+        if (!(top.getHolder() instanceof InvCreate)) {
+            return;
+        }
+        if (!(event.getPlayer() instanceof Player player)) {
+            return;
+        }
+
+        ItemStack[] snapshot = sanitize(top);
+        plugin.inventoryStore().update(player.getUniqueId(), snapshot, plugin.accessorySize());
+
+        if (plugin.skillEngine() != null) {
+            Inventory tmp = Bukkit.createInventory(null, top.getSize());
+            tmp.setContents(snapshot.clone());
+            plugin.skillEngine().refreshPlayer(player, tmp);
+        }
+    }
+
+    private ItemStack[] sanitize(Inventory inventory) {
+        ItemStack[] snapshot = inventory.getContents().clone();
+
         List<Integer> frameSlots = plugin.getConfig().getIntegerList("frame.slots");
-        if (frameSlots.isEmpty()) frameSlots = List.of(0, 2, 4, 6, 8);
+        if (frameSlots.isEmpty()) {
+            frameSlots = List.of(0, 2, 4, 6, 8);
+        }
 
-        for (int s : frameSlots) {
-            if (s < 0 || s >= snapshot.length) continue;
-            ItemStack it = snapshot[s];
-            if (it == null) { snapshot[s] = null; continue; }
-            ItemMeta meta = it.getItemMeta();
-            if (meta != null && meta.getPersistentDataContainer().has(LOCKED, PersistentDataType.BYTE)) {
-                snapshot[s] = null; // 不把外框存进文件
+        for (int slot : frameSlots) {
+            if (slot < 0 || slot >= snapshot.length) {
+                continue;
+            }
+            if (hasMarker(snapshot[slot], locked)) {
+                snapshot[slot] = null;
             }
         }
 
-        for (int s = 0; s < snapshot.length; s++) {
-            ItemStack it = snapshot[s];
-            if (it == null) continue;
-            ItemMeta meta = it.getItemMeta();
-            if (meta != null && meta.getPersistentDataContainer().has(DISABLED, PersistentDataType.BYTE)) {
-                snapshot[s] = null;
+        for (int slot = 0; slot < snapshot.length; slot++) {
+            if (hasMarker(snapshot[slot], disabled)) {
+                snapshot[slot] = null;
             }
         }
+        return snapshot;
+    }
 
-        // 写到与 InvLoad 一致的目录：contains/
-        File dir = new File(plugin.getDataFolder(), "contains");
-        if (!dir.exists()) dir.mkdirs();
-
-        File file = new File(dir, p.getUniqueId() + ".yml");
-        YamlConfiguration cfg = new YamlConfiguration();
-        cfg.set("contents", Arrays.asList(snapshot)); // List<ItemStack>
-        try {
-            cfg.save(file);
-            if (plugin instanceof Accessory accessory && accessory.skillEngine() != null) {
-                Inventory tmp = org.bukkit.Bukkit.createInventory(null, top.getSize());
-                tmp.setContents(snapshot.clone());
-                accessory.skillEngine().refreshPlayer(p, tmp);
-            }
-        } catch (IOException ex) {
-            plugin.getLogger().severe("Save failed: " + p.getName());
-            ex.printStackTrace();
+    private boolean hasMarker(ItemStack item, NamespacedKey markerKey) {
+        if (item == null) {
+            return false;
         }
+        ItemMeta meta = item.getItemMeta();
+        return meta != null && meta.getPersistentDataContainer().has(markerKey, PersistentDataType.BYTE);
     }
 }
