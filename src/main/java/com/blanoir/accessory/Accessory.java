@@ -6,6 +6,7 @@ import com.blanoir.accessory.bridge.AccessoryKeybindHook;
 import com.blanoir.accessory.bridge.AccessorySkillEngine;
 import com.blanoir.accessory.bridge.aura.AuraSkillsHook;
 import com.blanoir.accessory.bridge.AccessorySkillListener;
+import com.blanoir.accessory.inventory.AccessoryInventoryStore;
 import com.blanoir.accessory.inventory.InvListener;
 import com.blanoir.accessory.inventory.InvReload;
 import com.blanoir.accessory.inventory.InvSave;
@@ -22,15 +23,18 @@ public final class Accessory extends JavaPlugin {
     private File statsFile;
     private AccessoryService accessoryService;
     private AccessorySkillEngine skillEngine;
+    private AccessoryInventoryStore inventoryStore;
 
 
     public Language lang() { return lang; }
     public AccessorySkillEngine skillEngine() { return skillEngine; }
+    public AccessoryInventoryStore inventoryStore() { return inventoryStore; }
 
     @Override
     public void onEnable() {
         initFiles();
         initLang();
+        this.inventoryStore = new AccessoryInventoryStore(this);
 
         registerCommands();
         registerListeners();
@@ -45,6 +49,12 @@ public final class Accessory extends JavaPlugin {
     }
     @Override
     public void onDisable() {
+        if (inventoryStore != null) {
+            int size = accessorySize();
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                inventoryStore.flush(player.getUniqueId(), size);
+            }
+        }
         getLogger().info("Bye");
     }
 
@@ -133,6 +143,12 @@ public final class Accessory extends JavaPlugin {
         }
     }
 
+
+    public int accessorySize() {
+        int size = getConfig().getInt("size", 9);
+        size = Math.max(9, Math.min(54, size));
+        return size - (size % 9);
+    }
     private void hookKeyBind() {
         if (Bukkit.getPluginManager().getPlugin("KeyBind") != null) {
             getServer().getPluginManager().registerEvents(
