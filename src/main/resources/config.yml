@@ -8,6 +8,11 @@ size: 9
 # Available by default: en_US, zh_CN
 Lang: "en_US"
 
+# Enable startup debug logs (Aura hook step-by-step messages).
+# true example:
+# [Accessory][Aura] Step 1: getting AuraSkills API
+debug-mode: false
+
 # Enable detailed debug logs for accessory skill recognition and PDC writes.
 skill-debug: false
 
