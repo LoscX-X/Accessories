@@ -1,4 +1,4 @@
-package com.blanoir.accessory.bridge;
+package com.blanoir.accessory.bridge.myhic.skills;
 
 import com.blanoir.accessory.Accessory;
 import org.bukkit.entity.Entity;

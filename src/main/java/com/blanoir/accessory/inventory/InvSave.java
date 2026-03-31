@@ -16,10 +16,6 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
 
-/**
- * Keeps player accessory data in memory while online.
- * Save to YAML only when player quits (or on plugin disable handled by Accessory#onDisable).
- */
 public class InvSave implements Listener {
 
     private final Accessory plugin;

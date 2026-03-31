@@ -2,10 +2,9 @@ package com.blanoir.accessory;
 
 import com.blanoir.accessory.api.AccessoryService;
 import com.blanoir.accessory.bridge.myhic.MythicBridgeListener;
-import com.blanoir.accessory.bridge.AccessoryKeybindHook;
-import com.blanoir.accessory.bridge.AccessorySkillEngine;
+import com.blanoir.accessory.bridge.myhic.skills.AccessorySkillEngine;
 import com.blanoir.accessory.bridge.aura.AuraSkillsHook;
-import com.blanoir.accessory.bridge.AccessorySkillListener;
+import com.blanoir.accessory.bridge.myhic.skills.AccessorySkillListener;
 import com.blanoir.accessory.inventory.AccessoryInventoryStore;
 import com.blanoir.accessory.inventory.InvListener;
 import com.blanoir.accessory.inventory.InvReload;
@@ -20,7 +19,6 @@ import java.io.File;
 public final class Accessory extends JavaPlugin {
 
     private Language lang;
-    private File statsFile;
     private AccessoryService accessoryService;
     private AccessorySkillEngine skillEngine;
     private AccessoryInventoryStore inventoryStore;
@@ -41,7 +39,6 @@ public final class Accessory extends JavaPlugin {
 
         checkAndScheduleMythicHook();
         checkAndScheduleAuraHook();
-        hookKeyBind();
         this.accessoryService = new AccessoryService(this);
     }
     public AccessoryService service() {
@@ -62,7 +59,7 @@ public final class Accessory extends JavaPlugin {
 
     private void initFiles() {
         getDataFolder().mkdirs();
-        statsFile = new File(getDataFolder(), "stats.yml");
+        File statsFile = new File(getDataFolder(), "stats.yml");
         if (!statsFile.exists()) {
             saveResource("stats.yml", false);
         }
@@ -149,15 +146,5 @@ public final class Accessory extends JavaPlugin {
         size = Math.max(9, Math.min(54, size));
         return size - (size % 9);
     }
-    private void hookKeyBind() {
-        if (Bukkit.getPluginManager().getPlugin("KeyBind") != null) {
-            getServer().getPluginManager().registerEvents(
-                    new AccessoryKeybindHook(this),
-                    this
-            );
-            getLogger().info("[Accessory] KeyBind hook enabled: action=accessory.try_equip");
-        } else {
-            getLogger().warning("[Accessory] KeyBind not found, payload equip disabled.");
-        }
-    }
+
 }

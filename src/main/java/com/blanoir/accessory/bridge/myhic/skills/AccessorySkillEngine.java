@@ -1,4 +1,4 @@
-package com.blanoir.accessory.bridge;
+package com.blanoir.accessory.bridge.myhic.skills;
 
 import com.blanoir.accessory.Accessory;
 import io.lumine.mythic.bukkit.BukkitAdapter;

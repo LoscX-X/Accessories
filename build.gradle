@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.blanoir'
-version = '2.3.1'
+version = '2.3.2'
 
 repositories {
     mavenCentral()
@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+    implementation 'redis.clients:jedis:5.2.0'
     compileOnly files('libs/MythicMobs.jar')
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.3")

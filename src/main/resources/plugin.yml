@@ -1,5 +1,5 @@
 name: Accessory
-version: '2.3.1'
+version: '2.3.2'
 main: com.blanoir.accessory.Accessory
 api-version: '1.21'
 softdepend: [AuraSkills, PlaceholderAPI, MythicMobs]

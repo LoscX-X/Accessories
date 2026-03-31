@@ -7,13 +7,13 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-public class InvCommnad implements CommandExecutor {
+public class InvCommand implements CommandExecutor {
 
     private final Accessory plugin;
 
 
 
-    public InvCommnad(Accessory plugin) {
+    public InvCommand(Accessory plugin) {
         this.plugin = plugin;
     }
 

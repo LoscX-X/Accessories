@@ -1,4 +1,4 @@
-package com.blanoir.accessory.bridge;
+package com.blanoir.accessory.bridge.keybind;
 
 import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.api.AccessoryQuickEquipService;

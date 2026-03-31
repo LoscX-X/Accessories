@@ -1,50 +1,45 @@
-package com.blanoir.accessory.bridge.placeholder;
+package com.blanoir.accessory.bridge.placeholderapi;
 
-import com.blanoir.accessory.traits.Absorb;
+import com.blanoir.accessory.traits.MagicAbsorb;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class AbsorbPlaceholder extends PlaceholderExpansion {
+public class MagicAbsorbPlaceholder extends PlaceholderExpansion {
 
-    private final Absorb absorbTrait;
+    private final MagicAbsorb magicAbsorb;
 
-    public AbsorbPlaceholder(Absorb absorbTrait) {
-        this.absorbTrait = absorbTrait;
+    public MagicAbsorbPlaceholder(MagicAbsorb magicAbsorb) {
+        this.magicAbsorb = magicAbsorb;
     }
 
     @Override
     public @NotNull String getIdentifier() {
-        return "absorb"; // 占位符前缀 %absorb_*
+        return "magicabsorb"; // %magicabsorb_*
     }
 
     @Override
     public @NotNull String getAuthor() {
-        return "Blanoir"; // 你可以改成自己的名字
+        return "Blanoir";
     }
 
     @Override
     public @NotNull String getVersion() {
-        return "1.0.0"; // 扩展版本
-    }
-
-    @Override
-    public boolean canRegister() {
-        return true;
+        return "1.0.0";
     }
 
     @Override
     public boolean persist() {
-        return true; // 确保在重载时不取消注册
+        return true;
     }
 
     @Override
     public @Nullable String onPlaceholderRequest(Player player, @NotNull String identifier) {
         if (player == null) return "";
 
-        double currentShield = absorbTrait.getCurrentShield(player);
-        double maxShield = absorbTrait.getMaxShield(player);
+        double currentShield = magicAbsorb.getCurrentShield(player);
+        double maxShield = magicAbsorb.getMaxShield(player);
 
         switch (identifier.toLowerCase()) {
             case "current_shield":
@@ -53,10 +48,9 @@ public class AbsorbPlaceholder extends PlaceholderExpansion {
                 return String.format("%.1f", maxShield);
             case "shield_percent":
                 if (maxShield <= 0) return "0%";
-                double percent = (currentShield / maxShield) * 100;
+                double percent = (currentShield / maxShield) * 100.0;
                 return String.format("%.1f%%", percent);
         }
-
-        return null; // 未识别的占位符
+        return null;
     }
 }

@@ -11,16 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Player accessory inventory cache.
- * <p>
- * Lifecycle:
- * <ul>
- *   <li>Load from disk when player joins (or first access).</li>
- *   <li>Keep updates in memory while online.</li>
- *   <li>Persist to disk when player quits or plugin disables.</li>
- * </ul>
- */
+
 public final class AccessoryInventoryStore {
     private static final String CONTAINS_DIR = "contains";
     private static final String CONTENTS_KEY = "contents";

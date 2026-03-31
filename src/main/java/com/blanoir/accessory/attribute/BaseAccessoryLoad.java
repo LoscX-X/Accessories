@@ -13,6 +13,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -94,9 +95,7 @@ abstract class BaseAccessoryLoad implements AccessoryLoadHandler {
             inst.getModifiers().stream()
                     .filter(mod -> {
                         NamespacedKey key = mod.getKey();
-                        return key != null
-                                && key.getNamespace().equalsIgnoreCase(plugin.getName())
-                                && key.getKey().startsWith(ATTR_PATH_PREFIX);
+                        return key.getNamespace().equalsIgnoreCase(plugin.getName()) && key.getKey().startsWith(ATTR_PATH_PREFIX);
                     })
                     .toList()
                     .forEach(inst::removeModifier);
@@ -117,23 +116,27 @@ abstract class BaseAccessoryLoad implements AccessoryLoadHandler {
             AttributeInstance inst = player.getAttribute(attr);
             if (inst == null) continue;
 
-            NamespacedKey origKey = original.getKey();
-            String origPart = (origKey == null)
-                    ? "no_key"
-                    : (origKey.getNamespace() + "/" + origKey.getKey());
-
-            String origHash = Integer.toHexString(origPart.hashCode());
-            NamespacedKey attrKey = attr.getKey();
-            String attrPart = attrKey.getNamespace() + "/" + attrKey.getKey();
-
-            NamespacedKey myKey = new NamespacedKey(
-                    plugin,
-                    ATTR_PATH_PREFIX + "slot" + slot + "/" + Integer.toHexString(attrPart.hashCode()) + "/" + origHash
-            );
-
-            AttributeModifier copy = new AttributeModifier(myKey, original.getAmount(), original.getOperation());
+            AttributeModifier copy = getAttributeModifier(slot, original, attr);
             inst.addModifier(copy);
         }
+    }
+
+    @NotNull
+    private AttributeModifier getAttributeModifier(int slot, AttributeModifier original, Attribute attr) {
+        NamespacedKey origKey = original.getKey();
+        String origPart = origKey.getNamespace() + "/" + origKey.getKey();
+
+        String origHash = Integer.toHexString(origPart.hashCode());
+        NamespacedKey attrKey = attr.getKey();
+        String attrPart = attrKey.getNamespace() + "/" + attrKey.getKey();
+
+        NamespacedKey myKey = new NamespacedKey(
+                plugin,
+                ATTR_PATH_PREFIX + "slot" + slot + "/" + Integer.toHexString(attrPart.hashCode()) + "/" + origHash
+        );
+
+        AttributeModifier copy = new AttributeModifier(myKey, original.getAmount(), original.getOperation());
+        return copy;
     }
 
     private List<String> parseTags(ItemStack item) {

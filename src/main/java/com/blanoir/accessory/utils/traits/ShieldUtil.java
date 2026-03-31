@@ -9,9 +9,6 @@ import java.util.function.ToDoubleFunction;
 public final class ShieldUtil {
     private ShieldUtil() {}
 
-    /**
-     * 读取并修正当前护盾：如果当前护盾 > 最大护盾，就自动钳制到最大护盾并写回 map
-     */
     public static double getCurrentShield(Player player,
                                           Map<UUID, Double> shieldMap,
                                           ToDoubleFunction<Player> maxSupplier) {
