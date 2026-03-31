@@ -1,6 +1,7 @@
 package com.blanoir.accessory.utils;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
@@ -29,6 +30,8 @@ public final class Language {
     private final JavaPlugin plugin;
     private final Map<String, String> singleLineMessages = new HashMap<>();
     private final Map<String, List<String>> multiLineMessages = new HashMap<>();
+    private final Map<String, Component> singleLineComponents = new HashMap<>();
+    private final Map<String, List<Component>> multiLineComponents = new HashMap<>();
 
 
     public Language(JavaPlugin plugin) {
@@ -45,6 +48,8 @@ public final class Language {
 
         singleLineMessages.clear();
         multiLineMessages.clear();
+        singleLineComponents.clear();
+        multiLineComponents.clear();
 
         ConfigurationSection root = cfg.getConfigurationSection("Message");
         if (root == null) {
@@ -54,10 +59,13 @@ public final class Language {
         for (String key : root.getKeys(false)) {
             String path = "Message." + key;
             if (cfg.isList(path)) {
-                multiLineMessages.put(key, formatLines(cfg.getStringList(path)));
+                List<String> source = cfg.getStringList(path);
+                multiLineMessages.put(key, formatLines(source));
+                multiLineComponents.put(key, formatComponents(source));
             } else {
                 String raw = cfg.getString(path, "Missing:" + key);
                 singleLineMessages.put(key, format(raw));
+                singleLineComponents.put(key, formatComponent(raw));
             }
         }
     }
@@ -68,6 +76,14 @@ public final class Language {
 
     public List<String> langLines(String key) {
         return multiLineMessages.getOrDefault(key, Collections.emptyList());
+    }
+
+    public Component langComponent(String key) {
+        return singleLineComponents.getOrDefault(key, Component.text("Missing:" + key));
+    }
+
+    public List<Component> langComponentLines(String key) {
+        return multiLineComponents.getOrDefault(key, Collections.emptyList());
     }
 
     private String resolveLanguageFileName() {
@@ -125,6 +141,24 @@ public final class Language {
         List<String> out = new ArrayList<>(source.size());
         for (String line : source) {
             out.add(format(line));
+        }
+        return out;
+    }
+
+    private Component formatComponent(String input) {
+        String raw = input == null ? "" : input;
+        try {
+            return MINI_MESSAGE.deserialize(raw);
+        } catch (Exception ignored) {
+            String legacy = ChatColor.translateAlternateColorCodes('&', raw);
+            return LEGACY_SERIALIZER.deserialize(legacy);
+        }
+    }
+
+    private List<Component> formatComponents(List<String> source) {
+        List<Component> out = new ArrayList<>(source.size());
+        for (String line : source) {
+            out.add(formatComponent(line));
         }
         return out;
     }

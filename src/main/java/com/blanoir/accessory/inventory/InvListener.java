@@ -43,10 +43,26 @@ public class InvListener implements Listener {
     private List<String> requiredLore(int slot) {
         return plugin.getConfig().getStringList("Accessory." + slot + ".lore");
     }
-    private boolean canPlaceInSlot(int slot, ItemStack item) {
+    private String requiredPermission(int slot) {
+        String path = "Accessory." + slot + ".permission";
+        if (!plugin.getConfig().isString(path)) {
+            return null;
+        }
+        String permission = plugin.getConfig().getString(path, "").trim();
+        return permission.isEmpty() ? null : permission;
+    }
+    private boolean hasSlotPermission(Player player, int slot) {
+        String permission = requiredPermission(slot);
+        return permission == null || player.hasPermission(permission);
+    }
+    private boolean canPlaceInSlot(Player player, int slot, ItemStack item) {
         if (isSlotDisabled(slot)) return true;
         // 未配置的槽位：直接不允许放入（更安全的默认）
         if (!isSlotConfigured(slot)) return true;
+
+        if (!hasSlotPermission(player, slot)) {
+            return true;
+        }
 
         // 只做你现有的 lore 匹配；需要更多条件可在这里扩展
         List<String> need = requiredLore(slot);
@@ -146,9 +162,13 @@ public class InvListener implements Listener {
                         ItemStack going = (e.getAction() == InventoryAction.HOTBAR_SWAP)
                                 ? p.getInventory().getItem(e.getHotbarButton())
                                 : e.getCursor();
-                        if (going != null && !going.getType().isAir() && canPlaceInSlot(raw, going)) {
+                        if (going != null && !going.getType().isAir() && canPlaceInSlot(p, raw, going)) {
                             e.setCancelled(true);
-                            p.sendMessage(plugin.lang().lang("Item_not_match"));
+                            if (!hasSlotPermission(p, raw)) {
+                                p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
+                            } else {
+                                p.sendMessage(plugin.lang().langComponent("Item_not_match"));
+                            }
                             return;
                         }
                         if (going != null && !going.getType().isAir() && callPlaceEvent(p, top, raw, going)) {
@@ -180,12 +200,12 @@ public class InvListener implements Listener {
             int raw = en.getKey();
             if (raw < topSize && FRAME.contains(raw)) {
                 e.setCancelled(true);
-                p.sendMessage(plugin.lang().lang("Item_locked"));
+                p.sendMessage(plugin.lang().langComponent("Item_locked"));
                 return;
             }
             if (raw < topSize && isSlotDisabled(raw)) {
                 e.setCancelled(true);
-                p.sendMessage(plugin.lang().lang("Item_locked"));
+                p.sendMessage(plugin.lang().langComponent("Item_locked"));
                 return;
             }
         }
@@ -194,9 +214,13 @@ public class InvListener implements Listener {
         for (var en : e.getNewItems().entrySet()) {
             int raw = en.getKey();
             if (raw >= topSize) continue;
-            if (canPlaceInSlot(raw, en.getValue())) {
+            if (canPlaceInSlot(p, raw, en.getValue())) {
                 e.setCancelled(true);
-                p.sendMessage(plugin.lang().lang("Item_not_match"));
+                if (!hasSlotPermission(p, raw)) {
+                    p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
+                } else {
+                    p.sendMessage(plugin.lang().langComponent("Item_not_match"));
+                }
                 return;
             }
             if (callPlaceEvent(p, top, raw, en.getValue())) {

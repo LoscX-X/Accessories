@@ -20,6 +20,8 @@ skill-debug: false
 # Matching is case-insensitive.
 Accessory:
   "1":
+    # Optional permission node for this slot. If omitted, no permission is required.
+    # permission: "accessory.slot.ring"
     lore:
       - "[Ring]"
   "3":
