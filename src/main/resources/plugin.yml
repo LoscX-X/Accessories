@@ -5,11 +5,11 @@ api-version: '1.21'
 softdepend: [AuraSkills, PlaceholderAPI, MythicMobs]
 commands:
   shield:
-    description: 调整当前物理护盾（不改上限）
+    description: 调整当前物理护盾
     usage: /shield <give|givep> <me|player|all> <value>
     permission: accessory.shield
   magicshield:
-    description: 调整当前魔法护盾（不改上限）
+    description: 调整当前魔法护盾
     usage: /magicshield <give|givep> <me|player|all> <value>
     permission: accessory.magicshield
 

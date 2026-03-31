@@ -1,23 +1,23 @@
-# GUI title shown at the top of the accessory inventory.
+# 饰品背包 GUI 顶部显示的标题
 title: "<gradient:#00ffa6:#00d1ff><b>Accessories</b></gradient>"
 
-# GUI size in slots. Must be a multiple of 9 (minimum 9, maximum 54).
+# GUI 大小（格子数），必须是 9 的倍数（最小 9，最大 54）
 size: 9
 
-# Language file name in /plugins/Accessory/Language without extension.
-# Available by default: en_US, zh_CN
+# 语言文件名称（位于 /plugins/Accessory/Language 目录下，不带 .yml 后缀）
+# 默认可用：en_US, zh_CN
 Lang: "en_US"
 
-# Enable startup debug logs (Aura hook step-by-step messages).
-# true example:
+# 是否开启启动调试日志
+# 开启后示例：
 # [Accessory][Aura] Step 1: getting AuraSkills API
 debug-mode: false
 
-# Enable detailed debug logs for accessory skill recognition and PDC writes.
+# 是否开启饰品技能调试日志
 skill-debug: false
 
-# Slot rules: each slot index maps to lore keywords required for allowed items.
-# Matching is case-insensitive.
+# 插槽规则：每个槽位索引对应允许放入的物品 lore 关键词
+# 匹配不区分大小写
 Accessory:
   "1":
     # Optional permission node for this slot. If omitted, no permission is required.
@@ -33,37 +33,38 @@ Accessory:
   "7":
     lore:
       - "[Talisman]"
-  # "slot_index":
+  # 示例：
+  # "槽位索引":
   #   lore:
-  #     - "[CustomKeyword]"
+  #     - "[自定义关键词]"
 
-# Locked slot frame style.
+# 锁定槽位的边框样式
 frame:
   slots: [0, 2, 4, 6, 8]
   item:
-    type: "BLACK_STAINED_GLASS_PANE"
-    custom-model-data: 12345
-    hide-tooltip: true
-    name: "<gray>Locked"
+    type: "BLACK_STAINED_GLASS_PANE"   # 物品类型
+    custom-model-data: 12345           # 自定义模型数据（可选）
+    hide-tooltip: true                 # 是否隐藏物品提示信息
+    name: "<gray>Locked"               # 显示名称
     lore:
-      - "<dark_gray>Slot is locked"
+      - "<dark_gray>Slot is locked"    # 描述
 
-# Style for slots disabled at runtime via AccessoryService API.
+# 通过 AccessoryService API 在运行时禁用的槽位样式
 disabled-slot:
   item:
     type: "RED_STAINED_GLASS_PANE"
     hide-tooltip: true
     name: "<red>Slot Disabled"
     lore:
-      - "<dark_red>This slot is disabled by an external plugin"
+      - "<dark_red>This slot is disabled"
 
-# Display combat life-steal debug demonstration values.
+# 物理护盾恢复设置
+OUT_OF_COMBAT_SECONDS: 12      # 脱战多少秒后开始恢复
+SHIELD_REGEN_PERCENT: 0.10     # 每次恢复的百分比（0.10 = 10%）
+
+# 魔法护盾恢复设置
+MAGIC_SHIELD_OUT_OF_COMBAT_SECONDS: 12   # 脱战多少秒后开始恢复
+MAGIC_SHIELD_REGEN_PERCENT: 0.10         # 每次恢复的百分比（0.10 = 10%）
+
+# 是否显示吸血效果的调试演示数值
 Life_Steal_demonstrate: false
-
-# Physical shield regeneration settings.
-OUT_OF_COMBAT_SECONDS: 12
-SHIELD_REGEN_PERCENT: 0.10
-
-# Magic shield regeneration settings.
-MAGIC_SHIELD_OUT_OF_COMBAT_SECONDS: 12
-MAGIC_SHIELD_REGEN_PERCENT: 0.10
