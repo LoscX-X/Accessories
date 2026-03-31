@@ -165,9 +165,9 @@ public class InvListener implements Listener {
                         if (going != null && !going.getType().isAir() && canPlaceInSlot(p, raw, going)) {
                             e.setCancelled(true);
                             if (!hasSlotPermission(p, raw)) {
-                                p.sendMessage(plugin.lang().lang("Slot_no_permission"));
+                                p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
                             } else {
-                                p.sendMessage(plugin.lang().lang("Item_not_match"));
+                                p.sendMessage(plugin.lang().langComponent("Item_not_match"));
                             }
                             return;
                         }
@@ -200,12 +200,12 @@ public class InvListener implements Listener {
             int raw = en.getKey();
             if (raw < topSize && FRAME.contains(raw)) {
                 e.setCancelled(true);
-                p.sendMessage(plugin.lang().lang("Item_locked"));
+                p.sendMessage(plugin.lang().langComponent("Item_locked"));
                 return;
             }
             if (raw < topSize && isSlotDisabled(raw)) {
                 e.setCancelled(true);
-                p.sendMessage(plugin.lang().lang("Item_locked"));
+                p.sendMessage(plugin.lang().langComponent("Item_locked"));
                 return;
             }
         }
@@ -217,9 +217,9 @@ public class InvListener implements Listener {
             if (canPlaceInSlot(p, raw, en.getValue())) {
                 e.setCancelled(true);
                 if (!hasSlotPermission(p, raw)) {
-                    p.sendMessage(plugin.lang().lang("Slot_no_permission"));
+                    p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
                 } else {
-                    p.sendMessage(plugin.lang().lang("Item_not_match"));
+                    p.sendMessage(plugin.lang().langComponent("Item_not_match"));
                 }
                 return;
             }

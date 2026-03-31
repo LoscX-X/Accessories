@@ -20,7 +20,7 @@ skill-debug: false
 # 匹配不区分大小写
 Accessory:
   "1":
-    # （可选）该槽位所需权限节点，不填写则无需权限
+    # Optional permission node for this slot. If omitted, no permission is required.
     # permission: "accessory.slot.ring"
     lore:
       - "[Ring]"
