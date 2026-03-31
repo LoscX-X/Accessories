@@ -91,25 +91,24 @@ public final class Accessory extends JavaPlugin {
     private void initMythicBridgeHook() {
         try {
             this.skillEngine = new AccessorySkillEngine(this);
-            initSkillConfigs();
             this.skillEngine.loadConfig();
             this.skillEngine.startTimer();
+            initSkillConfigs();
             getServer().getPluginManager().registerEvents(new MythicBridgeListener(this), this);
             getServer().getPluginManager().registerEvents(new AccessorySkillListener(this), this);
             for (Player online : Bukkit.getOnlinePlayers()) {
                 this.skillEngine.refreshFromStored(online);
             }
-            getLogger().info("[Accessory] MythicMobs hook enabled (delayed init).");
+            getLogger().info("MythicMobs hook enabled (delayed init).");
         } catch (Throwable t) {
             this.skillEngine = null;
-            getLogger().warning("[Accessory] MythicMobs hook failed, Mythic skill bridge disabled.");
-            t.printStackTrace();
+            getLogger().warning("MythicMobs hook failed, Mythic skill bridge disabled.");
         }
     }
 
     private void checkAndScheduleAuraHook() {
         if (Bukkit.getPluginManager().getPlugin("AuraSkills") == null) {
-            getLogger().warning("[Accessory] AuraSkills not found.");
+            getLogger().warning("AuraSkills not found.");
             return;
         }
 

@@ -10,56 +10,61 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public final class Language {
     private static final String LANGUAGE_DIR = "Language";
     private static final String DEFAULT_LANG_CODE = "en_US";
     private static final String FALLBACK_FILE = "zh_CN.yml";
 
+    private static final String MESSAGE_ROOT = "Message";
+
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
     private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.legacySection();
 
     private final JavaPlugin plugin;
-    private final Map<String, String> singleLineMessages = new HashMap<>();
-    private final Map<String, List<String>> multiLineMessages = new HashMap<>();
 
+    private Map<String, String> singleLineMessages = Collections.emptyMap();
+    private Map<String, List<String>> multiLineMessages = Collections.emptyMap();
 
     public Language(JavaPlugin plugin) {
         this.plugin = plugin;
         reload();
     }
 
-    /**
-     * Reload language config from disk and rebuild message cache.
-     */
     public void reload() {
         String currentFileName = resolveLanguageFileName();
-        FileConfiguration cfg = loadLanguageConfiguration(currentFileName);
 
-        singleLineMessages.clear();
-        multiLineMessages.clear();
+        ensureLanguageDirectory();
 
-        ConfigurationSection root = cfg.getConfigurationSection("Message");
-        if (root == null) {
-            return;
-        }
+        FileConfiguration primary = loadLanguageConfiguration(currentFileName);
+        FileConfiguration fallback = loadLanguageConfiguration(FALLBACK_FILE);
 
-        for (String key : root.getKeys(false)) {
-            String path = "Message." + key;
-            if (cfg.isList(path)) {
-                multiLineMessages.put(key, formatLines(cfg.getStringList(path)));
+        Map<String, String> singles = new HashMap<>();
+        Map<String, List<String>> multis = new HashMap<>();
+
+        Set<String> keys = collectMessageKeys(primary, fallback);
+
+        for (String key : keys) {
+            String path = MESSAGE_ROOT + "." + key;
+
+            if (isList(primary, path) || isList(fallback, path)) {
+                List<String> raw = primary.getStringList(path);
+                if (raw.isEmpty()) {
+                    raw = fallback.getStringList(path);
+                }
+                multis.put(key, Collections.unmodifiableList(formatLines(raw)));
             } else {
-                String raw = cfg.getString(path, "Missing:" + key);
-                singleLineMessages.put(key, format(raw));
+                String raw = primary.getString(path);
+                if (raw == null) {
+                    raw = fallback.getString(path, "Missing:" + key);
+                }
+                singles.put(key, format(raw));
             }
         }
+
+        this.singleLineMessages = Collections.unmodifiableMap(singles);
+        this.multiLineMessages = Collections.unmodifiableMap(multis);
     }
 
     public String lang(String key) {
@@ -75,53 +80,71 @@ public final class Language {
         return code.endsWith(".yml") ? code : code + ".yml";
     }
 
-    private FileConfiguration loadLanguageConfiguration(String fileName) {
+    private void ensureLanguageDirectory() {
         File langDir = new File(plugin.getDataFolder(), LANGUAGE_DIR);
         if (!langDir.exists()) {
             langDir.mkdirs();
         }
-
-        ensureLanguageFile(fileName);
-        ensureLanguageFile(FALLBACK_FILE);
-
-        File file = new File(langDir, fileName);
-        FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
-        attachDefaultsFromJar(cfg, fileName);
-        return cfg;
     }
 
-    private void ensureLanguageFile(String fileName) {
+    private FileConfiguration loadLanguageConfiguration(String fileName) {
+        ensureLanguageFileIfPossible(fileName);
         File file = new File(plugin.getDataFolder(), LANGUAGE_DIR + "/" + fileName);
-        if (!file.exists()) {
-            plugin.saveResource(LANGUAGE_DIR + "/" + fileName, false);
-        }
+        return YamlConfiguration.loadConfiguration(file);
     }
 
-    private void attachDefaultsFromJar(FileConfiguration cfg, String fileName) {
-        try (InputStream in = plugin.getResource(LANGUAGE_DIR + "/" + fileName)) {
-            if (in == null) {
-                return;
+    private void ensureLanguageFileIfPossible(String fileName) {
+        File file = new File(plugin.getDataFolder(), LANGUAGE_DIR + "/" + fileName);
+        if (file.exists()) {
+            return;
+        }
+
+        String resourcePath = LANGUAGE_DIR + "/" + fileName;
+        try (InputStream in = plugin.getResource(resourcePath)) {
+            if (in != null) {
+                plugin.saveResource(resourcePath, false);
             }
-            YamlConfiguration defaults = YamlConfiguration.loadConfiguration(
-                    new InputStreamReader(in, StandardCharsets.UTF_8)
-            );
-            cfg.setDefaults(defaults);
         } catch (Exception ignored) {
         }
     }
 
+    private Set<String> collectMessageKeys(FileConfiguration primary, FileConfiguration fallback) {
+        Set<String> keys = new LinkedHashSet<>();
+
+        ConfigurationSection primaryRoot = primary.getConfigurationSection(MESSAGE_ROOT);
+        if (primaryRoot != null) {
+            keys.addAll(primaryRoot.getKeys(false));
+        }
+
+        ConfigurationSection fallbackRoot = fallback.getConfigurationSection(MESSAGE_ROOT);
+        if (fallbackRoot != null) {
+            keys.addAll(fallbackRoot.getKeys(false));
+        }
+
+        return keys;
+    }
+
+    private boolean isList(FileConfiguration cfg, String path) {
+        return cfg.contains(path) && cfg.isList(path);
+    }
+
     private String format(String input) {
         String raw = input == null ? "" : input;
-
         try {
-            String miniMessageParsed = LEGACY_SERIALIZER.serialize(MINI_MESSAGE.deserialize(raw));
-            return ChatColor.translateAlternateColorCodes('&', miniMessageParsed);
+            return ChatColor.translateAlternateColorCodes(
+                    '&',
+                    LEGACY_SERIALIZER.serialize(MINI_MESSAGE.deserialize(raw))
+            );
         } catch (Exception ignored) {
             return ChatColor.translateAlternateColorCodes('&', raw);
         }
     }
 
     private List<String> formatLines(List<String> source) {
+        if (source == null || source.isEmpty()) {
+            return Collections.emptyList();
+        }
+
         List<String> out = new ArrayList<>(source.size());
         for (String line : source) {
             out.add(format(line));
