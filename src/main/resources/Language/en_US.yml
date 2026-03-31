@@ -10,6 +10,7 @@ Message:
   Only_player_open: "&cThis command can only be executed by an in-game player."
 
   Item_not_match: "&cThis item does not match this slot's requirements."
+  Slot_no_permission: "&cYou do not have permission to use this accessory slot."
   Item_locked: "&cThis slot is locked."
   Accessory_equipped: "&aAccessory equipped."
 

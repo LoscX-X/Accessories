@@ -10,6 +10,7 @@ Message:
   Only_player_open: "&c该指令仅限玩家在游戏内执行。"
 
   Item_not_match: "&c该饰品不符合当前槽位要求。"
+  Slot_no_permission: "&c你没有权限使用该饰品槽位。"
   Item_locked: "&c该槽位已锁定。"
   Accessory_equipped: "&a饰品已装备。"
 
