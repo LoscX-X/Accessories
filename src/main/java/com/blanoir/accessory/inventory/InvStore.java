@@ -12,14 +12,14 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 
-public final class AccessoryInventoryStore {
+public final class InvStore {
     private static final String CONTAINS_DIR = "contains";
     private static final String CONTENTS_KEY = "contents";
 
     private final JavaPlugin plugin;
     private final Map<UUID, ItemStack[]> cache = new ConcurrentHashMap<>();
 
-    public AccessoryInventoryStore(JavaPlugin plugin) {
+    public InvStore(JavaPlugin plugin) {
         this.plugin = plugin;
     }
 

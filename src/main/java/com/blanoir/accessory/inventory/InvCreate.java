@@ -141,7 +141,7 @@ public class InvCreate implements InventoryHolder {
         meta.displayName(MiniMessage.miniMessage().deserialize(mmName));
 
         List<String> mmLore = cfg.getStringList("disabled-slot.item.lore");
-        if (mmLore != null && !mmLore.isEmpty()) {
+        if (!mmLore.isEmpty()) {
             List<Component> lore = new ArrayList<>(mmLore.size());
             for (String line : mmLore) {
                 lore.add(MiniMessage.miniMessage().deserialize(line));

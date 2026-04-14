@@ -1,8 +1,8 @@
 package com.blanoir.accessory.traits;
 
 import com.blanoir.accessory.attribute.aura.CustomTraits;
-import com.blanoir.accessory.events.AbsorbShieldRegenEvent;
-import com.blanoir.accessory.utils.traits.ShieldUtil;
+import com.blanoir.accessory.events.traits.AbsorbShieldRegenEvent;
+import com.blanoir.accessory.traits.utils.ShieldUtil;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.bukkit.BukkitTraitHandler;
 import dev.aurelium.auraskills.api.trait.Trait;
@@ -154,7 +154,7 @@ public class Absorb implements BukkitTraitHandler, Listener {
         UUID uuid = player.getUniqueId();
 
         // ✅ 如果有 Mythic Aura：Anti_absorb -> 不恢复
-        if (hasMythicAura(player, "Anti_absorb")) {
+        if (hasMythicAura(player)) {
             return;
         }
 
@@ -200,7 +200,7 @@ public class Absorb implements BukkitTraitHandler, Listener {
         if (max <= 0) return;
         addShield(player, max * ratio);
     }
-    private boolean hasMythicAura(Player player, String auraName) {
+    private boolean hasMythicAura(Player player) {
         try {
             if (Bukkit.getPluginManager().getPlugin("MythicMobs") == null) {
                 return false;
@@ -220,13 +220,13 @@ public class Absorb implements BukkitTraitHandler, Listener {
                 if (parameterTypes.length != 2) continue;
                 if (!parameterTypes[1].equals(String.class)) continue;
                 if (!parameterTypes[0].isAssignableFrom(abstractEntity.getClass())) continue;
-                Object hasAura = method.invoke(auraManager, abstractEntity, auraName);
+                Object hasAura = method.invoke(auraManager, abstractEntity, "Anti_absorb");
                 return hasAura instanceof Boolean && (Boolean) hasAura;
             }
             return false;
 
         } catch (Throwable t) {
-            // Mythic 没装 / 出错时保险
+            // Mythic 依赖缺陷
             return false;
         }
     }

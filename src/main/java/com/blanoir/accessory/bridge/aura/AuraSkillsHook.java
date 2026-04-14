@@ -5,7 +5,7 @@ import com.blanoir.accessory.attribute.aura.CustomStats;
 import com.blanoir.accessory.attribute.aura.CustomTraits;
 import com.blanoir.accessory.bridge.placeholderapi.AbsorbPlaceholder;
 import com.blanoir.accessory.bridge.placeholderapi.MagicAbsorbPlaceholder;
-import com.blanoir.accessory.command.ShieldCurCommand;
+import com.blanoir.accessory.command.ShieldCommand;
 import com.blanoir.accessory.traits.Absorb;
 import com.blanoir.accessory.traits.Defence;
 import com.blanoir.accessory.traits.HealRegDecrease;
@@ -57,7 +57,7 @@ public final class AuraSkillsHook {
             debugStartup("[Accessory][Aura] Step 4: registering shield commands");
             var shieldCmd = plugin.getCommand("shield");
             if (shieldCmd != null) {
-                var exec = new ShieldCurCommand(absorb);
+                var exec = new ShieldCommand(absorb);
                 shieldCmd.setExecutor(exec);
                 shieldCmd.setTabCompleter(exec);
             } else {
@@ -66,7 +66,7 @@ public final class AuraSkillsHook {
 
             var magicShieldCmd = plugin.getCommand("magicshield");
             if (magicShieldCmd != null) {
-                var exec = new ShieldCurCommand(ms::addShield, ms::addShieldPercent, "accessory.magicshield");
+                var exec = new ShieldCommand(ms::addShield, ms::addShieldPercent, "accessory.magicshield");
                 magicShieldCmd.setExecutor(exec);
                 magicShieldCmd.setTabCompleter(exec);
             } else {

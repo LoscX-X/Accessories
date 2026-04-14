@@ -150,6 +150,11 @@ public class InvReload implements CommandExecutor, TabCompleter {
     }
 
     private List<String> filterByPrefix(String input, List<String> options) {
+        return getStrings(input, options);
+    }
+
+    @NotNull
+    public static List<String> getStrings(String input, List<String> options) {
         String lower = input.toLowerCase(Locale.ROOT);
         List<String> out = new ArrayList<>();
         for (String option : options) {

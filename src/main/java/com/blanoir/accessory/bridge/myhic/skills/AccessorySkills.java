@@ -20,7 +20,7 @@ import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class AccessorySkillEngine {
+public final class AccessorySkills {
 
     private final Accessory plugin;
     private final NamespacedKey accItemId;
@@ -35,7 +35,7 @@ public final class AccessorySkillEngine {
     private int skillSignature = 1;
     private long tick = 0;
 
-    public AccessorySkillEngine(Accessory plugin) {
+    public AccessorySkills(Accessory plugin) {
         this.plugin = plugin;
         this.accItemId = new NamespacedKey(plugin, "acc_item_id");
         this.accItemVersion = new NamespacedKey(plugin, "acc_item_version");
@@ -104,14 +104,7 @@ public final class AccessorySkillEngine {
         return configs;
     }
 
-    private int toInt(Object val, int def) {
-        if (val instanceof Number n) return n.intValue();
-        try {
-            return Integer.parseInt(String.valueOf(val));
-        } catch (Exception ignore) {
-            return def;
-        }
-    }
+
 
     public void startTimer() {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
@@ -301,9 +294,8 @@ public final class AccessorySkillEngine {
     private Entity targetForEvent(TargetType configured, Player caster, Entity victim, Entity attacker) {
         return switch (configured) {
             case SELF -> caster;
-            case TARGETED -> victim;
+            case TARGETED, PROJECTILE  -> victim;
             case ATTACKER -> attacker;
-            case PROJECTILE -> victim;
             case NONE -> null;
         };
     }
@@ -398,6 +390,15 @@ public final class AccessorySkillEngine {
                 case ON_SHOOT -> PROJECTILE;
                 case ON_TIMER -> SELF;
             };
+        }
+
+    }
+    private int toInt(Object val, int def) {
+        if (val instanceof Number n) return n.intValue();
+        try {
+            return Integer.parseInt(String.valueOf(val));
+        } catch (Exception ignore) {
+            return def;
         }
     }
 }

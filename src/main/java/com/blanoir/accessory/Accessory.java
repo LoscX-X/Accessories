@@ -2,44 +2,46 @@ package com.blanoir.accessory;
 
 import com.blanoir.accessory.api.AccessoryService;
 import com.blanoir.accessory.bridge.myhic.MythicBridgeListener;
-import com.blanoir.accessory.bridge.myhic.skills.AccessorySkillEngine;
+import com.blanoir.accessory.bridge.myhic.skills.AccessorySkills;
 import com.blanoir.accessory.bridge.aura.AuraSkillsHook;
 import com.blanoir.accessory.bridge.myhic.skills.AccessorySkillListener;
-import com.blanoir.accessory.inventory.AccessoryInventoryStore;
-import com.blanoir.accessory.inventory.InvListener;
+import com.blanoir.accessory.inventory.InvStore;
+import com.blanoir.accessory.inventory.listener.InvListener;
 import com.blanoir.accessory.inventory.InvReload;
 import com.blanoir.accessory.inventory.InvSave;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import com.blanoir.accessory.utils.Language;
+import com.blanoir.accessory.utils.Lang;
 
 import java.io.File;
 
 public final class Accessory extends JavaPlugin {
 
-    private Language lang;
+    private Lang lang;
     private AccessoryService accessoryService;
-    private AccessorySkillEngine skillEngine;
-    private AccessoryInventoryStore inventoryStore;
+    private AccessorySkills skillEngine;
+    private InvStore inventoryStore;
 
 
-    public Language lang() { return lang; }
-    public AccessorySkillEngine skillEngine() { return skillEngine; }
-    public AccessoryInventoryStore inventoryStore() { return inventoryStore; }
+    public Lang lang() { return lang; }
+    public AccessorySkills skillEngine() { return skillEngine; }
+    public InvStore inventoryStore() { return inventoryStore; }
 
     @Override
     public void onEnable() {
         initFiles();
         initLang();
-        this.inventoryStore = new AccessoryInventoryStore(this);
+        initSkillConfigs();
+
+        this.inventoryStore = new InvStore(this);
+        this.accessoryService = new AccessoryService(this);
 
         registerCommands();
         registerListeners();
 
         checkAndScheduleMythicHook();
         checkAndScheduleAuraHook();
-        this.accessoryService = new AccessoryService(this);
     }
     public AccessoryService service() {
         return accessoryService;
@@ -67,7 +69,7 @@ public final class Accessory extends JavaPlugin {
     }
 
     private void initLang() {
-        lang = new Language(this);
+        lang = new Lang(this);
     }
 
     private void initSkillConfigs() {
@@ -90,7 +92,7 @@ public final class Accessory extends JavaPlugin {
 
     private void initMythicBridgeHook() {
         try {
-            this.skillEngine = new AccessorySkillEngine(this);
+            this.skillEngine = new AccessorySkills(this);
             this.skillEngine.loadConfig();
             this.skillEngine.startTimer();
             initSkillConfigs();

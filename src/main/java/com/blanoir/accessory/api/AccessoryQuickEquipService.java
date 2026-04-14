@@ -145,8 +145,14 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
 
     private File dataFile(Player p) {
         File dir = new File(plugin.getDataFolder(), "contains");
-        if (!dir.exists()) dir.mkdirs();
+        ensureDir(dir);
         return new File(dir, p.getUniqueId() + ".yml");
+    }
+    private void ensureDir(File dir){
+        if(dir.exists()) return;
+        if(!dir.mkdirs()){
+            throw new RuntimeException("创建目录失败" + dir.getAbsolutePath());
+        }
     }
 
     private ItemStack[] loadContents(Player p, int size) {

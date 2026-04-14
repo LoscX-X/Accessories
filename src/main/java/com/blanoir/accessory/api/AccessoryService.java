@@ -81,7 +81,7 @@ public final class AccessoryService {
         Player online = target.getPlayer();
         if (online != null) {
             clearOpenAccessoryInventory(online);
-            Inventory empty = Bukkit.createInventory((InventoryHolder) null, accessorySize());
+            Inventory empty = Bukkit.createInventory(null, accessorySize());
             new AccessoryLoad(plugin).rebuildFromInventory(online, empty);
             if (plugin.skillEngine() != null) {
                 plugin.skillEngine().refreshPlayer(online, empty);
@@ -94,7 +94,7 @@ public final class AccessoryService {
         File dir = new File(plugin.getDataFolder(), "contains");
         if (!dir.exists() && !dir.mkdirs()) return false;
 
-        File file = new File(dir, target.getUniqueId().toString() + ".yml");
+        File file = new File(dir, target.getUniqueId() + ".yml");
         YamlConfiguration cfg = new YamlConfiguration();
         cfg.set("contents", List.of());
         try {

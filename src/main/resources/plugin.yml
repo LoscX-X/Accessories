@@ -8,15 +8,15 @@ commands:
     description: 调整当前物理护盾
     usage: /shield <give|givep> <me|player|all> <value>
     permission: accessory.shield
-  magicshield:
+  magicShield:
     description: 调整当前魔法护盾
     usage: /magicshield <give|givep> <me|player|all> <value>
     permission: accessory.magicshield
-
   accessory:
     description: 打开你的饰品背包，或执行管理命令
     usage: /accessory [open|reload|clear <player>]
     aliases: [ acc, acre ]
+
 permissions:
   accessory.reload:
     description: Allow Reloaded
@@ -27,6 +27,6 @@ permissions:
   accessory.shield:
     description: Allow adjusting physical shield
     default: op
-  accessory.magicshield:
+  accessory.magicShield:
     description: Allow adjusting magic shield
     default: op

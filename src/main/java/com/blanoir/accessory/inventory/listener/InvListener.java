@@ -1,6 +1,7 @@
 // com.blanoir.accessory.inv.InvListener
-package com.blanoir.accessory.inventory;
+package com.blanoir.accessory.inventory.listener;
 
+import com.blanoir.accessory.inventory.InvCreate;
 import com.blanoir.accessory.utils.LoreUtils;
 import com.blanoir.accessory.attribute.AccessoryLoad;
 import com.blanoir.accessory.events.AccessoryPlaceEvent;
@@ -53,14 +54,14 @@ public class InvListener implements Listener {
     }
     private boolean hasSlotPermission(Player player, int slot) {
         String permission = requiredPermission(slot);
-        return permission == null || player.hasPermission(permission);
+        return permission != null && !player.hasPermission(permission);
     }
     private boolean canPlaceInSlot(Player player, int slot, ItemStack item) {
         if (isSlotDisabled(slot)) return true;
         // 未配置的槽位：直接不允许放入（更安全的默认）
         if (!isSlotConfigured(slot)) return true;
 
-        if (!hasSlotPermission(player, slot)) {
+        if (hasSlotPermission(player, slot)) {
             return true;
         }
 
@@ -164,7 +165,7 @@ public class InvListener implements Listener {
                                 : e.getCursor();
                         if (going != null && !going.getType().isAir() && canPlaceInSlot(p, raw, going)) {
                             e.setCancelled(true);
-                            if (!hasSlotPermission(p, raw)) {
+                            if (hasSlotPermission(p, raw)) {
                                 p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
                             } else {
                                 p.sendMessage(plugin.lang().langComponent("Item_not_match"));
@@ -216,7 +217,7 @@ public class InvListener implements Listener {
             if (raw >= topSize) continue;
             if (canPlaceInSlot(p, raw, en.getValue())) {
                 e.setCancelled(true);
-                if (!hasSlotPermission(p, raw)) {
+                if (hasSlotPermission(p, raw)) {
                     p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
                 } else {
                     p.sendMessage(plugin.lang().langComponent("Item_not_match"));

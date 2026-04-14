@@ -1,11 +1,11 @@
-package com.blanoir.accessory.events;
+package com.blanoir.accessory.events.traits;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class MagicShieldRegenEvent extends Event implements Cancellable {
+public class AbsorbShieldRegenEvent extends Event implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();
 
@@ -15,7 +15,7 @@ public class MagicShieldRegenEvent extends Event implements Cancellable {
     private boolean cancelled;
     private double amount;
 
-    public MagicShieldRegenEvent(Player player, double currentShield, double maxShield, double amount) {
+    public AbsorbShieldRegenEvent(Player player, double currentShield, double maxShield, double amount) {
         this.player = player;
         this.currentShield = currentShield;
         this.maxShield = maxShield;

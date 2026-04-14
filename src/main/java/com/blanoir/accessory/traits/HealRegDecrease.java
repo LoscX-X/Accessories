@@ -58,4 +58,7 @@ public class HealRegDecrease implements BukkitTraitHandler, Listener {
         event.setAmount(Math.max(0.0, event.getAmount() - dec));
     }
 
+    public JavaPlugin getPlugin() {
+        return plugin;
+    }
 }

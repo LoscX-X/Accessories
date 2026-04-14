@@ -13,7 +13,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.*;
 
-public final class Language {
+public final class Lang {
     private static final String LANGUAGE_DIR = "Language";
     private static final String DEFAULT_LANG_CODE = "en_US";
     private static final String FALLBACK_FILE = "zh_CN.yml";
@@ -29,43 +29,60 @@ public final class Language {
     private final Map<String, Component> singleLineComponents = new HashMap<>();
     private final Map<String, List<Component>> multiLineComponents = new HashMap<>();
 
-    private Map<String, String> singleLineMessages = Collections.emptyMap();
-    private Map<String, List<String>> multiLineMessages = Collections.emptyMap();
 
-    public Language(JavaPlugin plugin) {
+
+    public Lang(JavaPlugin plugin) {
         this.plugin = plugin;
         reload();
     }
 
     public void reload() {
-        String currentFileName = resolveLanguageFileName();
+        String fileName = resolveLanguageFileName();
 
-        singleLineMessages.clear();
-        multiLineMessages.clear();
-        singleLineComponents.clear();
-        multiLineComponents.clear();
-
-        FileConfiguration primary = loadLanguageConfiguration(currentFileName);
+        FileConfiguration primary = loadLanguageConfiguration(fileName);
         FileConfiguration fallback = loadLanguageConfiguration(FALLBACK_FILE);
 
         Map<String, String> singles = new HashMap<>();
         Map<String, List<String>> multis = new HashMap<>();
+        Map<String, Component> singlesC = new HashMap<>();
+        Map<String, List<Component>> multisC = new HashMap<>();
 
-        for (String key : root.getKeys(false)) {
-            String path = "Message." + key;
-            if (cfg.isList(path)) {
-                List<String> source = cfg.getStringList(path);
-                multiLineMessages.put(key, formatLines(source));
-                multiLineComponents.put(key, formatComponents(source));
+        Set<String> keys = collectMessageKeys(primary, fallback);
+
+        for (String key : keys) {
+            String path = MESSAGE_ROOT + "." + key;
+
+            if (isList(primary, path) || isList(fallback, path)) {
+                List<String> raw = primary.getStringList(path);
+                if (raw.isEmpty()) raw = fallback.getStringList(path);
+
+                multis.put(key, formatLines(raw));
+                multisC.put(key, formatComponents(raw));
+
             } else {
-                String raw = cfg.getString(path, "Missing:" + key);
-                singleLineMessages.put(key, format(raw));
-                singleLineComponents.put(key, formatComponent(raw));
+                String raw = primary.getString(path);
+                if (raw == null) raw = fallback.getString(path, "Missing:" + key);
+
+                singles.put(key, format(raw));
+                singlesC.put(key, formatComponent(raw));
             }
         }
 
-        this.singleLineMessages = Collections.unmodifiableMap(singles);
-        this.multiLineMessages = Collections.unmodifiableMap(multis);
+
+// 写入字符串缓存
+        this.singleLineMessages.clear();
+        this.singleLineMessages.putAll(singles);
+
+        this.multiLineMessages.clear();
+        this.multiLineMessages.putAll(multis);
+
+// 写入 Component 缓存
+        this.singleLineComponents.clear();
+        this.singleLineComponents.putAll(singlesC);
+
+        this.multiLineComponents.clear();
+        this.multiLineComponents.putAll(multisC);
+
     }
 
     public String lang(String key) {

@@ -1,8 +1,8 @@
 package com.blanoir.accessory.traits;
 
 import com.blanoir.accessory.attribute.aura.CustomTraits;
-import com.blanoir.accessory.events.MagicShieldRegenEvent;
-import com.blanoir.accessory.utils.traits.ShieldUtil;
+import com.blanoir.accessory.events.traits.MagicShieldRegenEvent;
+import com.blanoir.accessory.traits.utils.ShieldUtil;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.bukkit.BukkitTraitHandler;
 import dev.aurelium.auraskills.api.trait.Trait;
@@ -129,7 +129,7 @@ public class MagicAbsorb implements BukkitTraitHandler, Listener {
 
         // 把基础伤害按比例缩放，让最终伤害变成 newFinal
         double base = event.getDamage();
-        double scale = (finalDamage == 0) ? 0 : (newFinal / finalDamage);
+        double scale = newFinal / finalDamage;
         event.setDamage(base * scale);
     }
 
@@ -186,5 +186,9 @@ public class MagicAbsorb implements BukkitTraitHandler, Listener {
         double max = getMaxShield(player);
         if (max <= 0) return;
         addShield(player, max * ratio);
+    }
+
+    public JavaPlugin getPlugin() {
+        return plugin;
     }
 }

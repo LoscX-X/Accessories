@@ -4,7 +4,7 @@ title: "<gradient:#00ffa6:#00d1ff><b>Accessories</b></gradient>"
 # GUI 大小（格子数），必须是 9 的倍数（最小 9，最大 54）
 size: 9
 
-# 语言文件名称（位于 /plugins/Accessory/Language 目录下，不带 .yml 后缀）
+# 语言文件名称（位于 /plugins/Accessory/Lang 目录下，不带 .yml 后缀）
 # 默认可用：en_US, zh_CN
 Lang: "en_US"
 
@@ -20,7 +20,7 @@ skill-debug: false
 # 匹配不区分大小写
 Accessory:
   "1":
-    # Optional permission node for this slot. If omitted, no permission is required.
+    # 增加permission检测
     # permission: "accessory.slot.ring"
     lore:
       - "[Ring]"

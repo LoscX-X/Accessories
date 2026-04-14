@@ -16,17 +16,17 @@ public class AbsorbPlaceholder extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getIdentifier() {
-        return "absorb"; // 占位符前缀 %absorb_*
+        return "absorb";
     }
 
     @Override
     public @NotNull String getAuthor() {
-        return "Blanoir"; // 你可以改成自己的名字
+        return "LoscX";
     }
 
     @Override
     public @NotNull String getVersion() {
-        return "1.0.0"; // 扩展版本
+        return "1.0.0";
     }
 
     @Override
@@ -36,7 +36,7 @@ public class AbsorbPlaceholder extends PlaceholderExpansion {
 
     @Override
     public boolean persist() {
-        return true; // 确保在重载时不取消注册
+        return true;
     }
 
     @Override
