@@ -17,18 +17,20 @@ public class InvLoad {
     }
 
     public void openFor(Player viewer, Player target) {
-        InvCreate holder = new InvCreate(plugin, target.getUniqueId());
+        int totalPages = plugin.accessoryPages();
+        InvCreate holder = new InvCreate(plugin, target.getUniqueId(), 1, totalPages);
         Inventory inventory = holder.getInventory();
 
-        ItemStack[] cached = plugin.inventoryStore().getOrLoad(target.getUniqueId(), inventory.getSize());
+        ItemStack[] cached = plugin.inventoryStore().getPageOrLoad(
+                target.getUniqueId(),
+                holder.currentPage(),
+                inventory.getSize(),
+                totalPages
+        );
         inventory.setContents(cached);
 
-        holder.applyFrames();
         var service = plugin.service();
-        if (service != null) {
-            holder.applyDisabledSlots(service.getDisabledSlots());
-        }
-
+        holder.decorate(service != null ? service.getDisabledSlots() : null);
         viewer.openInventory(inventory);
     }
 }
