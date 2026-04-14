@@ -1,6 +1,7 @@
 package com.blanoir.accessory.inventory;
 
 import com.blanoir.accessory.database.mysql.SqlManager;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -10,6 +11,10 @@ import org.bukkit.util.io.BukkitObjectOutputStream;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 public final class InvStore {
     private static final String CONTAINS_DIR = "contains";
@@ -34,6 +39,11 @@ public final class InvStore {
     private final StorageType storageType;
     private final SqlManager sqlManager;
     private final Map<UUID, ItemStack[]> cache = new ConcurrentHashMap<>();
+    private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "accessory-io");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public InvStore(JavaPlugin plugin, StorageType storageType, SqlManager sqlManager) {
         this.plugin = plugin;
@@ -42,11 +52,23 @@ public final class InvStore {
     }
 
     public void preload(UUID playerId, int totalSize) {
-        cache.computeIfAbsent(playerId, id -> load(id, totalSize));
+        CompletableFuture.runAsync(() -> cache.computeIfAbsent(playerId, id -> load(id, totalSize)), ioExecutor);
+    }
+
+    public void getPageOrLoadAsync(UUID playerId, int page, int pageSize, int totalPages, Consumer<ItemStack[]> callback) {
+        CompletableFuture
+                .supplyAsync(() -> getOrLoadInternal(playerId, totalSize(pageSize, totalPages)), ioExecutor)
+                .thenApply(full -> extractPage(full, page, pageSize))
+                .thenAccept(pageContents -> Bukkit.getScheduler().runTask(plugin, () -> callback.accept(pageContents)));
     }
 
     public ItemStack[] getOrLoad(UUID playerId, int totalSize) {
-        ItemStack[] contents = cache.computeIfAbsent(playerId, id -> load(id, totalSize));
+        ItemStack[] contents = cache.get(playerId);
+        if (contents == null) {
+            contents = new ItemStack[totalSize];
+            cache.put(playerId, contents);
+            preload(playerId, totalSize);
+        }
         return copyToSize(contents, totalSize);
     }
 
@@ -76,18 +98,26 @@ public final class InvStore {
 
     public void saveAndRemove(UUID playerId, int totalSize) {
         ItemStack[] contents = getOrLoad(playerId, totalSize);
-        save(playerId, contents);
-        cache.remove(playerId);
+        CompletableFuture.runAsync(() -> save(playerId, contents), ioExecutor)
+                .thenRun(() -> cache.remove(playerId));
     }
 
     public void flush(UUID playerId, int totalSize) {
-        save(playerId, getOrLoad(playerId, totalSize));
+        ItemStack[] snapshot = getOrLoad(playerId, totalSize);
+        CompletableFuture.runAsync(() -> save(playerId, snapshot), ioExecutor);
     }
 
-    public void flushAll(int totalSize) {
+    public CompletableFuture<Void> flushAllAsync(int totalSize) {
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
         for (UUID playerId : cache.keySet()) {
-            flush(playerId, totalSize);
+            ItemStack[] snapshot = getOrLoad(playerId, totalSize);
+            futures.add(CompletableFuture.runAsync(() -> save(playerId, snapshot), ioExecutor));
         }
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+    }
+
+    public void shutdown() {
+        ioExecutor.shutdown();
     }
 
     private ItemStack[] extractPage(ItemStack[] full, int page, int pageSize) {
@@ -106,6 +136,11 @@ public final class InvStore {
     private int normalizedPage(int page, int totalPages) {
         int max = Math.max(1, totalPages);
         return Math.max(1, Math.min(max, page));
+    }
+
+    private ItemStack[] getOrLoadInternal(UUID playerId, int totalSize) {
+        ItemStack[] contents = cache.computeIfAbsent(playerId, id -> load(id, totalSize));
+        return copyToSize(contents, totalSize);
     }
 
     private ItemStack[] load(UUID playerId, int size) {

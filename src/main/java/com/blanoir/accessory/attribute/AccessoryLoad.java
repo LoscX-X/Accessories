@@ -19,7 +19,15 @@ public final class AccessoryLoad {
     }
 
     private AccessoryLoadHandler createDelegate(JavaPlugin plugin) {
-        if (Bukkit.getPluginManager().getPlugin("AuraSkills") == null) {
+        boolean hasAttributePlus = Bukkit.getPluginManager().getPlugin("AttributePlus") != null;
+        boolean hasAura = Bukkit.getPluginManager().getPlugin("AuraSkills") != null;
+
+        if (hasAttributePlus) {
+            plugin.getLogger().info("[Accessory] AttributePlus hook enabled.");
+            return new AttributePlusAccessoryLoad(plugin);
+        }
+
+        if (!hasAura) {
             plugin.getLogger().warning("[Accessory] AuraSkills not found, using vanilla item attributes only.");
             return new VanillaAccessoryLoad(plugin);
         }
