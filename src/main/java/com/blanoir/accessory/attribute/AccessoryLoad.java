@@ -19,7 +19,20 @@ public final class AccessoryLoad {
     }
 
     private AccessoryLoadHandler createDelegate(JavaPlugin plugin) {
-        if (Bukkit.getPluginManager().getPlugin("AuraSkills") == null) {
+        boolean attributePlusEnabled = plugin.getConfig().getBoolean("attribute-plus.enable", false);
+        boolean hasAttributePlus = Bukkit.getPluginManager().getPlugin("AttributePlus") != null;
+
+        if (attributePlusEnabled) {
+            if (hasAttributePlus) {
+                plugin.getLogger().info("[Accessory] AttributePlus mode enabled by config, AuraSkills traits are ignored.");
+                return new AttributePlusAccessoryLoad(plugin);
+            }
+            plugin.getLogger().warning("[Accessory] AttributePlus mode enabled, but AttributePlus plugin not found. Using vanilla item attributes only.");
+            return new VanillaAccessoryLoad(plugin);
+        }
+
+        boolean hasAura = Bukkit.getPluginManager().getPlugin("AuraSkills") != null;
+        if (!hasAura) {
             plugin.getLogger().warning("[Accessory] AuraSkills not found, using vanilla item attributes only.");
             return new VanillaAccessoryLoad(plugin);
         }
