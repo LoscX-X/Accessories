@@ -4,7 +4,6 @@ import com.blanoir.accessory.database.mysql.SqlManager;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-
 import org.bukkit.util.io.BukkitObjectInputStream;
 import org.bukkit.util.io.BukkitObjectOutputStream;
 
@@ -42,37 +41,71 @@ public final class InvStore {
         this.sqlManager = sqlManager;
     }
 
-    public void preload(UUID playerId, int size) {
-        cache.computeIfAbsent(playerId, id -> load(id, size));
+    public void preload(UUID playerId, int totalSize) {
+        cache.computeIfAbsent(playerId, id -> load(id, totalSize));
     }
 
-    public ItemStack[] getOrLoad(UUID playerId, int size) {
-        ItemStack[] contents = cache.computeIfAbsent(playerId, id -> load(id, size));
-        return copyToSize(contents, size);
+    public ItemStack[] getOrLoad(UUID playerId, int totalSize) {
+        ItemStack[] contents = cache.computeIfAbsent(playerId, id -> load(id, totalSize));
+        return copyToSize(contents, totalSize);
     }
 
-    public void update(UUID playerId, ItemStack[] contents, int size) {
-        cache.put(playerId, copyToSize(contents, size));
+    public ItemStack[] getPageOrLoad(UUID playerId, int page, int pageSize, int totalPages) {
+        ItemStack[] full = getOrLoad(playerId, totalSize(pageSize, totalPages));
+        return extractPage(full, page, pageSize);
     }
 
-    public void clear(UUID playerId, int size) {
-        cache.put(playerId, new ItemStack[size]);
+    public void update(UUID playerId, ItemStack[] contents, int totalSize) {
+        cache.put(playerId, copyToSize(contents, totalSize));
     }
 
-    public void saveAndRemove(UUID playerId, int size) {
-        ItemStack[] contents = getOrLoad(playerId, size);
+    public void updatePage(UUID playerId, int page, ItemStack[] pageContents, int pageSize, int totalPages) {
+        int totalSize = totalSize(pageSize, totalPages);
+        ItemStack[] full = getOrLoad(playerId, totalSize);
+        int pageIndex = normalizedPage(page, totalPages) - 1;
+        int start = pageIndex * pageSize;
+        for (int i = 0; i < pageSize; i++) {
+            full[start + i] = i < pageContents.length ? pageContents[i] : null;
+        }
+        cache.put(playerId, full);
+    }
+
+    public void clear(UUID playerId, int totalSize) {
+        cache.put(playerId, new ItemStack[totalSize]);
+    }
+
+    public void saveAndRemove(UUID playerId, int totalSize) {
+        ItemStack[] contents = getOrLoad(playerId, totalSize);
         save(playerId, contents);
         cache.remove(playerId);
     }
 
-    public void flush(UUID playerId, int size) {
-        save(playerId, getOrLoad(playerId, size));
+    public void flush(UUID playerId, int totalSize) {
+        save(playerId, getOrLoad(playerId, totalSize));
     }
 
-    public void flushAll(int size) {
+    public void flushAll(int totalSize) {
         for (UUID playerId : cache.keySet()) {
-            flush(playerId, size);
+            flush(playerId, totalSize);
         }
+    }
+
+    private ItemStack[] extractPage(ItemStack[] full, int page, int pageSize) {
+        int maxPages = Math.max(1, full.length / pageSize);
+        int pageIndex = normalizedPage(page, maxPages) - 1;
+        ItemStack[] out = new ItemStack[pageSize];
+        int start = pageIndex * pageSize;
+        System.arraycopy(full, start, out, 0, Math.min(pageSize, full.length - start));
+        return out;
+    }
+
+    private int totalSize(int pageSize, int totalPages) {
+        return Math.max(pageSize, pageSize * Math.max(1, totalPages));
+    }
+
+    private int normalizedPage(int page, int totalPages) {
+        int max = Math.max(1, totalPages);
+        return Math.max(1, Math.min(max, page));
     }
 
     private ItemStack[] load(UUID playerId, int size) {

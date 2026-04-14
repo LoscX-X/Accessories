@@ -22,23 +22,27 @@ public class InvSave implements Listener {
     private final Accessory plugin;
     private final NamespacedKey locked;
     private final NamespacedKey disabled;
+    private final NamespacedKey prePage;
+    private final NamespacedKey nextPage;
 
     public InvSave(Accessory plugin) {
         this.plugin = plugin;
         this.locked = new NamespacedKey(plugin, "locked");
         this.disabled = new NamespacedKey(plugin, "disabled");
+        this.prePage = new NamespacedKey(plugin, "pre_page");
+        this.nextPage = new NamespacedKey(plugin, "next_page");
     }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        plugin.inventoryStore().preload(player.getUniqueId(), plugin.accessorySize());
+        plugin.inventoryStore().preload(player.getUniqueId(), plugin.totalAccessoryStorageSize());
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        plugin.inventoryStore().saveAndRemove(player.getUniqueId(), plugin.accessorySize());
+        plugin.inventoryStore().saveAndRemove(player.getUniqueId(), plugin.totalAccessoryStorageSize());
     }
 
     @EventHandler
@@ -47,13 +51,16 @@ public class InvSave implements Listener {
         if (!(top.getHolder() instanceof InvCreate holder)) {
             return;
         }
-        if (!(event.getPlayer() instanceof Player player)) {
-            return;
-        }
 
-        ItemStack[] snapshot = sanitize(top);
+        ItemStack[] snapshot = sanitize(top, holder.currentPage());
         UUID ownerId = holder.ownerId();
-        plugin.inventoryStore().update(ownerId, snapshot, plugin.accessorySize());
+        plugin.inventoryStore().updatePage(
+                ownerId,
+                holder.currentPage(),
+                snapshot,
+                plugin.accessorySize(),
+                plugin.accessoryPages()
+        );
 
         Player owner = Bukkit.getPlayer(ownerId);
         if (owner != null && plugin.skillEngine() != null) {
@@ -63,14 +70,10 @@ public class InvSave implements Listener {
         }
     }
 
-    private ItemStack[] sanitize(Inventory inventory) {
+    public ItemStack[] sanitize(Inventory inventory, int page) {
         ItemStack[] snapshot = inventory.getContents().clone();
 
-        List<Integer> frameSlots = plugin.getConfig().getIntegerList("frame.slots");
-        if (frameSlots.isEmpty()) {
-            frameSlots = List.of(0, 2, 4, 6, 8);
-        }
-
+        List<Integer> frameSlots = frameSlots(page);
         for (int slot : frameSlots) {
             if (slot < 0 || slot >= snapshot.length) {
                 continue;
@@ -81,11 +84,25 @@ public class InvSave implements Listener {
         }
 
         for (int slot = 0; slot < snapshot.length; slot++) {
-            if (hasMarker(snapshot[slot], disabled)) {
+            if (hasMarker(snapshot[slot], disabled)
+                    || hasMarker(snapshot[slot], prePage)
+                    || hasMarker(snapshot[slot], nextPage)) {
                 snapshot[slot] = null;
             }
         }
         return snapshot;
+    }
+
+    private List<Integer> frameSlots(int page) {
+        String pagePath = "frame.page_" + page + ".slots";
+        List<Integer> slots = plugin.getConfig().getIntegerList(pagePath);
+        if (slots.isEmpty()) {
+            slots = plugin.getConfig().getIntegerList("frame.slots");
+        }
+        if (slots.isEmpty()) {
+            slots = List.of(0, 2, 4, 6, 8);
+        }
+        return slots;
     }
 
     private boolean hasMarker(ItemStack item, NamespacedKey markerKey) {

@@ -1,21 +1,21 @@
-# 饰品背包 GUI 顶部显示的标题
-title: "<gradient:#00ffa6:#00d1ff><b>Accessories</b></gradient>"
+# 饰品背包 GUI 顶部显示的标题（支持变量 {page} / {max_page}）
+title: "<gradient:#00ffa6:#00d1ff><b>Accessories {page}/{max_page}</b></gradient>"
 
-# GUI 大小（格子数），必须是 9 的倍数（最小 9，最大 54）
+# 每页 GUI 大小（格子数），必须是 9 的倍数（最小 9，最大 54）
 size: 9
+
+# 总页数
+pages: 2
 
 # 语言文件名称（位于 /plugins/Accessory/Lang 目录下，不带 .yml 后缀）
 # 默认可用：en_US, zh_CN
 Lang: "en_US"
 
 # 是否开启启动调试日志
-# 开启后示例：
-# [Accessory][Aura] Step 1: getting AuraSkills API
 debug-mode: false
 
 # 是否开启饰品技能调试日志
 skill-debug: false
-
 
 # 存储方式: yml 或 mysql
 database:
@@ -32,38 +32,63 @@ database:
     connection-timeout: 10000
     idle-timeout: 600000
 
-# 插槽规则：每个槽位索引对应允许放入的物品 lore 关键词
-# 匹配不区分大小写
+# 插槽规则：每个页面可配置每个槽位允许放入的物品 lore 关键词
+# 同时支持 permission 检测
 Accessory:
-  "1":
-    # 增加permission检测
-    # permission: "accessory.slot.ring"
-    lore:
-      - "[Ring]"
-  "3":
-    lore:
-      - "[Necklace]"
-  "5":
-    lore:
-      - "[Bracelet]"
-  "7":
-    lore:
-      - "[Talisman]"
-  # 示例：
-  # "槽位索引":
-  #   lore:
-  #     - "[自定义关键词]"
+  page_1:
+    "1":
+      # permission: "accessory.slot.ring"
+      lore:
+        - "[Ring]"
+    "3":
+      lore:
+        - "[Necklace]"
+    "5":
+      lore:
+        - "[Bracelet]"
+    "7":
+      lore:
+        - "[Talisman]"
+  page_2:
+    "1":
+      lore:
+        - "[Ring]"
 
-# 锁定槽位的边框样式
+# 锁定槽位边框（支持按页面配置）
 frame:
-  slots: [0, 2, 4, 6, 8]
+  page_1:
+    slots: [0, 2, 4, 6, 8]
+  page_2:
+    slots: [0, 2, 4, 6, 8]
   item:
-    type: "BLACK_STAINED_GLASS_PANE"   # 物品类型
-    custom-model-data: 12345           # 自定义模型数据（可选）
-    hide-tooltip: true                 # 是否隐藏物品提示信息
-    name: "<gray>Locked"               # 显示名称
+    type: "BLACK_STAINED_GLASS_PANE"
+    custom-model-data: 12345
+    hide-tooltip: true
+    name: "<gray>Locked"
     lore:
-      - "<dark_gray>Slot is locked"    # 描述
+      - "<dark_gray>Slot is locked"
+
+# 上一页按钮配置
+pre_page:
+  slot: 0
+  item:
+    type: "ARROW"
+    custom-model-data: 12345
+    hide-tooltip: true
+    name: "<gray>Previous Page"
+    lore:
+      - "<dark_gray>Go to previous page"
+
+# 下一页按钮配置
+next_page:
+  slot: 8
+  item:
+    type: "ARROW"
+    custom-model-data: 12345
+    hide-tooltip: true
+    name: "<gray>Next Page"
+    lore:
+      - "<dark_gray>Go to next page"
 
 # 通过 AccessoryService API 在运行时禁用的槽位样式
 disabled-slot:
@@ -75,12 +100,12 @@ disabled-slot:
       - "<dark_red>This slot is disabled"
 
 # 物理护盾恢复设置
-OUT_OF_COMBAT_SECONDS: 12      # 脱战多少秒后开始恢复
-SHIELD_REGEN_PERCENT: 0.10     # 每次恢复的百分比（0.10 = 10%）
+OUT_OF_COMBAT_SECONDS: 12
+SHIELD_REGEN_PERCENT: 0.10
 
 # 魔法护盾恢复设置
-MAGIC_SHIELD_OUT_OF_COMBAT_SECONDS: 12   # 脱战多少秒后开始恢复
-MAGIC_SHIELD_REGEN_PERCENT: 0.10         # 每次恢复的百分比（0.10 = 10%）
+MAGIC_SHIELD_OUT_OF_COMBAT_SECONDS: 12
+MAGIC_SHIELD_REGEN_PERCENT: 0.10
 
 # 是否显示吸血效果的调试演示数值
 Life_Steal_demonstrate: false

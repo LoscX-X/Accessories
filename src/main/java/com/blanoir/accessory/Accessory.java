@@ -52,7 +52,7 @@ public final class Accessory extends JavaPlugin {
 
     public void reloadPluginSettings() {
         if (inventoryStore != null) {
-            inventoryStore.flushAll(accessorySize());
+            inventoryStore.flushAll(totalAccessoryStorageSize());
         }
         if (sqlManager != null) {
             sqlManager.shutdown();
@@ -66,9 +66,9 @@ public final class Accessory extends JavaPlugin {
     @Override
     public void onDisable() {
         if (inventoryStore != null) {
-            int size = accessorySize();
+            int totalSize = totalAccessoryStorageSize();
             for (Player player : Bukkit.getOnlinePlayers()) {
-                inventoryStore.flush(player.getUniqueId(), size);
+                inventoryStore.flush(player.getUniqueId(), totalSize);
             }
         }
         if (sqlManager != null) {
@@ -107,9 +107,9 @@ public final class Accessory extends JavaPlugin {
     private void startAutoSaveTask() {
         long period = 5L * 60L * 20L;
         Bukkit.getScheduler().runTaskTimer(this, () -> {
-            int size = accessorySize();
+            int totalSize = totalAccessoryStorageSize();
             for (Player player : Bukkit.getOnlinePlayers()) {
-                inventoryStore.flush(player.getUniqueId(), size);
+                inventoryStore.flush(player.getUniqueId(), totalSize);
             }
         }, period, period);
     }
@@ -195,5 +195,13 @@ public final class Accessory extends JavaPlugin {
         int size = getConfig().getInt("size", 9);
         size = Math.max(9, Math.min(54, size));
         return size - (size % 9);
+    }
+
+    public int accessoryPages() {
+        return Math.max(1, getConfig().getInt("pages", 1));
+    }
+
+    public int totalAccessoryStorageSize() {
+        return accessorySize() * accessoryPages();
     }
 }

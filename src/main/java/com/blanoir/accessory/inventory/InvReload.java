@@ -73,9 +73,10 @@ public class InvReload implements CommandExecutor, TabCompleter {
         }
 
         int size = plugin.accessorySize();
+        int pages = plugin.accessoryPages();
         for (Player online : Bukkit.getOnlinePlayers()) {
             Inventory stored = Bukkit.createInventory(null, size);
-            stored.setContents(plugin.inventoryStore().getOrLoad(online.getUniqueId(), size));
+            stored.setContents(plugin.inventoryStore().getPageOrLoad(online.getUniqueId(), 1, size, pages));
             accessoryLoad.rebuildFromInventory(online, stored);
             if (plugin.skillEngine() != null) {
                 plugin.skillEngine().refreshPlayer(online, stored);
@@ -102,12 +103,13 @@ public class InvReload implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        int size = plugin.accessorySize();
-        plugin.inventoryStore().clear(target.getUniqueId(), size);
-        plugin.inventoryStore().flush(target.getUniqueId(), size);
+        int totalSize = plugin.totalAccessoryStorageSize();
+        plugin.inventoryStore().clear(target.getUniqueId(), totalSize);
+        plugin.inventoryStore().flush(target.getUniqueId(), totalSize);
 
         Player online = target.getPlayer();
         if (online != null) {
+            int size = plugin.accessorySize();
             clearOpenAccessoryInventory(online);
             Inventory empty = Bukkit.createInventory(null, size);
             accessoryLoad.rebuildFromInventory(online, empty);
