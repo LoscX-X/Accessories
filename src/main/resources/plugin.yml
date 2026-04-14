@@ -2,7 +2,7 @@ name: Accessory
 version: '${version}'
 main: com.blanoir.accessory.Accessory
 api-version: '1.21'
-softdepend: [AuraSkills, PlaceholderAPI, MythicMobs]
+softdepend: [AuraSkills, PlaceholderAPI, MythicMobs, AttributePlus]
 commands:
   shield:
     description: 调整当前物理护盾

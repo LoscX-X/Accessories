@@ -35,6 +35,7 @@ abstract class BaseAccessoryLoad implements AccessoryLoadHandler {
     @Override
     public final void rebuildFromInventory(Player player, Inventory inventory) {
         clearTraitModifiers(player);
+        clearExternalModifiers(player);
         clearAccessoryAttributes(player);
         clearAppliedTags(player);
 
@@ -45,6 +46,7 @@ abstract class BaseAccessoryLoad implements AccessoryLoadHandler {
             if (item == null || item.getType() == Material.AIR) continue;
 
             applyTraitModifiers(player, item, slot);
+            applyExternalModifiers(player, item, slot);
             applyItemAttributes(player, item, slot);
 
             for (String tag : parseTags(item)) {
@@ -53,12 +55,25 @@ abstract class BaseAccessoryLoad implements AccessoryLoadHandler {
             }
         }
 
+        finishExternalModifiers(player);
         saveAppliedTags(player, currentTags);
     }
 
     protected abstract void clearTraitModifiers(Player player);
 
     protected abstract void applyTraitModifiers(Player player, ItemStack item, int slot);
+
+    protected void clearExternalModifiers(Player player) {
+        // Optional extension point for non-Aura external systems.
+    }
+
+    protected void applyExternalModifiers(Player player, ItemStack item, int slot) {
+        // Optional extension point for non-Aura external systems.
+    }
+
+    protected void finishExternalModifiers(Player player) {
+        // Optional extension point for non-Aura external systems.
+    }
 
     private void clearAppliedTags(Player player) {
         NamespacedKey key = new NamespacedKey(plugin, PLAYER_TAGS_PDC_KEY);

@@ -17,6 +17,12 @@ debug-mode: false
 # 是否开启饰品技能调试日志
 skill-debug: false
 
+# 属性挂钩模式（默认关闭）
+# false: 使用 AuraSkills trait（如果存在）
+# true: 只使用 AttributePlus，忽略 AuraSkills trait
+attribute-plus:
+  enable: false
+
 # 存储方式: yml 或 mysql
 database:
   type: "yml"

@@ -13,7 +13,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.List;
 import java.util.Map;
 
-final class AuraAccessoryLoad extends BaseAccessoryLoad {
+class AuraAccessoryLoad extends BaseAccessoryLoad {
 
     private final AuraSkillsApi api;
     private final ItemManager itemManager;

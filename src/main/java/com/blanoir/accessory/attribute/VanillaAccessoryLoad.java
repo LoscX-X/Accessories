@@ -4,7 +4,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
-final class VanillaAccessoryLoad extends BaseAccessoryLoad {
+class VanillaAccessoryLoad extends BaseAccessoryLoad {
 
     VanillaAccessoryLoad(JavaPlugin plugin) {
         super(plugin);
