@@ -2,11 +2,12 @@ Message:
   No_permission: "&c你没有权限使用该指令。"
   Reload_success: "&a[Accessory] 重载成功。"
   Reload_usage: "&c用法: /accessory reload"
+  View_usage: "&c用法: /accessory view <玩家名>"
   Clear_usage: "&c用法: /accessory clear <玩家名>"
   Clear_success: "&a[Accessory] 已清空该玩家的饰品。"
   Clear_failed: "&c[Accessory] 清空该玩家饰品失败。"
   Player_not_found: "&c未找到该玩家。"
-  Accessory_unknown: "&c未知子命令。可用命令: /accessory, /accessory reload, /accessory clear <玩家名>"
+  Accessory_unknown: "&c未知子命令。可用命令: /accessory, /accessory reload, /accessory clear <玩家名> /accessory view <玩家名>"
   Only_player_open: "&c该指令仅限玩家在游戏内执行。"
 
   Item_not_match: "&c该饰品不符合当前槽位要求。"

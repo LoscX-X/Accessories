@@ -27,8 +27,7 @@ public class InvCommand implements CommandExecutor {
             return true;
         }
 
-        InvCreate gui = new InvCreate(plugin);
-        player.openInventory(gui.getInventory());
+        new InvLoad(plugin).openFor(player);
         return true;
     }
 }

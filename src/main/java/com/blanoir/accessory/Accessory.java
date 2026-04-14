@@ -1,18 +1,19 @@
 package com.blanoir.accessory;
 
 import com.blanoir.accessory.api.AccessoryService;
-import com.blanoir.accessory.bridge.myhic.MythicBridgeListener;
-import com.blanoir.accessory.bridge.myhic.skills.AccessorySkills;
 import com.blanoir.accessory.bridge.aura.AuraSkillsHook;
+import com.blanoir.accessory.bridge.myhic.MythicBridgeListener;
 import com.blanoir.accessory.bridge.myhic.skills.AccessorySkillListener;
-import com.blanoir.accessory.inventory.InvStore;
-import com.blanoir.accessory.inventory.listener.InvListener;
+import com.blanoir.accessory.bridge.myhic.skills.AccessorySkills;
+import com.blanoir.accessory.database.mysql.SqlManager;
 import com.blanoir.accessory.inventory.InvReload;
 import com.blanoir.accessory.inventory.InvSave;
+import com.blanoir.accessory.inventory.InvStore;
+import com.blanoir.accessory.inventory.listener.InvListener;
+import com.blanoir.accessory.utils.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import com.blanoir.accessory.utils.Lang;
 
 import java.io.File;
 
@@ -22,7 +23,7 @@ public final class Accessory extends JavaPlugin {
     private AccessoryService accessoryService;
     private AccessorySkills skillEngine;
     private InvStore inventoryStore;
-
+    private SqlManager sqlManager;
 
     public Lang lang() { return lang; }
     public AccessorySkills skillEngine() { return skillEngine; }
@@ -34,18 +35,34 @@ public final class Accessory extends JavaPlugin {
         initLang();
         initSkillConfigs();
 
-        this.inventoryStore = new InvStore(this);
+        initStorage();
         this.accessoryService = new AccessoryService(this);
 
         registerCommands();
         registerListeners();
 
+        startAutoSaveTask();
         checkAndScheduleMythicHook();
         checkAndScheduleAuraHook();
     }
+
     public AccessoryService service() {
         return accessoryService;
     }
+
+    public void reloadPluginSettings() {
+        if (inventoryStore != null) {
+            inventoryStore.flushAll(accessorySize());
+        }
+        if (sqlManager != null) {
+            sqlManager.shutdown();
+            sqlManager = null;
+        }
+        reloadConfig();
+        lang.reload();
+        initStorage();
+    }
+
     @Override
     public void onDisable() {
         if (inventoryStore != null) {
@@ -54,10 +71,48 @@ public final class Accessory extends JavaPlugin {
                 inventoryStore.flush(player.getUniqueId(), size);
             }
         }
+        if (sqlManager != null) {
+            sqlManager.shutdown();
+        }
         getLogger().info("Bye");
     }
 
+    private void initStorage() {
+        String typeRaw = getConfig().getString("database.type", "yml");
+        InvStore.StorageType storageType = InvStore.StorageType.fromConfig(typeRaw);
 
+        if (storageType == InvStore.StorageType.MYSQL) {
+            this.sqlManager = new SqlManager(this);
+            this.sqlManager.init(
+                    getConfig().getString("database.mysql.host", "127.0.0.1"),
+                    getConfig().getInt("database.mysql.port", 3306),
+                    getConfig().getString("database.mysql.database", "minecraft"),
+                    getConfig().getString("database.mysql.username", "root"),
+                    getConfig().getString("database.mysql.password", "password"),
+                    getConfig().getInt("database.mysql.pool-size", 10),
+                    getConfig().getInt("database.mysql.min-idle", 2),
+                    getConfig().getInt("database.mysql.max-lifetime", 1800000),
+                    getConfig().getInt("database.mysql.connection-timeout", 10000),
+                    getConfig().getInt("database.mysql.idle-timeout", 600000)
+            );
+            getLogger().info("Accessory storage mode: mysql");
+        } else {
+            this.sqlManager = null;
+            getLogger().info("Accessory storage mode: yml");
+        }
+
+        this.inventoryStore = new InvStore(this, storageType, sqlManager);
+    }
+
+    private void startAutoSaveTask() {
+        long period = 5L * 60L * 20L;
+        Bukkit.getScheduler().runTaskTimer(this, () -> {
+            int size = accessorySize();
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                inventoryStore.flush(player.getUniqueId(), size);
+            }
+        }, period, period);
+    }
 
     private void initFiles() {
         getDataFolder().mkdirs();
@@ -136,11 +191,9 @@ public final class Accessory extends JavaPlugin {
         }
     }
 
-
     public int accessorySize() {
         int size = getConfig().getInt("size", 9);
         size = Math.max(9, Math.min(54, size));
         return size - (size % 9);
     }
-
 }

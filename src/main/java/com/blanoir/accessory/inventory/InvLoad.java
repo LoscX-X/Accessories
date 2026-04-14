@@ -13,10 +13,14 @@ public class InvLoad {
     }
 
     public void openFor(Player player) {
-        InvCreate holder = new InvCreate(plugin);
+        openFor(player, player);
+    }
+
+    public void openFor(Player viewer, Player target) {
+        InvCreate holder = new InvCreate(plugin, target.getUniqueId());
         Inventory inventory = holder.getInventory();
 
-        ItemStack[] cached = plugin.inventoryStore().getOrLoad(player.getUniqueId(), inventory.getSize());
+        ItemStack[] cached = plugin.inventoryStore().getOrLoad(target.getUniqueId(), inventory.getSize());
         inventory.setContents(cached);
 
         holder.applyFrames();
@@ -25,6 +29,6 @@ public class InvLoad {
             holder.applyDisabledSlots(service.getDisabledSlots());
         }
 
-        player.openInventory(inventory);
+        viewer.openInventory(inventory);
     }
 }

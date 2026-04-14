@@ -16,6 +16,22 @@ debug-mode: false
 # 是否开启饰品技能调试日志
 skill-debug: false
 
+
+# 存储方式: yml 或 mysql
+database:
+  type: "yml"
+  mysql:
+    host: "127.0.0.1"
+    port: 3306
+    database: "minecraft"
+    username: "root"
+    password: "password"
+    pool-size: 10
+    min-idle: 2
+    max-lifetime: 1800000
+    connection-timeout: 10000
+    idle-timeout: 600000
+
 # 插槽规则：每个槽位索引对应允许放入的物品 lore 关键词
 # 匹配不区分大小写
 Accessory:
