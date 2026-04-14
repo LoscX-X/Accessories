@@ -12,8 +12,6 @@ pages: 2
 Lang: "en_US"
 
 # 是否开启启动调试日志
-# 开启后示例：
-# [Accessory][Aura] Step 1: getting AuraSkills API
 debug-mode: false
 
 # 是否开启饰品技能调试日志

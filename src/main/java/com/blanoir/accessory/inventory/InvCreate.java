@@ -59,6 +59,10 @@ public class InvCreate implements InventoryHolder {
         this.currentPage = Math.max(1, Math.min(totalPages, page));
     }
 
+    public UUID ownerId() {
+        return ownerId;
+    }
+
     @NotNull
     @Override
     public Inventory getInventory() { return this.inventory; }
