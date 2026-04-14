@@ -15,6 +15,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
+import java.util.UUID;
 
 public class InvSave implements Listener {
 
@@ -43,7 +44,7 @@ public class InvSave implements Listener {
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
         Inventory top = event.getView().getTopInventory();
-        if (!(top.getHolder() instanceof InvCreate)) {
+        if (!(top.getHolder() instanceof InvCreate holder)) {
             return;
         }
         if (!(event.getPlayer() instanceof Player player)) {
@@ -51,12 +52,14 @@ public class InvSave implements Listener {
         }
 
         ItemStack[] snapshot = sanitize(top);
-        plugin.inventoryStore().update(player.getUniqueId(), snapshot, plugin.accessorySize());
+        UUID ownerId = holder.ownerId();
+        plugin.inventoryStore().update(ownerId, snapshot, plugin.accessorySize());
 
-        if (plugin.skillEngine() != null) {
+        Player owner = Bukkit.getPlayer(ownerId);
+        if (owner != null && plugin.skillEngine() != null) {
             Inventory tmp = Bukkit.createInventory(null, top.getSize());
             tmp.setContents(snapshot.clone());
-            plugin.skillEngine().refreshPlayer(player, tmp);
+            plugin.skillEngine().refreshPlayer(owner, tmp);
         }
     }
 

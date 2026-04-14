@@ -16,13 +16,16 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class InvCreate implements InventoryHolder {
     private final JavaPlugin plugin;
     private final Inventory inventory;
+    private final UUID ownerId;
 
-    public InvCreate(JavaPlugin plugin) {
+    public InvCreate(JavaPlugin plugin, UUID ownerId) {
         this.plugin = plugin;
+        this.ownerId = ownerId;
 
         FileConfiguration cfg = plugin.getConfig();
 
@@ -35,8 +38,11 @@ public class InvCreate implements InventoryHolder {
 
         this.inventory = Bukkit.createInventory(this, size, title);
 
-        // 首次创建就铺一次外框（从配置读取槽位）
         applyFrames();
+    }
+
+    public UUID ownerId() {
+        return ownerId;
     }
 
     @NotNull
@@ -68,13 +74,11 @@ public class InvCreate implements InventoryHolder {
         }
     }
 
-    /** 生成带 PDC 锁标记的外框物品：类型/CMD/隐藏提示/名称/ lore 均从 config 读，失败回退为黑玻璃 */
     private ItemStack makeLockedItemFromConfig() {
         var cfg = plugin.getConfig();
 
-        // 物品类型（匹配失败回退）
         String typeStr = cfg.getString("frame.item.type", "BLACK_STAINED_GLASS_PANE");
-        Material mat = Material.matchMaterial(typeStr, false); // 支持去除"minecraft:"命名空间
+        Material mat = Material.matchMaterial(typeStr, false);
         if (mat == null || !mat.isItem()) {
             plugin.getLogger().warning("[Accessory] Invalid material '" + typeStr
                     + "', fallback to BLACK_STAINED_GLASS_PANE.");
@@ -84,11 +88,9 @@ public class InvCreate implements InventoryHolder {
         ItemStack it = new ItemStack(mat);
         ItemMeta meta = it.getItemMeta();
 
-        // 隐藏 tooltip（1.20.5+），旧版静默忽略
         boolean hide = cfg.getBoolean("frame.item.hide-tooltip", true);
         try { meta.setHideTooltip(hide); } catch (NoSuchMethodError ignored) {}
 
-        // CustomModelData（>0 才设置）
         int cmd = cfg.getInt("frame.item.custom-model-data", -1);
         if (cmd > 0) {
             try { meta.setCustomModelData(cmd); } catch (Throwable t) {
@@ -96,13 +98,11 @@ public class InvCreate implements InventoryHolder {
             }
         }
 
-        // 显示名（MiniMessage）
         String mmName = cfg.getString("frame.item.name", null);
         if (mmName != null && !mmName.isEmpty()) {
             meta.displayName(MiniMessage.miniMessage().deserialize(mmName));
         }
 
-        // lore（MiniMessage）
         List<String> mmLore = cfg.getStringList("frame.item.lore");
         if (!mmLore.isEmpty()) {
             List<Component> lore = new ArrayList<>(mmLore.size());
@@ -112,7 +112,6 @@ public class InvCreate implements InventoryHolder {
             try { meta.lore(lore); } catch (NoSuchMethodError ignored) {}
         }
 
-        //“locked”标记
         meta.getPersistentDataContainer().set(
                 new NamespacedKey(plugin, "locked"),
                 PersistentDataType.BYTE, (byte) 1

@@ -2,11 +2,12 @@ Message:
   No_permission: "&cYou do not have permission to use this command."
   Reload_success: "&a[Accessory] Reload completed successfully."
   Reload_usage: "&cUsage: /accessory reload"
+  View_usage: "&cUsage: /accessory view <player>"
   Clear_usage: "&cUsage: /accessory clear <player>"
   Clear_success: "&a[Accessory] Cleared the player's accessories."
   Clear_failed: "&c[Accessory] Failed to clear the player's accessories."
   Player_not_found: "&cPlayer not found."
-  Accessory_unknown: "&cUnknown subcommand. Available: /accessory, /accessory reload, /accessory clear <player>."
+  Accessory_unknown: "&cUnknown subcommand. Available: /accessory, /accessory reload, /accessory clear <player>, /accessory view <player>."
   Only_player_open: "&cThis command can only be executed by an in-game player."
 
   Item_not_match: "&cThis item does not match this slot's requirements."
