@@ -20,17 +20,17 @@ public class InvLoad {
         int totalPages = plugin.accessoryPages();
         InvCreate holder = new InvCreate(plugin, target.getUniqueId(), 1, totalPages);
         Inventory inventory = holder.getInventory();
-
-        ItemStack[] cached = plugin.inventoryStore().getPageOrLoad(
+        plugin.inventoryStore().getPageOrLoadAsync(
                 target.getUniqueId(),
                 holder.currentPage(),
                 inventory.getSize(),
-                totalPages
+                totalPages,
+                cached -> {
+                    inventory.setContents(cached);
+                    var service = plugin.service();
+                    holder.decorate(service != null ? service.getDisabledSlots() : null);
+                    viewer.openInventory(inventory);
+                }
         );
-        inventory.setContents(cached);
-
-        var service = plugin.service();
-        holder.decorate(service != null ? service.getDisabledSlots() : null);
-        viewer.openInventory(inventory);
     }
 }

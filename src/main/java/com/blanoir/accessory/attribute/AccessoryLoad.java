@@ -6,8 +6,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
 public final class AccessoryLoad {
 
+    private static final Set<String> LOGGED = Collections.synchronizedSet(new HashSet<>());
     private final AccessoryLoadHandler delegate;
 
     public AccessoryLoad(JavaPlugin plugin) {
@@ -19,21 +24,42 @@ public final class AccessoryLoad {
     }
 
     private AccessoryLoadHandler createDelegate(JavaPlugin plugin) {
-        if (Bukkit.getPluginManager().getPlugin("AuraSkills") == null) {
-            plugin.getLogger().warning("[Accessory] AuraSkills not found, using vanilla item attributes only.");
+        boolean hasAttributePlus = Bukkit.getPluginManager().getPlugin("AttributePlus") != null;
+        boolean hasAura = Bukkit.getPluginManager().getPlugin("AuraSkills") != null;
+
+        if (hasAttributePlus) {
+            infoOnce(plugin, "attributeplus-enabled", "AttributePlus hook enabled.");
+            return new AttributePlusAccessoryLoad(plugin);
+        }
+
+        if (!hasAura) {
+            warnOnce(plugin, "auraskills-missing", "AuraSkills not found, using vanilla item attributes only.");
             return new VanillaAccessoryLoad(plugin);
         }
 
         try {
             AuraSkillsApi api = AuraSkillsApi.get();
             if (api == null) {
-                plugin.getLogger().warning("[Accessory] AuraSkills API unavailable, using vanilla item attributes only.");
+                warnOnce(plugin, "auraskills-api-unavailable", "AuraSkills API unavailable, using vanilla item attributes only.");
                 return new VanillaAccessoryLoad(plugin);
             }
             return new AuraAccessoryLoad(plugin, api);
         } catch (Throwable t) {
-            plugin.getLogger().warning("[Accessory] AuraSkills hook failed, using vanilla item attributes only: " + t.getClass().getSimpleName());
+            warnOnce(plugin, "auraskills-hook-failed-" + t.getClass().getSimpleName(),
+                    "AuraSkills hook failed, using vanilla item attributes only: " + t.getClass().getSimpleName());
             return new VanillaAccessoryLoad(plugin);
+        }
+    }
+
+    private static void infoOnce(JavaPlugin plugin, String key, String msg) {
+        if (LOGGED.add(key)) {
+            plugin.getLogger().info(msg);
+        }
+    }
+
+    private static void warnOnce(JavaPlugin plugin, String key, String msg) {
+        if (LOGGED.add(key)) {
+            plugin.getLogger().warning(msg);
         }
     }
 }
