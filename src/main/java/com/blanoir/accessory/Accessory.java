@@ -129,13 +129,19 @@ public final class Accessory extends JavaPlugin {
         if (!skillFolder.exists()) {
             skillFolder.mkdirs();
         }
-        saveResource("skill/skill.yml", false);
-        saveResource("skill/example.yml", false);
+        File skillFile = new File(skillFolder, "skill.yml");
+        if (!skillFile.exists()) {
+            saveResource("skill/skill.yml", false);
+        }
+        File exampleFile = new File(skillFolder, "example.yml");
+        if (!exampleFile.exists()) {
+            saveResource("skill/example.yml", false);
+        }
     }
 
     private void checkAndScheduleMythicHook() {
         if (Bukkit.getPluginManager().getPlugin("MythicMobs") == null) {
-            getLogger().warning("[Accessory] MythicMobs not found, Mythic skill bridge disabled.");
+            getLogger().warning("MythicMobs not found, Mythic skill bridge disabled.");
             this.skillEngine = null;
             return;
         }
@@ -147,7 +153,6 @@ public final class Accessory extends JavaPlugin {
             this.skillEngine = new AccessorySkills(this);
             this.skillEngine.loadConfig();
             this.skillEngine.startTimer();
-            initSkillConfigs();
             getServer().getPluginManager().registerEvents(new MythicBridgeListener(this), this);
             getServer().getPluginManager().registerEvents(new AccessorySkillListener(this), this);
             for (Player online : Bukkit.getOnlinePlayers()) {
@@ -165,7 +170,9 @@ public final class Accessory extends JavaPlugin {
             Bukkit.getScheduler().runTask(this, () -> new AuraSkillsHook(this).load());
             return;
         }
-        getLogger().warning("AuraSkills not found.");
+        if (Bukkit.getPluginManager().getPlugin("AttributePlus") == null) {
+            getLogger().warning("AuraSkills not found.");
+        }
     }
 
     private void registerListeners() {
