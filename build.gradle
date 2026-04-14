@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.blanoir'
-version = '2.3.2'
+version = '2.4.'
 
 repositories {
     mavenCentral()
@@ -23,11 +23,11 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
     compileOnly("dev.aurelium:auraskills-api-bukkit:2.3.3")
     compileOnly 'me.clip:placeholderapi:2.11.7'
-    implementation "org.xerial:sqlite-jdbc:3.51.3.0"
     implementation 'redis.clients:jedis:5.2.0'
     implementation("com.mysql:mysql-connector-j:9.6.0")
     implementation("com.zaxxer:HikariCP:6.3.0")
     compileOnly files("libs/KeyBind.jar")
+    compileOnly files("libs/AttributePlus.jar")
 }
 
 tasks {
