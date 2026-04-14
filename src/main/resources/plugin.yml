@@ -1,5 +1,5 @@
 name: Accessory
-version: '2.3.2'
+version: '${version}'
 main: com.blanoir.accessory.Accessory
 api-version: '1.21'
 softdepend: [AuraSkills, PlaceholderAPI, MythicMobs]
@@ -14,7 +14,7 @@ commands:
     permission: accessory.magicshield
   accessory:
     description: 打开你的饰品背包，或执行管理命令
-    usage: /accessory [open|reload|clear <player>]
+    usage: /accessory [open|reload|clear <player>|view <player>]
     aliases: [ acc, acre ]
 
 permissions:
@@ -23,6 +23,9 @@ permissions:
     default: op
   accessory.clear:
     description: Allow clearing player accessories
+    default: op
+  accessory.view:
+    description: Allow opening and editing another player's accessory inventory
     default: op
   accessory.shield:
     description: Allow adjusting physical shield

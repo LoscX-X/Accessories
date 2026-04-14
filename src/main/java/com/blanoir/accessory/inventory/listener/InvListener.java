@@ -1,21 +1,22 @@
-// com.blanoir.accessory.inv.InvListener
 package com.blanoir.accessory.inventory.listener;
 
-import com.blanoir.accessory.inventory.InvCreate;
-import com.blanoir.accessory.utils.LoreUtils;
+import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.attribute.AccessoryLoad;
 import com.blanoir.accessory.events.AccessoryPlaceEvent;
+import com.blanoir.accessory.inventory.InvCreate;
+import com.blanoir.accessory.inventory.InvSave;
+import com.blanoir.accessory.utils.LoreUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.event.*;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
-import com.blanoir.accessory.Accessory;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -24,67 +25,97 @@ import java.util.List;
 public class InvListener implements Listener {
     private final Accessory plugin;
     private final AccessoryLoad effects;
-    private final NamespacedKey LOCKED;                 // ← 不在字段处初始化
+    private final InvSave invSave;
+    private final NamespacedKey LOCKED;
+    private final NamespacedKey PRE_PAGE;
+    private final NamespacedKey NEXT_PAGE;
 
     public InvListener(Accessory plugin) {
         this.plugin = plugin;
         this.effects = new AccessoryLoad(plugin);
-        this.LOCKED = new NamespacedKey(plugin, "locked"); //在构造器里用已赋值的 plugin
+        this.invSave = new InvSave(plugin);
+        this.LOCKED = new NamespacedKey(plugin, "locked");
+        this.PRE_PAGE = new NamespacedKey(plugin, "pre_page");
+        this.NEXT_PAGE = new NamespacedKey(plugin, "next_page");
     }
 
-    private boolean isAccessoryTop(InventoryView view) {
+    private boolean isNotAccessoryTop(InventoryView view) {
         return !(view.getTopInventory().getHolder() instanceof InvCreate);
     }
-    private boolean isSlotConfigured(int slot) {
-        return plugin.getConfig().isConfigurationSection("Accessory." + slot);
+
+    private int currentPage(InventoryView view) {
+        if (view.getTopInventory().getHolder() instanceof InvCreate holder) {
+            return holder.currentPage();
+        }
+        return 1;
     }
+
+    private boolean isSlotConfigured(int page, int slot) {
+        return plugin.getConfig().isConfigurationSection("Accessory.page_" + page + "." + slot)
+                || plugin.getConfig().isConfigurationSection("Accessory." + slot);
+    }
+
     private boolean isSlotDisabled(int slot) {
         return plugin.service() != null && plugin.service().isSlotDisabled(slot);
     }
-    private List<String> requiredLore(int slot) {
+
+    private List<String> requiredLore(int page, int slot) {
+        String pagePath = "Accessory.page_" + page + "." + slot + ".lore";
+        if (plugin.getConfig().isList(pagePath)) {
+            return plugin.getConfig().getStringList(pagePath);
+        }
         return plugin.getConfig().getStringList("Accessory." + slot + ".lore");
     }
-    private String requiredPermission(int slot) {
-        String path = "Accessory." + slot + ".permission";
+
+    private String requiredPermission(int page, int slot) {
+        String pagePath = "Accessory.page_" + page + "." + slot + ".permission";
+        String path = plugin.getConfig().isString(pagePath) ? pagePath : "Accessory." + slot + ".permission";
         if (!plugin.getConfig().isString(path)) {
             return null;
         }
         String permission = plugin.getConfig().getString(path, "").trim();
         return permission.isEmpty() ? null : permission;
     }
-    private boolean hasSlotPermission(Player player, int slot) {
-        String permission = requiredPermission(slot);
+
+    private boolean hasSlotPermission(Player player, int page, int slot) {
+        String permission = requiredPermission(page, slot);
         return permission != null && !player.hasPermission(permission);
     }
-    private boolean canPlaceInSlot(Player player, int slot, ItemStack item) {
-        if (isSlotDisabled(slot)) return true;
-        // 未配置的槽位：直接不允许放入（更安全的默认）
-        if (!isSlotConfigured(slot)) return true;
 
-        if (hasSlotPermission(player, slot)) {
+    private boolean canPlaceInSlot(Player player, int page, int slot, ItemStack item) {
+        if (isSlotDisabled(slot)) return true;
+        if (!isSlotConfigured(page, slot)) return true;
+
+        if (hasSlotPermission(player, page, slot)) {
             return true;
         }
 
-        // 只做你现有的 lore 匹配；需要更多条件可在这里扩展
-        List<String> need = requiredLore(slot);
+        List<String> need = requiredLore(page, slot);
         return !LoreUtils.matchesAnyKeyword(LoreUtils.plainLore(item), need);
     }
 
-    private boolean isLocked(ItemStack it) {
+    private boolean hasMarker(ItemStack it, NamespacedKey marker) {
         if (it == null || it.getType().isAir()) return false;
         ItemMeta meta = it.getItemMeta();
-        return meta != null &&
-                meta.getPersistentDataContainer().has(LOCKED, PersistentDataType.BYTE);
+        return meta != null && meta.getPersistentDataContainer().has(marker, PersistentDataType.BYTE);
     }
 
-    private void scheduleRefresh(Player p, InventoryView view) {
+    private void scheduleRefresh(Player actor, InventoryView view) {
         Inventory top = view.getTopInventory();
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            effects.rebuildFromInventory(p, top);
-            if (plugin.skillEngine() != null) {
-                plugin.skillEngine().refreshPlayer(p, top);
+        Player target = actor;
+        if (top.getHolder() instanceof InvCreate holder) {
+            Player owner = Bukkit.getPlayer(holder.ownerId());
+            if (owner != null) {
+                target = owner;
             }
-        }); // 下一 tick
+        }
+        Player refreshTarget = target;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            effects.rebuildFromInventory(refreshTarget, top);
+            if (plugin.skillEngine() != null) {
+                plugin.skillEngine().refreshPlayer(refreshTarget, top);
+            }
+        });
     }
 
     private boolean callPlaceEvent(Player player, Inventory top, int slot, ItemStack item) {
@@ -97,48 +128,58 @@ public class InvListener implements Listener {
         Bukkit.getPluginManager().callEvent(event);
         return event.isCancelled();
     }
+
     private List<Integer> frameSlots(InventoryView view) {
         int size = view.getTopInventory().getSize();
+        int page = currentPage(view);
 
-        // 1) 读配置（为空则按空列表处理）
-        List<Integer> raw = plugin.getConfig().getIntegerList("frame.slots");
+        List<Integer> raw = plugin.getConfig().getIntegerList("frame.page_" + page + ".slots");
+        if (raw.isEmpty()) {
+            raw = plugin.getConfig().getIntegerList("frame.slots");
+        }
 
-        // 2) 去重且保持配置顺序（LinkedHashSet 保序）【避免重复槽位】
-        LinkedHashSet<Integer> set = new LinkedHashSet<>(); // preserves insertion order
+        LinkedHashSet<Integer> set = new LinkedHashSet<>();
         for (Integer i : raw) {
             if (i == null) continue;
             if (i < 0 || i >= size) {
                 plugin.getLogger().warning("[Accessory] frame.slots out of bounds: " + i + " (invSize=" + size + ")");
-                continue; // 3) 过滤越界槽位
+                continue;
             }
             set.add(i);
         }
 
-        // 4) 若清洗后为空，回退默认（并裁剪到大小内）
         if (set.isEmpty()) {
             for (int d : new int[]{0, 2, 4, 6, 8}) if (d < size) set.add(d);
         }
         return new ArrayList<>(set);
     }
+
     @EventHandler(ignoreCancelled = true)
     public void onClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        if (isAccessoryTop(e.getView())) return;
+        if (isNotAccessoryTop(e.getView())) return;
 
         Inventory top = e.getView().getTopInventory();
         int topSize = top.getSize();
         int raw = e.getRawSlot();
+        int page = currentPage(e.getView());
 
-        // 从下半区 shift-塞到上半区：直接拦（避免跳过逐格校验）
+        if (raw < topSize) {
+            ItemStack clicked = top.getItem(raw);
+            if (hasMarker(clicked, PRE_PAGE) || hasMarker(clicked, NEXT_PAGE)) {
+                e.setCancelled(true);
+                switchPage(p, e.getView(), hasMarker(clicked, PRE_PAGE) ? page - 1 : page + 1);
+                return;
+            }
+        }
+
         if (e.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && raw >= topSize) {
             e.setCancelled(true);
             return;
         }
 
-        // 计算当前 GUI 的外框槽位（从 config 读、去重/越界过滤）
         List<Integer> FRAME = frameSlots(e.getView());
 
-        // 只处理上半区
         if (raw < topSize) {
             boolean isFrame = FRAME.contains(raw);
             boolean isDisabled = isSlotDisabled(raw);
@@ -146,26 +187,29 @@ public class InvListener implements Listener {
 
             if (isFrame || isDisabled) {
                 switch (e.getAction()) {
-                    // 这些是“往格子里放”的动作 → 禁止
                     case PLACE_ALL, PLACE_SOME, PLACE_ONE,
                          SWAP_WITH_CURSOR, HOTBAR_SWAP,
-                          COLLECT_TO_CURSOR,
-                         MOVE_TO_OTHER_INVENTORY -> { e.setCancelled(true); return; }
+                         COLLECT_TO_CURSOR,
+                         MOVE_TO_OTHER_INVENTORY -> {
+                        e.setCancelled(true);
+                        return;
+                    }
                     default -> {
-                        // 非“放入”动作（如 PICKUP_*）：若当前是“锁面板”，禁止拿走；否则允许把玩家物品拿出来
-                        if (isLocked(cur)) { e.setCancelled(true); return; }
+                        if (hasMarker(cur, LOCKED)) {
+                            e.setCancelled(true);
+                            return;
+                        }
                     }
                 }
             } else {
-                // 非外框槽位：仅在“放入”时做 lore 校验；其他动作不拦
                 switch (e.getAction()) {
                     case PLACE_ALL, PLACE_SOME, PLACE_ONE, SWAP_WITH_CURSOR, HOTBAR_SWAP -> {
                         ItemStack going = (e.getAction() == InventoryAction.HOTBAR_SWAP)
                                 ? p.getInventory().getItem(e.getHotbarButton())
                                 : e.getCursor();
-                        if (going != null && !going.getType().isAir() && canPlaceInSlot(p, raw, going)) {
+                        if (going != null && !going.getType().isAir() && canPlaceInSlot(p, page, raw, going)) {
                             e.setCancelled(true);
-                            if (hasSlotPermission(p, raw)) {
+                            if (hasSlotPermission(p, page, raw)) {
                                 p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
                             } else {
                                 p.sendMessage(plugin.lang().langComponent("Item_not_match"));
@@ -177,26 +221,25 @@ public class InvListener implements Listener {
                             return;
                         }
                     }
-                    default -> {}
+                    default -> {
+                    }
                 }
             }
         }
 
-        // 下一 tick 再重建效果，避免与本次修改冲突（官方也提示本事件阶段并非所有库存操作都安全）。:contentReference[oaicite:3]{index=3}
         scheduleRefresh(p, e.getView());
     }
-
 
     @EventHandler(ignoreCancelled = true)
     public void onDrag(InventoryDragEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        if (isAccessoryTop(e.getView())) return;
+        if (isNotAccessoryTop(e.getView())) return;
 
         Inventory top = e.getView().getTopInventory();
         int topSize = top.getSize();
+        int page = currentPage(e.getView());
         List<Integer> FRAME = frameSlots(e.getView());
 
-        // 先拦外框目标（getNewItems/rawSlots 都可，用 getNewItems 读“将被写入”的物品更直观）:contentReference[oaicite:4]{index=4}
         for (var en : e.getNewItems().entrySet()) {
             int raw = en.getKey();
             if (raw < topSize && FRAME.contains(raw)) {
@@ -211,13 +254,12 @@ public class InvListener implements Listener {
             }
         }
 
-        // 再对落在非外框的目标格做 lore 校验
         for (var en : e.getNewItems().entrySet()) {
             int raw = en.getKey();
             if (raw >= topSize) continue;
-            if (canPlaceInSlot(p, raw, en.getValue())) {
+            if (canPlaceInSlot(p, page, raw, en.getValue())) {
                 e.setCancelled(true);
-                if (hasSlotPermission(p, raw)) {
+                if (hasSlotPermission(p, page, raw)) {
                     p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
                 } else {
                     p.sendMessage(plugin.lang().langComponent("Item_not_match"));
@@ -231,5 +273,39 @@ public class InvListener implements Listener {
         }
 
         scheduleRefresh(p, e.getView());
+    }
+
+    private void switchPage(Player viewer, InventoryView view, int targetPage) {
+        if (!(view.getTopInventory().getHolder() instanceof InvCreate holder)) {
+            return;
+        }
+
+        int current = holder.currentPage();
+        int total = holder.totalPages();
+        int next = Math.max(1, Math.min(total, targetPage));
+        if (next == current) {
+            return;
+        }
+
+        Inventory top = view.getTopInventory();
+        ItemStack[] snapshot = invSave.sanitize(top, current);
+        plugin.inventoryStore().updatePage(
+                holder.ownerId(),
+                current,
+                snapshot,
+                plugin.accessorySize(),
+                plugin.accessoryPages()
+        );
+
+        holder.setCurrentPage(next);
+        top.clear();
+        top.setContents(plugin.inventoryStore().getPageOrLoad(
+                holder.ownerId(),
+                next,
+                plugin.accessorySize(),
+                plugin.accessoryPages()
+        ));
+        holder.decorate(plugin.service() != null ? plugin.service().getDisabledSlots() : null);
+        scheduleRefresh(viewer, view);
     }
 }

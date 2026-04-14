@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class InvReload implements CommandExecutor, TabCompleter {
-    private static final List<String> ROOT_SUB_COMMANDS = List.of("open", "reload", "clear");
+    private static final List<String> ROOT_SUB_COMMANDS = List.of("open", "reload", "clear", "view");
 
     private final Accessory plugin;
     private final AccessoryLoad accessoryLoad;
@@ -39,6 +39,7 @@ public class InvReload implements CommandExecutor, TabCompleter {
             case "open" -> executeOpen(sender);
             case "reload" -> executeReload(sender, args);
             case "clear" -> executeClear(sender, args);
+            case "view" -> executeView(sender, args);
             default -> {
                 sender.sendMessage(plugin.lang().lang("Accessory_unknown"));
                 yield true;
@@ -66,16 +67,16 @@ public class InvReload implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        plugin.reloadConfig();
-        plugin.lang().reload();
+        plugin.reloadPluginSettings();
         if (plugin.skillEngine() != null) {
             plugin.skillEngine().loadConfig();
         }
 
         int size = plugin.accessorySize();
+        int pages = plugin.accessoryPages();
         for (Player online : Bukkit.getOnlinePlayers()) {
             Inventory stored = Bukkit.createInventory(null, size);
-            stored.setContents(plugin.inventoryStore().getOrLoad(online.getUniqueId(), size));
+            stored.setContents(plugin.inventoryStore().getPageOrLoad(online.getUniqueId(), 1, size, pages));
             accessoryLoad.rebuildFromInventory(online, stored);
             if (plugin.skillEngine() != null) {
                 plugin.skillEngine().refreshPlayer(online, stored);
@@ -102,12 +103,13 @@ public class InvReload implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        int size = plugin.accessorySize();
-        plugin.inventoryStore().clear(target.getUniqueId(), size);
-        plugin.inventoryStore().flush(target.getUniqueId(), size);
+        int totalSize = plugin.totalAccessoryStorageSize();
+        plugin.inventoryStore().clear(target.getUniqueId(), totalSize);
+        plugin.inventoryStore().flush(target.getUniqueId(), totalSize);
 
         Player online = target.getPlayer();
         if (online != null) {
+            int size = plugin.accessorySize();
             clearOpenAccessoryInventory(online);
             Inventory empty = Bukkit.createInventory(null, size);
             accessoryLoad.rebuildFromInventory(online, empty);
@@ -117,6 +119,30 @@ public class InvReload implements CommandExecutor, TabCompleter {
         }
 
         sender.sendMessage(plugin.lang().lang("Clear_success"));
+        return true;
+    }
+
+    private boolean executeView(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player viewer)) {
+            sender.sendMessage(plugin.lang().lang("Only_player_open"));
+            return true;
+        }
+        if (!viewer.hasPermission("accessory.view")) {
+            sender.sendMessage(plugin.lang().lang("No_permission"));
+            return true;
+        }
+        if (args.length < 2) {
+            sender.sendMessage(plugin.lang().lang("View_usage"));
+            return true;
+        }
+
+        Player target = Bukkit.getPlayerExact(args[1]);
+        if (target == null) {
+            sender.sendMessage(plugin.lang().lang("Player_not_found"));
+            return true;
+        }
+
+        new InvLoad(plugin).openFor(viewer, target);
         return true;
     }
 
@@ -139,7 +165,7 @@ public class InvReload implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             return filterByPrefix(args[0], ROOT_SUB_COMMANDS);
         }
-        if (args.length == 2 && "clear".equalsIgnoreCase(args[0])) {
+        if (args.length == 2 && ("clear".equalsIgnoreCase(args[0]) || "view".equalsIgnoreCase(args[0]))) {
             List<String> players = new ArrayList<>();
             for (Player online : Bukkit.getOnlinePlayers()) {
                 players.add(online.getName());
