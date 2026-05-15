@@ -11,6 +11,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -72,14 +73,12 @@ public class InvReload implements CommandExecutor, TabCompleter {
             plugin.skillEngine().loadConfig();
         }
 
-        int size = plugin.accessorySize();
-        int pages = plugin.accessoryPages();
+        int totalSize = plugin.totalAccessoryStorageSize();
         for (Player online : Bukkit.getOnlinePlayers()) {
-            Inventory stored = Bukkit.createInventory(null, size);
-            stored.setContents(plugin.inventoryStore().getPageOrLoad(online.getUniqueId(), 1, size, pages));
-            accessoryLoad.rebuildFromInventory(online, stored);
+            var contents = plugin.inventoryStore().getOrLoad(online.getUniqueId(), totalSize);
+            accessoryLoad.rebuildFromContents(online, contents);
             if (plugin.skillEngine() != null) {
-                plugin.skillEngine().refreshPlayer(online, stored);
+                plugin.skillEngine().refreshPlayer(online, contents);
             }
         }
 
@@ -109,10 +108,9 @@ public class InvReload implements CommandExecutor, TabCompleter {
 
         Player online = target.getPlayer();
         if (online != null) {
-            int size = plugin.accessorySize();
             clearOpenAccessoryInventory(online);
-            Inventory empty = Bukkit.createInventory(null, size);
-            accessoryLoad.rebuildFromInventory(online, empty);
+            ItemStack[] empty = new ItemStack[plugin.totalAccessoryStorageSize()];
+            accessoryLoad.rebuildFromContents(online, empty);
             if (plugin.skillEngine() != null) {
                 plugin.skillEngine().refreshPlayer(online, empty);
             }
@@ -154,7 +152,7 @@ public class InvReload implements CommandExecutor, TabCompleter {
 
         Inventory top = view.getTopInventory();
         top.clear();
-        holder.applyFrames();
+        holder.decorate(plugin.service() != null ? plugin.service().getDisabledSlots() : null);
     }
 
     @Override

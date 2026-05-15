@@ -4,6 +4,7 @@ import dev.aurelium.auraskills.api.AuraSkillsApi;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Collections;
@@ -21,6 +22,10 @@ public final class AccessoryLoad {
 
     public void rebuildFromInventory(Player player, Inventory inventory) {
         delegate.rebuildFromInventory(player, inventory);
+    }
+
+    public void rebuildFromContents(Player player, ItemStack[] contents) {
+        delegate.rebuildFromContents(player, contents);
     }
 
     private AccessoryLoadHandler createDelegate(JavaPlugin plugin) {

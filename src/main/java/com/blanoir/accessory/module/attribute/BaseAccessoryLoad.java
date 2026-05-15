@@ -34,15 +34,22 @@ abstract class BaseAccessoryLoad implements AccessoryLoadHandler {
 
     @Override
     public final void rebuildFromInventory(Player player, Inventory inventory) {
+        ItemStack[] contents = inventory == null ? new ItemStack[0] : inventory.getContents();
+        rebuildFromContents(player, contents);
+    }
+
+    @Override
+    public final void rebuildFromContents(Player player, ItemStack[] contents) {
         clearTraitModifiers(player);
         clearExternalModifiers(player);
         clearAccessoryAttributes(player);
         clearAppliedTags(player);
 
         Set<String> currentTags = new LinkedHashSet<>();
+        ItemStack[] safeContents = contents == null ? new ItemStack[0] : contents;
 
-        for (int slot = 0; slot < inventory.getSize(); slot++) {
-            ItemStack item = inventory.getItem(slot);
+        for (int slot = 0; slot < safeContents.length; slot++) {
+            ItemStack item = safeContents[slot];
             if (item == null || item.getType() == Material.AIR) continue;
 
             applyTraitModifiers(player, item, slot);

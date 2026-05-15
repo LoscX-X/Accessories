@@ -1,0 +1,34 @@
+# 饰品页面配置文件，必须填写 page，否则插件会在控制台报错并跳过此文件。
+# 文件名可自定义，例如 extra.yml，实际页码由 page 决定。
+page: 2
+
+size: 9
+
+Accessory:
+  "1":
+    lore:
+      - "[Ring]"
+
+frame:
+  locked:
+    slots: [0, 2, 4, 6, 8]
+    type: "BLACK_STAINED_GLASS_PANE"
+    custom-model-data: 12345
+    hide-tooltip: true
+    name: "<gray>Locked"
+    lore:
+      - "<dark_gray>Slot is locked"
+
+  command_button:
+    slots: [7]
+    type: "BOOK"
+    hide-tooltip: false
+    name: "<aqua>Command Button"
+    lore:
+      - "<gray>Click to run configured commands"
+    drag: "command"
+    command:
+      console:
+        - "say {player} clicked accessory page {page} slot {slot}"
+      player:
+        - "help"

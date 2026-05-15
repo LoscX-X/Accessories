@@ -1,7 +1,7 @@
 # 饰品背包 GUI 顶部显示的标题（支持变量 {page} / {max_page}）
 title: "<gradient:#00ffa6:#00d1ff><b>Accessories {page}/{max_page}</b></gradient>"
 
-# 每页 GUI 大小（格子数），必须是 9 的倍数（最小 9，最大 54）
+# 默认 GUI 大小；每页可在 /plugins/Accessory/page/*.yml 中用 size 覆盖。
 size: 9
 
 # 总页数
@@ -38,41 +38,11 @@ database:
     connection-timeout: 10000
     idle-timeout: 600000
 
-# 插槽规则：每个页面可配置每个槽位允许放入的物品 lore 关键词
-# 同时支持 permission 检测
-Accessory:
-  page_1:
-    "1":
-      # permission: "accessory.slot.ring"
-      lore:
-        - "[Ring]"
-    "3":
-      lore:
-        - "[Necklace]"
-    "5":
-      lore:
-        - "[Bracelet]"
-    "7":
-      lore:
-        - "[Talisman]"
-  page_2:
-    "1":
-      lore:
-        - "[Ring]"
+# 饰品页面配置请放在 /plugins/Accessory/page/*.yml 中。
+# 每个页面文件都必须内置 page: <页码>，文件名可以自定义；缺失 page 会在控制台报错并跳过。
+# 示例文件：page/page1.yml、page/page2.yml
 
-# 锁定槽位边框（支持按页面配置）
-frame:
-  page_1:
-    slots: [0, 2, 4, 6, 8]
-  page_2:
-    slots: [0, 2, 4, 6, 8]
-  item:
-    type: "BLACK_STAINED_GLASS_PANE"
-    custom-model-data: 12345
-    hide-tooltip: true
-    name: "<gray>Locked"
-    lore:
-      - "<dark_gray>Slot is locked"
+# 页面物品/边框配置请放在 /plugins/Accessory/page/*.yml 的 frame 下；每个物品自行配置 slots。
 
 # 上一页按钮配置
 pre_page:
