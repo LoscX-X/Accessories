@@ -127,27 +127,20 @@ public final class AccessorySkills {
     }
 
     public void refreshFromStored(Player player) {
-        int size = plugin.getConfig().getInt("size", 9);
-        size = Math.max(9, Math.min(54, size));
-        size = size - (size % 9);
-
-        org.bukkit.inventory.Inventory tmp = Bukkit.createInventory(null, size);
-        File file = new File(plugin.getDataFolder(), "contains/" + player.getUniqueId() + ".yml");
-        if (file.exists()) {
-            YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
-            List<?> raw = cfg.getList("contents");
-            if (raw != null) {
-                for (int i = 0; i < Math.min(size, raw.size()); i++) {
-                    Object it = raw.get(i);
-                    if (it instanceof ItemStack stack) tmp.setItem(i, stack);
-                }
-            }
-        }
-        refreshPlayer(player, tmp);
+        refreshPlayer(player, plugin.inventoryStore().getOrLoad(player.getUniqueId(), plugin.totalAccessoryStorageSize()));
     }
 
     public void refreshPlayer(Player player, Inventory inv) {
-        if (player == null || inv == null) return;
+        if (inv == null) return;
+        refreshPlayer(player, inv.getContents());
+    }
+
+    public void refreshPlayer(Player player, ItemStack[] contents, int pageSize) {
+        refreshPlayer(player, contents);
+    }
+
+    public void refreshPlayer(Player player, ItemStack[] contents) {
+        if (player == null || contents == null) return;
 
         EnumMap<TriggerType, List<ResolvedEntry>> byTrigger = new EnumMap<>(TriggerType.class);
         Set<String> equippedItemIds = new LinkedHashSet<>();
@@ -156,10 +149,10 @@ public final class AccessorySkills {
         Map<Integer, Integer> previousSnapshot = accessorySlotSnapshots.get(player.getUniqueId());
         Map<Integer, Integer> currentSnapshot = new HashMap<>();
 
-        for (int slot = 0; slot < inv.getSize(); slot++) {
+        for (int slot = 0; slot < contents.length; slot++) {
             if (!isAccessorySlot(slot)) continue;
 
-            ItemStack item = inv.getItem(slot);
+            ItemStack item = contents[slot];
             int itemHash = item == null ? 0 : item.hashCode();
             currentSnapshot.put(slot, itemHash);
 
@@ -176,7 +169,6 @@ public final class AccessorySkills {
             if ((slotChanged(previousSnapshot, slot, itemHash) || needsStamp(item, itemId))
                     && stampItem(item, itemId)) {
                 debug("饰品写入 PDC 成功: player=" + player.getName() + ", slot=" + slot + ", itemId=" + itemId + ", signature=" + skillSignature);
-                inv.setItem(slot, item);
             }
 
             for (SkillEntry entry : entries) {
@@ -197,8 +189,12 @@ public final class AccessorySkills {
         loadouts.put(player.getUniqueId(), new PlayerLoadout(equippedItemIds, byTrigger, timers));
     }
 
-    private boolean isAccessorySlot(int slot) {
-        return plugin.getConfig().isConfigurationSection("Accessory." + slot)
+    private boolean isAccessorySlot(int absoluteSlot) {
+        int page = plugin.pageManager().pageByAbsoluteSlot(absoluteSlot);
+        int slot = plugin.pageManager().localSlot(absoluteSlot);
+        return page != -1
+                && slot != -1
+                && plugin.pageManager().isSlotConfigured(page, slot)
                 && (plugin.service() == null || !plugin.service().isSlotDisabled(slot));
     }
 

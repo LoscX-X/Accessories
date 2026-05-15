@@ -7,7 +7,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.InventoryView;
 
@@ -81,8 +81,8 @@ public final class AccessoryService {
         Player online = target.getPlayer();
         if (online != null) {
             clearOpenAccessoryInventory(online);
-            Inventory empty = Bukkit.createInventory(null, accessorySize());
-            new AccessoryLoad(plugin).rebuildFromInventory(online, empty);
+            ItemStack[] empty = new ItemStack[plugin.totalAccessoryStorageSize()];
+            new AccessoryLoad(plugin).rebuildFromContents(online, empty);
             if (plugin.skillEngine() != null) {
                 plugin.skillEngine().refreshPlayer(online, empty);
             }
@@ -113,8 +113,7 @@ public final class AccessoryService {
         InventoryHolder holder = view.getTopInventory().getHolder();
         if (holder instanceof InvCreate invHolder) {
             view.getTopInventory().clear();
-            invHolder.applyFrames();
-            invHolder.applyDisabledSlots(getDisabledSlots());
+            invHolder.decorate(getDisabledSlots());
         }
     }
 
@@ -125,15 +124,12 @@ public final class AccessoryService {
             InventoryHolder holder = view.getTopInventory().getHolder();
             if (!(holder instanceof InvCreate invHolder)) continue;
 
-            invHolder.applyFrames();
-            invHolder.applyDisabledSlots(getDisabledSlots());
+            invHolder.decorate(getDisabledSlots());
         }
     }
 
     private int accessorySize() {
-        int size = plugin.getConfig().getInt("size", 9);
-        size = Math.max(9, Math.min(54, size));
-        return size - size % 9;
+        return plugin.pageManager() == null ? plugin.accessorySize() : plugin.pageManager().maxPageSize();
     }
 
 }

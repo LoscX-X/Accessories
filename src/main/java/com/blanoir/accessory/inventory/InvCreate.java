@@ -5,6 +5,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -33,9 +34,7 @@ public class InvCreate implements InventoryHolder {
 
         FileConfiguration cfg = plugin.getConfig();
 
-        int size = cfg.getInt("size", 9);
-        size = Math.max(9, Math.min(54, size));
-        size -= size % 9;
+        int size = pageSize();
 
         String mmTitle = cfg.getString("title", "<green>Accessory");
         Component title = MiniMessage.miniMessage().deserialize(mmTitle.replace("{page}", String.valueOf(this.currentPage)).replace("{max_page}", String.valueOf(this.totalPages)));
@@ -58,6 +57,16 @@ public class InvCreate implements InventoryHolder {
 
     public UUID ownerId() {
         return ownerId;
+    }
+
+    private int pageSize() {
+        if (plugin instanceof com.blanoir.accessory.Accessory accessory && accessory.pageManager() != null) {
+            return accessory.accessorySize(currentPage);
+        }
+        FileConfiguration cfg = plugin.getConfig();
+        int size = cfg.getInt("size", 9);
+        size = Math.max(9, Math.min(54, size));
+        return size - (size % 9);
     }
 
     @NotNull
@@ -87,27 +96,23 @@ public class InvCreate implements InventoryHolder {
     }
 
     public void applyFrames() {
-        ItemStack pane = makeMarkedItemFromConfig("frame.item", "locked");
-        List<Integer> slots = frameSlotsForCurrentPage();
+        if (plugin instanceof com.blanoir.accessory.Accessory accessory && accessory.pageManager() != null) {
+            for (AccessoryPageManager.FrameItem frameItem : accessory.pageManager().frameItems(currentPage, inventory.getSize())) {
+                ItemStack pane = makeMarkedItem(frameItem.section(), "locked");
+                for (int slot : frameItem.slots()) {
+                    inventory.setItem(slot, pane.clone());
+                }
+            }
+            return;
+        }
 
+        ItemStack pane = makeMarkedItemFromConfig("frame.item", "locked");
         int invSize = inventory.getSize();
-        for (int s : slots) {
+        for (int s : List.of(0, 2, 4, 6, 8)) {
             if (s >= 0 && s < invSize) {
                 inventory.setItem(s, pane.clone());
             }
         }
-    }
-
-    private List<Integer> frameSlotsForCurrentPage() {
-        String pagePath = "frame.page_" + currentPage + ".slots";
-        List<Integer> slots = plugin.getConfig().getIntegerList(pagePath);
-        if (slots.isEmpty()) {
-            slots = plugin.getConfig().getIntegerList("frame.slots");
-        }
-        if (slots.isEmpty()) {
-            slots = List.of(0, 2, 4, 6, 8);
-        }
-        return slots;
     }
 
     public void applyDisabledSlots(List<Integer> slots) {
@@ -139,9 +144,11 @@ public class InvCreate implements InventoryHolder {
     }
 
     private ItemStack makeMarkedItemFromConfig(String basePath, String... markers) {
-        var cfg = plugin.getConfig();
+        return makeMarkedItem(plugin.getConfig().getConfigurationSection(basePath), markers);
+    }
 
-        String typeStr = cfg.getString(basePath + ".type", "BLACK_STAINED_GLASS_PANE");
+    private ItemStack makeMarkedItem(ConfigurationSection section, String... markers) {
+        String typeStr = section == null ? "BLACK_STAINED_GLASS_PANE" : section.getString("type", "BLACK_STAINED_GLASS_PANE");
         Material mat = Material.matchMaterial(typeStr, false);
         if (mat == null || !mat.isItem()) {
             mat = Material.BLACK_STAINED_GLASS_PANE;
@@ -150,22 +157,22 @@ public class InvCreate implements InventoryHolder {
         ItemStack it = new ItemStack(mat);
         ItemMeta meta = it.getItemMeta();
 
-        boolean hide = cfg.getBoolean(basePath + ".hide-tooltip", true);
+        boolean hide = section == null || section.getBoolean("hide-tooltip", true);
         try { meta.setHideTooltip(hide); } catch (NoSuchMethodError ignored) {}
 
-        int cmd = cfg.getInt(basePath + ".custom-model-data", -1);
+        int cmd = section == null ? -1 : section.getInt("custom-model-data", -1);
         if (cmd > 0) {
             try { meta.setCustomModelData(cmd); } catch (Throwable ignored) {}
         }
 
-        String mmName = cfg.getString(basePath + ".name", null);
+        String mmName = section == null ? null : section.getString("name", null);
         if (mmName != null && !mmName.isEmpty()) {
             meta.displayName(MiniMessage.miniMessage().deserialize(mmName
                     .replace("{page}", String.valueOf(currentPage))
                     .replace("{max_page}", String.valueOf(totalPages))));
         }
 
-        List<String> mmLore = cfg.getStringList(basePath + ".lore");
+        List<String> mmLore = section == null ? List.of() : section.getStringList("lore");
         if (!mmLore.isEmpty()) {
             List<Component> lore = new ArrayList<>(mmLore.size());
             for (String line : mmLore) {

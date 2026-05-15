@@ -1,31 +1,24 @@
 package com.blanoir.accessory.api;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.module.attribute.AccessoryLoad;
 import com.blanoir.accessory.events.AccessoryPlaceEvent;
+import com.blanoir.accessory.module.attribute.AccessoryLoad;
 import com.blanoir.accessory.utils.LoreUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 public final class AccessoryQuickEquipService {    //这个可以不用管
     private final Accessory plugin;
-    private final NamespacedKey LOCKED;
     private final AccessoryLoad accessoryLoad;
 
     public AccessoryQuickEquipService(Accessory plugin) {
         this.plugin = plugin;
-        this.LOCKED = new NamespacedKey(plugin, "locked");
         this.accessoryLoad = new AccessoryLoad(plugin);
     }
 
@@ -36,33 +29,37 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
         ItemStack hand = p.getInventory().getItemInMainHand();
         if (hand.getType().isAir()) return;
 
-        int slot = findAccessorySlot(hand);
-        if (slot == -1) return;
+        TargetSlot target = findAccessoryTarget(hand);
+        if (target == null) return;
 
-        if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) return;
-
-        // 防止把饰品塞进外框锁定槽（如果你 frame 槽位和 accessory 槽位配置冲突）
-        if (isFrameSlot(slot)) return;
-
-        equipToSlot(p, slot);
+        equipToSlot(p, target.page(), target.slot());
     }
 
     /**
-     * 核心：把主手物品 equip 到指定 slot（会替换旧的）
+     * 兼容旧 API：把主手物品 equip 到第 1 页指定 slot（会替换旧的）
      */
     public void equipToSlot(Player p, int slot) {
-        int size = guiSize();
-        if (slot < 0 || slot >= size) return;
+        equipToSlot(p, 1, slot);
+    }
+
+    /**
+     * 核心：把主手物品 equip 到指定 page/slot（会替换旧的）
+     */
+    public void equipToSlot(Player p, int page, int slot) {
+        int pageSize = plugin.accessorySize(page);
+        int pages = plugin.accessoryPages();
+        if (page < 1 || page > pages || slot < 0 || slot >= pageSize) return;
         if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) return;
 
-        // 1) 读当前饰品 contents
-        ItemStack[] contents = loadContents(p, size);
+        // 防止把饰品塞进外框锁定槽（如果 frame 槽位和 accessory 槽位配置冲突）
+        if (isFrameSlot(page, slot)) return;
 
-        ItemStack old = contents[slot];
-
-        // 2) 放入新饰品（只放 1 个）
         ItemStack hand = p.getInventory().getItemInMainHand();
         if (hand.getType().isAir()) return;
+
+        ItemStack[] contents = plugin.inventoryStore().getOrLoad(p.getUniqueId(), plugin.totalAccessoryStorageSize());
+        int absoluteSlot = plugin.accessoryPageStart(page) + slot;
+        ItemStack old = contents[absoluteSlot];
 
         ItemStack placed = hand.clone();
         placed.setAmount(1);
@@ -81,120 +78,73 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
             return;
         }
 
-        contents[slot] = placed;
-
-        // 3) 扣主手 1（稳，不用 e.getItem 引用）
+        contents[absoluteSlot] = placed;
         decrementMainHand(p);
 
-        // 4) 旧饰品回背包 / 满了掉地
         if (old != null && old.getType() != Material.AIR) {
             Map<Integer, ItemStack> left = p.getInventory().addItem(old);
             left.values().forEach(it -> p.getWorld().dropItemNaturally(p.getLocation(), it));
         }
 
-        // 5) 保存
-        saveContents(p, contents);
+        plugin.inventoryStore().update(p.getUniqueId(), contents, plugin.totalAccessoryStorageSize());
+        plugin.inventoryStore().flush(p.getUniqueId(), plugin.totalAccessoryStorageSize());
 
-        // 6) 刷新属性（AccessoryLoad 扫 inv）
-        Inventory tmp = Bukkit.createInventory(null, size);
-        tmp.setContents(contents.clone());
-        accessoryLoad.rebuildFromInventory(p, tmp);
+        accessoryLoad.rebuildFromContents(p, contents);
         if (plugin.skillEngine() != null) {
-            plugin.skillEngine().refreshPlayer(p, tmp);
+            plugin.skillEngine().refreshPlayer(p, contents);
         }
 
-        // 7) 反馈
         p.sendActionBar(plugin.lang().lang("Accessory_equipped"));
-
-
     }
 
-    /** lore -> 找到目标槽位：Accessory.<slot>.lore */
+    /** lore -> 找到目标槽位：优先 page/*.yml 中 page 对应的 Accessory.<slot>.lore，再兼容旧版配置。 */
     public int findAccessorySlot(ItemStack item) {
+        TargetSlot target = findAccessoryTarget(item);
+        return target == null ? -1 : target.slot();
+    }
+
+    private TargetSlot findAccessoryTarget(ItemStack item) {
         if (plugin.skillEngine() != null) {
             plugin.skillEngine().stampKnownAccessoryItem(item);
         }
         List<String> lore = LoreUtils.plainLore(item);
-        if (lore.isEmpty()) return -1;
+        if (lore.isEmpty()) return null;
 
-        var sec = plugin.getConfig().getConfigurationSection("Accessory");
-        if (sec == null) return -1;
+        int pages = plugin.accessoryPages();
+        for (int page = 1; page <= pages; page++) {
+            ConfigurationSection pageSec = plugin.pageManager().pageAccessorySection(page);
+            if (pageSec == null) continue;
 
-        for (String key : sec.getKeys(false)) {
+            TargetSlot target = findMatchingSlotInSection(lore, page, pageSec);
+            if (target != null) return target;
+        }
+
+        ConfigurationSection legacySec = plugin.pageManager().legacyAccessorySection();
+        return legacySec == null ? null : findMatchingSlotInSection(lore, 1, legacySec);
+    }
+
+    private TargetSlot findMatchingSlotInSection(List<String> lore, int page, ConfigurationSection section) {
+        int pageSize = plugin.accessorySize(page);
+        for (String key : section.getKeys(false)) {
+            if (key.startsWith("page_")) continue;
+
             int slot;
-            try { slot = Integer.parseInt(key); }
-            catch (NumberFormatException ignored) { continue; }
+            try {
+                slot = Integer.parseInt(key);
+            } catch (NumberFormatException ignored) {
+                continue;
+            }
 
-            List<String> need = plugin.getConfig().getStringList("Accessory." + slot + ".lore");
+            if (slot < 0 || slot >= pageSize) continue;
+            if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) continue;
+            if (isFrameSlot(page, slot)) continue;
+
+            List<String> need = plugin.pageManager().requiredLore(page, slot);
             if (need.isEmpty()) continue;
 
-            if (LoreUtils.matchesAnyKeyword(lore, need)) return slot;
+            if (LoreUtils.matchesAnyKeyword(lore, need)) return new TargetSlot(page, slot);
         }
-        return -1;
-    }
-
-    // ----------------- storage (和你 InvSave/InvLoad 同一套) -----------------
-
-    private int guiSize() {
-        // 你如果 config 里没写 gui.size，就默认 27
-        int s = plugin.getConfig().getInt("gui.size", 27);
-        // 防御：必须是 9 的倍数
-        if (s % 9 != 0) s = 27;
-        return s;
-    }
-
-    private File dataFile(Player p) {
-        File dir = new File(plugin.getDataFolder(), "contains");
-        ensureDir(dir);
-        return new File(dir, p.getUniqueId() + ".yml");
-    }
-    private void ensureDir(File dir){
-        if(dir.exists()) return;
-        if(!dir.mkdirs()){
-            throw new RuntimeException("创建目录失败" + dir.getAbsolutePath());
-        }
-    }
-
-    private ItemStack[] loadContents(Player p, int size) {
-        File f = dataFile(p);
-        ItemStack[] arr = new ItemStack[size];
-
-        if (!f.exists()) return arr;
-
-        YamlConfiguration cfg = YamlConfiguration.loadConfiguration(f);
-        List<?> raw = cfg.getList("contents");
-        if (raw == null) return arr;
-
-        int limit = Math.min(size, raw.size());
-        for (int i = 0; i < limit; i++) {
-            Object o = raw.get(i);
-            if (o instanceof ItemStack is) arr[i] = is;
-        }
-        return arr;
-    }
-
-    private void saveContents(Player p, ItemStack[] contents) {
-        ItemStack[] snapshot = contents.clone();
-
-        // 防御：如果某些情况下 locked 外框被写进去了，保存前剥离
-        for (int i = 0; i < snapshot.length; i++) {
-            ItemStack it = snapshot[i];
-            if (it == null || it.getType().isAir()) continue;
-            ItemMeta meta = it.getItemMeta();
-            if (meta != null && meta.getPersistentDataContainer().has(LOCKED, PersistentDataType.BYTE)) {
-                snapshot[i] = null;
-            }
-        }
-
-        YamlConfiguration cfg = new YamlConfiguration();
-        cfg.set("contents", Arrays.asList(snapshot));
-
-        try {
-            cfg.save(dataFile(p));
-        } catch (IOException ex) {
-            plugin.getLogger().severe("Save failed: " + p.getName());
-            ex.printStackTrace();
-        }
+        return null;
     }
 
     private void decrementMainHand(Player p) {
@@ -209,9 +159,10 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
         }
     }
 
-    private boolean isFrameSlot(int slot) {
-        List<Integer> frames = plugin.getConfig().getIntegerList("frame.slots");
-        if (frames.isEmpty()) frames = List.of(0,2,4,6,8);
-        return frames.contains(slot);
+    private boolean isFrameSlot(int page, int slot) {
+        return plugin.pageManager().frameSlots(page, plugin.accessorySize(page)).contains(slot);
+    }
+
+    private record TargetSlot(int page, int slot) {
     }
 }

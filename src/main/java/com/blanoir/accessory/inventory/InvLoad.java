@@ -3,7 +3,6 @@ package com.blanoir.accessory.inventory;
 import com.blanoir.accessory.Accessory;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
 
 public class InvLoad {
     private final Accessory plugin;
@@ -20,11 +19,11 @@ public class InvLoad {
         int totalPages = plugin.accessoryPages();
         InvCreate holder = new InvCreate(plugin, target.getUniqueId(), 1, totalPages);
         Inventory inventory = holder.getInventory();
-        plugin.inventoryStore().getPageOrLoadAsync(
+        plugin.inventoryStore().getSliceOrLoadAsync(
                 target.getUniqueId(),
-                holder.currentPage(),
+                plugin.accessoryPageStart(holder.currentPage()),
                 inventory.getSize(),
-                totalPages,
+                plugin.totalAccessoryStorageSize(),
                 cached -> {
                     inventory.setContents(cached);
                     var service = plugin.service();

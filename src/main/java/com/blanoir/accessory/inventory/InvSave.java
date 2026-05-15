@@ -54,19 +54,18 @@ public class InvSave implements Listener {
 
         ItemStack[] snapshot = sanitize(top, holder.currentPage());
         UUID ownerId = holder.ownerId();
-        plugin.inventoryStore().updatePage(
+        plugin.inventoryStore().updateSlice(
                 ownerId,
-                holder.currentPage(),
+                plugin.accessoryPageStart(holder.currentPage()),
                 snapshot,
-                plugin.accessorySize(),
-                plugin.accessoryPages()
+                plugin.accessorySize(holder.currentPage()),
+                plugin.totalAccessoryStorageSize()
         );
 
         Player owner = Bukkit.getPlayer(ownerId);
         if (owner != null && plugin.skillEngine() != null) {
-            Inventory tmp = Bukkit.createInventory(null, top.getSize());
-            tmp.setContents(snapshot.clone());
-            plugin.skillEngine().refreshPlayer(owner, tmp);
+            ItemStack[] fullContents = plugin.inventoryStore().getOrLoad(ownerId, plugin.totalAccessoryStorageSize());
+            plugin.skillEngine().refreshPlayer(owner, fullContents);
         }
     }
 
@@ -94,15 +93,7 @@ public class InvSave implements Listener {
     }
 
     private List<Integer> frameSlots(int page) {
-        String pagePath = "frame.page_" + page + ".slots";
-        List<Integer> slots = plugin.getConfig().getIntegerList(pagePath);
-        if (slots.isEmpty()) {
-            slots = plugin.getConfig().getIntegerList("frame.slots");
-        }
-        if (slots.isEmpty()) {
-            slots = List.of(0, 2, 4, 6, 8);
-        }
-        return slots;
+        return plugin.pageManager().frameSlots(page, plugin.accessorySize(page));
     }
 
     private boolean hasMarker(ItemStack item, NamespacedKey markerKey) {

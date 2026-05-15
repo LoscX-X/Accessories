@@ -6,6 +6,7 @@ import com.blanoir.accessory.bridge.myhic.MythicBridgeListener;
 import com.blanoir.accessory.bridge.myhic.skills.AccessorySkillListener;
 import com.blanoir.accessory.bridge.myhic.skills.AccessorySkills;
 import com.blanoir.accessory.database.mysql.SqlManager;
+import com.blanoir.accessory.inventory.AccessoryPageManager;
 import com.blanoir.accessory.inventory.InvReload;
 import com.blanoir.accessory.inventory.InvSave;
 import com.blanoir.accessory.inventory.InvStore;
@@ -23,17 +24,20 @@ public final class Accessory extends JavaPlugin {
     private AccessoryService accessoryService;
     private AccessorySkills skillEngine;
     private InvStore inventoryStore;
+    private AccessoryPageManager pageManager;
     private SqlManager sqlManager;
 
     public Lang lang() { return lang; }
     public AccessorySkills skillEngine() { return skillEngine; }
     public InvStore inventoryStore() { return inventoryStore; }
+    public AccessoryPageManager pageManager() { return pageManager; }
 
     @Override
     public void onEnable() {
         initFiles();
         initLang();
         initSkillConfigs();
+        initPageConfigs();
 
         initStorage();
         this.accessoryService = new AccessoryService(this);
@@ -59,6 +63,11 @@ public final class Accessory extends JavaPlugin {
             sqlManager = null;
         }
         reloadConfig();
+        if (pageManager == null) {
+            initPageConfigs();
+        } else {
+            pageManager.reload();
+        }
         lang.reload();
         initStorage();
     }
@@ -118,6 +127,25 @@ public final class Accessory extends JavaPlugin {
             saveResource("stats.yml", false);
         }
         saveDefaultConfig();
+    }
+
+    private void initPageConfigs() {
+        File pageFolder = new File(getDataFolder(), "page");
+        if (!pageFolder.exists()) {
+            pageFolder.mkdirs();
+        }
+        savePageResourceIfMissing("page/page1.yml");
+        savePageResourceIfMissing("page/page2.yml");
+
+        this.pageManager = new AccessoryPageManager(this);
+        this.pageManager.reload();
+    }
+
+    private void savePageResourceIfMissing(String path) {
+        File file = new File(getDataFolder(), path);
+        if (!file.exists()) {
+            saveResource(path, false);
+        }
     }
 
     private void initLang() {
@@ -192,16 +220,28 @@ public final class Accessory extends JavaPlugin {
     }
 
     public int accessorySize() {
+        return accessorySize(1);
+    }
+
+    public int accessorySize(int page) {
+        if (pageManager != null) {
+            return pageManager.pageSize(page);
+        }
         int size = getConfig().getInt("size", 9);
         size = Math.max(9, Math.min(54, size));
         return size - (size % 9);
     }
 
     public int accessoryPages() {
-        return Math.max(1, getConfig().getInt("pages", 1));
+        int configuredPages = Math.max(1, getConfig().getInt("pages", 1));
+        return pageManager == null ? configuredPages : pageManager.configuredPageCount(configuredPages);
+    }
+
+    public int accessoryPageStart(int page) {
+        return pageManager == null ? (Math.max(1, page) - 1) * accessorySize() : pageManager.pageStart(page);
     }
 
     public int totalAccessoryStorageSize() {
-        return accessorySize() * accessoryPages();
+        return pageManager == null ? accessorySize() * accessoryPages() : pageManager.totalStorageSize();
     }
 }

@@ -62,6 +62,14 @@ public final class InvStore {
                 .thenAccept(pageContents -> Bukkit.getScheduler().runTask(plugin, () -> callback.accept(pageContents)));
     }
 
+
+    public void getSliceOrLoadAsync(UUID playerId, int start, int size, int totalSize, Consumer<ItemStack[]> callback) {
+        CompletableFuture
+                .supplyAsync(() -> getOrLoadInternal(playerId, totalSize), ioExecutor)
+                .thenApply(full -> extractSlice(full, start, size))
+                .thenAccept(pageContents -> Bukkit.getScheduler().runTask(plugin, () -> callback.accept(pageContents)));
+    }
+
     public ItemStack[] getOrLoad(UUID playerId, int totalSize) {
         ItemStack[] contents = cache.get(playerId);
         if (contents == null) {
@@ -72,6 +80,12 @@ public final class InvStore {
         return copyToSize(contents, totalSize);
     }
 
+
+    public ItemStack[] getSliceOrLoad(UUID playerId, int start, int size, int totalSize) {
+        ItemStack[] full = getOrLoad(playerId, totalSize);
+        return extractSlice(full, start, size);
+    }
+
     public ItemStack[] getPageOrLoad(UUID playerId, int page, int pageSize, int totalPages) {
         ItemStack[] full = getOrLoad(playerId, totalSize(pageSize, totalPages));
         return extractPage(full, page, pageSize);
@@ -79,6 +93,17 @@ public final class InvStore {
 
     public void update(UUID playerId, ItemStack[] contents, int totalSize) {
         cache.put(playerId, copyToSize(contents, totalSize));
+    }
+
+
+    public void updateSlice(UUID playerId, int start, ItemStack[] pageContents, int pageSize, int totalSize) {
+        ItemStack[] full = getOrLoad(playerId, totalSize);
+        int safeStart = Math.max(0, Math.min(start, full.length));
+        int safeSize = Math.max(0, Math.min(pageSize, full.length - safeStart));
+        for (int i = 0; i < safeSize; i++) {
+            full[safeStart + i] = i < pageContents.length ? pageContents[i] : null;
+        }
+        cache.put(playerId, full);
     }
 
     public void updatePage(UUID playerId, int page, ItemStack[] pageContents, int pageSize, int totalPages) {
@@ -118,6 +143,17 @@ public final class InvStore {
 
     public void shutdown() {
         ioExecutor.shutdown();
+    }
+
+
+    private ItemStack[] extractSlice(ItemStack[] full, int start, int size) {
+        ItemStack[] out = new ItemStack[Math.max(0, size)];
+        int safeStart = Math.max(0, Math.min(start, full.length));
+        int copyLength = Math.min(out.length, full.length - safeStart);
+        if (copyLength > 0) {
+            System.arraycopy(full, safeStart, out, 0, copyLength);
+        }
+        return out;
     }
 
     private ItemStack[] extractPage(ItemStack[] full, int page, int pageSize) {

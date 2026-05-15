@@ -18,8 +18,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 
 public class InvListener implements Listener {
@@ -51,8 +49,7 @@ public class InvListener implements Listener {
     }
 
     private boolean isSlotConfigured(int page, int slot) {
-        return plugin.getConfig().isConfigurationSection("Accessory.page_" + page + "." + slot)
-                || plugin.getConfig().isConfigurationSection("Accessory." + slot);
+        return plugin.pageManager().isSlotConfigured(page, slot);
     }
 
     private boolean isSlotDisabled(int slot) {
@@ -60,21 +57,11 @@ public class InvListener implements Listener {
     }
 
     private List<String> requiredLore(int page, int slot) {
-        String pagePath = "Accessory.page_" + page + "." + slot + ".lore";
-        if (plugin.getConfig().isList(pagePath)) {
-            return plugin.getConfig().getStringList(pagePath);
-        }
-        return plugin.getConfig().getStringList("Accessory." + slot + ".lore");
+        return plugin.pageManager().requiredLore(page, slot);
     }
 
     private String requiredPermission(int page, int slot) {
-        String pagePath = "Accessory.page_" + page + "." + slot + ".permission";
-        String path = plugin.getConfig().isString(pagePath) ? pagePath : "Accessory." + slot + ".permission";
-        if (!plugin.getConfig().isString(path)) {
-            return null;
-        }
-        String permission = plugin.getConfig().getString(path, "").trim();
-        return permission.isEmpty() ? null : permission;
+        return plugin.pageManager().requiredPermission(page, slot);
     }
 
     private boolean hasSlotPermission(Player player, int page, int slot) {
@@ -102,18 +89,26 @@ public class InvListener implements Listener {
 
     private void scheduleRefresh(Player actor, InventoryView view) {
         Inventory top = view.getTopInventory();
-        Player target = actor;
-        if (top.getHolder() instanceof InvCreate holder) {
-            Player owner = Bukkit.getPlayer(holder.ownerId());
-            if (owner != null) {
-                target = owner;
-            }
+        if (!(top.getHolder() instanceof InvCreate holder)) {
+            return;
         }
-        Player refreshTarget = target;
+
+        Player owner = Bukkit.getPlayer(holder.ownerId());
+        Player refreshTarget = owner != null ? owner : actor;
         Bukkit.getScheduler().runTask(plugin, () -> {
-            effects.rebuildFromInventory(refreshTarget, top);
+            ItemStack[] snapshot = invSave.sanitize(top, holder.currentPage());
+            plugin.inventoryStore().updateSlice(
+                    holder.ownerId(),
+                    plugin.accessoryPageStart(holder.currentPage()),
+                    snapshot,
+                    plugin.accessorySize(holder.currentPage()),
+                    plugin.totalAccessoryStorageSize()
+            );
+
+            ItemStack[] fullContents = plugin.inventoryStore().getOrLoad(holder.ownerId(), plugin.totalAccessoryStorageSize());
+            effects.rebuildFromContents(refreshTarget, fullContents);
             if (plugin.skillEngine() != null) {
-                plugin.skillEngine().refreshPlayer(refreshTarget, top);
+                plugin.skillEngine().refreshPlayer(refreshTarget, fullContents);
             }
         });
     }
@@ -130,28 +125,7 @@ public class InvListener implements Listener {
     }
 
     private List<Integer> frameSlots(InventoryView view) {
-        int size = view.getTopInventory().getSize();
-        int page = currentPage(view);
-
-        List<Integer> raw = plugin.getConfig().getIntegerList("frame.page_" + page + ".slots");
-        if (raw.isEmpty()) {
-            raw = plugin.getConfig().getIntegerList("frame.slots");
-        }
-
-        LinkedHashSet<Integer> set = new LinkedHashSet<>();
-        for (Integer i : raw) {
-            if (i == null) continue;
-            if (i < 0 || i >= size) {
-                plugin.getLogger().warning("[Accessory] frame.slots out of bounds: " + i + " (invSize=" + size + ")");
-                continue;
-            }
-            set.add(i);
-        }
-
-        if (set.isEmpty()) {
-            for (int d : new int[]{0, 2, 4, 6, 8}) if (d < size) set.add(d);
-        }
-        return new ArrayList<>(set);
+        return plugin.pageManager().frameSlots(currentPage(view), view.getTopInventory().getSize());
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -197,6 +171,7 @@ public class InvListener implements Listener {
                     default -> {
                         if (hasMarker(cur, LOCKED)) {
                             e.setCancelled(true);
+                            plugin.pageManager().executeFrameCommand(p, page, raw, topSize);
                             return;
                         }
                     }
@@ -289,23 +264,24 @@ public class InvListener implements Listener {
 
         Inventory top = view.getTopInventory();
         ItemStack[] snapshot = invSave.sanitize(top, current);
-        plugin.inventoryStore().updatePage(
+        plugin.inventoryStore().updateSlice(
                 holder.ownerId(),
-                current,
+                plugin.accessoryPageStart(current),
                 snapshot,
-                plugin.accessorySize(),
-                plugin.accessoryPages()
+                plugin.accessorySize(current),
+                plugin.totalAccessoryStorageSize()
         );
 
-        holder.setCurrentPage(next);
-        top.clear();
-        top.setContents(plugin.inventoryStore().getPageOrLoad(
+        InvCreate nextHolder = new InvCreate(plugin, holder.ownerId(), next, total);
+        Inventory nextInventory = nextHolder.getInventory();
+        nextInventory.setContents(plugin.inventoryStore().getSliceOrLoad(
                 holder.ownerId(),
-                next,
-                plugin.accessorySize(),
-                plugin.accessoryPages()
+                plugin.accessoryPageStart(next),
+                nextInventory.getSize(),
+                plugin.totalAccessoryStorageSize()
         ));
-        holder.decorate(plugin.service() != null ? plugin.service().getDisabledSlots() : null);
-        scheduleRefresh(viewer, view);
+        nextHolder.decorate(plugin.service() != null ? plugin.service().getDisabledSlots() : null);
+        viewer.openInventory(nextInventory);
+        scheduleRefresh(viewer, viewer.getOpenInventory());
     }
 }
