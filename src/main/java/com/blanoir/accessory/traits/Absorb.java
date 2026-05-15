@@ -1,6 +1,6 @@
 package com.blanoir.accessory.traits;
 
-import com.blanoir.accessory.attribute.aura.CustomTraits;
+import com.blanoir.accessory.module.attribute.aura.CustomTraits;
 import com.blanoir.accessory.events.traits.AbsorbShieldRegenEvent;
 import com.blanoir.accessory.traits.utils.ShieldUtil;
 import dev.aurelium.auraskills.api.AuraSkillsApi;

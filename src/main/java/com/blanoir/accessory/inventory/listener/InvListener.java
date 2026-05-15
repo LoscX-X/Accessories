@@ -1,7 +1,7 @@
 package com.blanoir.accessory.inventory.listener;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.attribute.AccessoryLoad;
+import com.blanoir.accessory.module.attribute.AccessoryLoad;
 import com.blanoir.accessory.events.AccessoryPlaceEvent;
 import com.blanoir.accessory.inventory.InvCreate;
 import com.blanoir.accessory.inventory.InvSave;

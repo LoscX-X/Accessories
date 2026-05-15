@@ -1,8 +1,8 @@
 package com.blanoir.accessory.bridge.aura;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.attribute.aura.CustomStats;
-import com.blanoir.accessory.attribute.aura.CustomTraits;
+import com.blanoir.accessory.module.attribute.aura.CustomStats;
+import com.blanoir.accessory.module.attribute.aura.CustomTraits;
 import com.blanoir.accessory.bridge.placeholderapi.AbsorbPlaceholder;
 import com.blanoir.accessory.bridge.placeholderapi.MagicAbsorbPlaceholder;
 import com.blanoir.accessory.command.ShieldCommand;

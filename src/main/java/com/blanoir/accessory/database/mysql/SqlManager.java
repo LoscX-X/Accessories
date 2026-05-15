@@ -46,9 +46,6 @@ public class SqlManager {
         createTable();
     }
 
-    public DataSource dataSource() {
-        return dataSource;
-    }
 
     public Connection getConnection() throws SQLException {
         if (dataSource == null) {
@@ -106,5 +103,8 @@ public class SqlManager {
         } catch (SQLException ex) {
             throw new RuntimeException("Failed to create accessory_inventory table", ex);
         }
+    }
+    public DataSource dataSource() {
+        return dataSource;
     }
 }

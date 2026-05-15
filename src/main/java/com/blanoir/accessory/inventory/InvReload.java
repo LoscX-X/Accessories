@@ -1,7 +1,7 @@
 package com.blanoir.accessory.inventory;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.attribute.AccessoryLoad;
+import com.blanoir.accessory.module.attribute.AccessoryLoad;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class InvReload implements CommandExecutor, TabCompleter {
-    private static final List<String> ROOT_SUB_COMMANDS = List.of("open", "reload", "clear", "view");
+    private static final List<String> ROOT_COMMANDS = List.of("open", "reload", "clear", "view");
 
     private final Accessory plugin;
     private final AccessoryLoad accessoryLoad;
@@ -163,7 +163,7 @@ public class InvReload implements CommandExecutor, TabCompleter {
                                       @NotNull String alias,
                                       String[] args) {
         if (args.length == 1) {
-            return filterByPrefix(args[0], ROOT_SUB_COMMANDS);
+            return filterByPrefix(args[0], ROOT_COMMANDS);
         }
         if (args.length == 2 && ("clear".equalsIgnoreCase(args[0]) || "view".equalsIgnoreCase(args[0]))) {
             List<String> players = new ArrayList<>();

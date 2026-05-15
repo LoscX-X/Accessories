@@ -10,7 +10,7 @@ import com.blanoir.accessory.inventory.InvReload;
 import com.blanoir.accessory.inventory.InvSave;
 import com.blanoir.accessory.inventory.InvStore;
 import com.blanoir.accessory.inventory.listener.InvListener;
-import com.blanoir.accessory.utils.Lang;
+import com.blanoir.accessory.module.lang.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -121,7 +121,8 @@ public final class Accessory extends JavaPlugin {
     }
 
     private void initLang() {
-        lang = new Lang(this);
+        String LangFile = getConfig().getString("Lang","en_US");
+        lang = new Lang(this,LangFile);
     }
 
     private void initSkillConfigs() {

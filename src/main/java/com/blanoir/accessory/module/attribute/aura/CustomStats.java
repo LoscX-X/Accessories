@@ -1,0 +1,27 @@
+package com.blanoir.accessory.module.attribute.aura;
+
+import dev.aurelium.auraskills.api.item.ItemContext;
+import dev.aurelium.auraskills.api.registry.NamespacedId;
+import dev.aurelium.auraskills.api.stat.CustomStat;
+
+public class CustomStats {
+
+    //初始化加载State
+    public static final CustomStat CUSTOM_STAT = CustomStat
+            .builder(NamespacedId.of("accessory", "custom_stat"))
+                    .trait(CustomTraits.HEAL_REGENERATION, 0.001)
+                    .trait(CustomTraits.DEFENCE, 0.001)
+                    .trait(CustomTraits.HEALTH, 0.001)
+                    .displayName("custom_stat")
+                    .description("this used to load the stats automaticlly.")
+                    .color("<green>")
+                    .symbol("")
+                    .item(ItemContext.builder()
+                            .material("lime_stained_glass_pane")
+                            .group("lower")
+                            // A group defined in AuraSkills/menus/stats.yml
+                            .order(2)
+                            .build())
+
+                    .build();
+}
