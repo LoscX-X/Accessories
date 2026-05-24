@@ -199,9 +199,7 @@ public final class Accessory extends JavaPlugin {
             Bukkit.getScheduler().runTask(this, () -> new AuraSkillsHook(this).load());
             return;
         }
-        if (Bukkit.getPluginManager().getPlugin("AttributePlus") == null) {
-            getLogger().warning("AuraSkills not found.");
-        }
+        getLogger().warning("AuraSkills not found.");
     }
 
     private void registerListeners() {
