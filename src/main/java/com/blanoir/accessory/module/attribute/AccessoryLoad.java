@@ -33,24 +33,24 @@ public final class AccessoryLoad {
         boolean hasAura = Bukkit.getPluginManager().getPlugin("AuraSkills") != null;
 
         if (hasAttributePlus) {
-            infoOnce(plugin, "attributeplus-enabled", "AttributePlus hook enabled.");
+            infoOnce(plugin, "AttributePlus-enabled", "AttributePlus hook enabled.");
             return new AttributePlusAccessoryLoad(plugin);
         }
 
         if (!hasAura) {
-            warnOnce(plugin, "auraskills-missing", "AuraSkills not found, using vanilla item attributes only.");
+            warnOnce(plugin, "AuraSkills-missing", "AuraSkills not found, using vanilla item attributes only.");
             return new VanillaAccessoryLoad(plugin);
         }
 
         try {
             AuraSkillsApi api = AuraSkillsApi.get();
             if (api == null) {
-                warnOnce(plugin, "auraskills-api-unavailable", "AuraSkills API unavailable, using vanilla item attributes only.");
+                warnOnce(plugin, "AuraSkills-api-unavailable", "AuraSkills API unavailable, using vanilla item attributes only.");
                 return new VanillaAccessoryLoad(plugin);
             }
             return new AuraAccessoryLoad(plugin, api);
         } catch (Throwable t) {
-            warnOnce(plugin, "auraskills-hook-failed-" + t.getClass().getSimpleName(),
+            warnOnce(plugin, "AuraSkills-hook-failed-" + t.getClass().getSimpleName(),
                     "AuraSkills hook failed, using vanilla item attributes only: " + t.getClass().getSimpleName());
             return new VanillaAccessoryLoad(plugin);
         }

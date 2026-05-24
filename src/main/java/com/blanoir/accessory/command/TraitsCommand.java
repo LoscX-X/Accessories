@@ -17,7 +17,7 @@ import java.util.function.BiConsumer;
 
 import static com.blanoir.accessory.module.inventory.InvReload.getStrings;
 
-public final class ShieldCommand implements CommandExecutor, TabCompleter {
+public final class TraitsCommand implements CommandExecutor, TabCompleter {
 
     private static final MiniMessage MM = MiniMessage.miniMessage();
 
@@ -25,11 +25,11 @@ public final class ShieldCommand implements CommandExecutor, TabCompleter {
     private final BiConsumer<Player, Double> addByPercent;
     private final String permissionNode;
 
-    public ShieldCommand(Absorb absorb) {
+    public TraitsCommand(Absorb absorb) {
         this(absorb::addShield, absorb::addShieldPercent, "accessory.shield");
     }
 
-    public ShieldCommand(BiConsumer<Player, Double> addByValue,
+    public TraitsCommand(BiConsumer<Player, Double> addByValue,
                          BiConsumer<Player, Double> addByPercent,
                          String permissionNode) {
         this.addByValue = addByValue;

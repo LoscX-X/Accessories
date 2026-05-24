@@ -57,9 +57,9 @@ class AuraAccessoryLoad extends BaseAccessoryLoad {
             String traitId = modifier.trait().toString();
             String name = PREFIX + "slot" + slot + "/" + traitId;
 
-            TraitModifier copy = new TraitModifier(name, modifier.trait(), modifier.value(), modifier.operation());
-            copy.setNonPersistent();
-            user.addTraitModifier(copy);
+            TraitModifier temp = new TraitModifier(name, modifier.trait(), modifier.value(), modifier.operation());
+            temp.setNonPersistent();
+            user.addTraitModifier(temp);
         }
     }
 }

@@ -9,10 +9,8 @@ Message:
   Player_not_found: "&c未找到该玩家。"
   Accessory_unknown: "&c未知子命令。可用命令: /accessory, /accessory reload, /accessory clear <玩家名> /accessory view <玩家名>"
   Only_player_open: "&c该指令仅限玩家在游戏内执行。"
-
   Item_not_match: "&c该饰品不符合当前槽位要求。"
   Slot_no_permission: "&c你没有权限使用该饰品槽位。"
   Item_locked: "&c该槽位已锁定。"
   Accessory_equipped: "&a饰品已装备。"
-
   Life_steal_success: "&a生命偷取 +"

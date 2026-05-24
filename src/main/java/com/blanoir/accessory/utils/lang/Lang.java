@@ -14,10 +14,12 @@ import java.io.InputStream;
 import java.util.*;
 
 public final class Lang {
+
+    private final String LangFile;
+
     private static final String LANGUAGE_DIR = "Language";
 
     private static final String DEFAULT_LANG = "en_US.yml";
-    private final String LangFile;
 
     private static final String MESSAGE_ROOT = "Message";
 
