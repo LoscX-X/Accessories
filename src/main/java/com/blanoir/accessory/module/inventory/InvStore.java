@@ -55,13 +55,6 @@ public final class InvStore {
         CompletableFuture.runAsync(() -> cache.computeIfAbsent(playerId, id -> load(id, totalSize)), ioExecutor);
     }
 
-    public void getPageOrLoadAsync(UUID playerId, int page, int pageSize, int totalPages, Consumer<ItemStack[]> callback) {
-        CompletableFuture
-                .supplyAsync(() -> getOrLoadInternal(playerId, totalSize(pageSize, totalPages)), ioExecutor)
-                .thenApply(full -> extractPage(full, page, pageSize))
-                .thenAccept(pageContents -> Bukkit.getScheduler().runTask(plugin, () -> callback.accept(pageContents)));
-    }
-
 
     public void getSliceOrLoadAsync(UUID playerId, int start, int size, int totalSize, Consumer<ItemStack[]> callback) {
         CompletableFuture

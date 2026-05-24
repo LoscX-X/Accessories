@@ -11,8 +11,6 @@ public class InvCommand implements CommandExecutor {
 
     private final Accessory plugin;
 
-
-
     public InvCommand(Accessory plugin) {
         this.plugin = plugin;
     }

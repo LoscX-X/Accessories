@@ -109,7 +109,7 @@ public class InvCreate implements InventoryHolder {
         ItemStack pane = makeMarkedItemFromConfig("frame.item", "locked");
         int invSize = inventory.getSize();
         for (int s : List.of(0, 2, 4, 6, 8)) {
-            if (s >= 0 && s < invSize) {
+            if (s < invSize) {
                 inventory.setItem(s, pane.clone());
             }
         }

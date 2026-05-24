@@ -1,4 +1,4 @@
-package com.blanoir.accessory.module.lang;
+package com.blanoir.accessory.utils.lang;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.Component;

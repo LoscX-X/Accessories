@@ -11,7 +11,7 @@ import com.blanoir.accessory.module.inventory.InvReload;
 import com.blanoir.accessory.module.inventory.InvSave;
 import com.blanoir.accessory.module.inventory.InvStore;
 import com.blanoir.accessory.module.inventory.listener.InvListener;
-import com.blanoir.accessory.module.lang.Lang;
+import com.blanoir.accessory.utils.lang.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;

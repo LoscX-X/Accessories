@@ -219,15 +219,14 @@ public final class AccessoryPageManager {
         return null;
     }
 
-    public boolean executeFrameCommand(Player player, int page, int slot, int size) {
+    public void executeFrameCommand(Player player, int page, int slot, int size) {
         FrameItem item = frameItemAt(page, slot, size);
         if (item == null || !"command".equalsIgnoreCase(item.section().getString("drag", ""))) {
-            return false;
+            return;
         }
 
         executeCommands(player, page, slot, commands(item.section(), "command.console"), true);
         executeCommands(player, page, slot, commands(item.section(), "command.player"), false);
-        return true;
     }
 
     public ConfigurationSection pageAccessorySection(int page) {
