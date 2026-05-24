@@ -1,6 +1,6 @@
 package com.blanoir.accessory.command;
 
-import com.blanoir.accessory.traits.Absorb;
+import com.blanoir.accessory.module.attribute.aura.traits.Absorb;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.BiConsumer;
 
-import static com.blanoir.accessory.inventory.InvReload.getStrings;
+import static com.blanoir.accessory.module.inventory.InvReload.getStrings;
 
 public final class ShieldCommand implements CommandExecutor, TabCompleter {
 

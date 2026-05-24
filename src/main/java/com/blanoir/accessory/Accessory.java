@@ -1,16 +1,16 @@
 package com.blanoir.accessory;
 
 import com.blanoir.accessory.api.AccessoryService;
-import com.blanoir.accessory.bridge.aura.AuraSkillsHook;
-import com.blanoir.accessory.bridge.myhic.MythicBridgeListener;
-import com.blanoir.accessory.bridge.myhic.skills.AccessorySkillListener;
-import com.blanoir.accessory.bridge.myhic.skills.AccessorySkills;
+import com.blanoir.accessory.hook.aura.AuraSkillsHook;
+import com.blanoir.accessory.hook.myhic.MythicBridgeListener;
+import com.blanoir.accessory.hook.myhic.skills.AccessorySkillListener;
+import com.blanoir.accessory.hook.myhic.skills.AccessorySkills;
 import com.blanoir.accessory.database.mysql.SqlManager;
-import com.blanoir.accessory.inventory.AccessoryPageManager;
-import com.blanoir.accessory.inventory.InvReload;
-import com.blanoir.accessory.inventory.InvSave;
-import com.blanoir.accessory.inventory.InvStore;
-import com.blanoir.accessory.inventory.listener.InvListener;
+import com.blanoir.accessory.module.inventory.AccessoryPageManager;
+import com.blanoir.accessory.module.inventory.InvReload;
+import com.blanoir.accessory.module.inventory.InvSave;
+import com.blanoir.accessory.module.inventory.InvStore;
+import com.blanoir.accessory.module.inventory.listener.InvListener;
 import com.blanoir.accessory.module.lang.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;

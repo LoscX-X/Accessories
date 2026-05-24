@@ -2,7 +2,7 @@ package com.blanoir.accessory.api;
 
 import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.module.attribute.AccessoryLoad;
-import com.blanoir.accessory.inventory.InvCreate;
+import com.blanoir.accessory.module.inventory.InvCreate;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.YamlConfiguration;
