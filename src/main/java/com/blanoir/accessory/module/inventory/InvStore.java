@@ -124,7 +124,7 @@ public final class InvStore {
     public void saveAndRemove(UUID playerId, int totalSize) {
         ItemStack[] contents = getOrLoad(playerId, totalSize);
         CompletableFuture.runAsync(() -> save(playerId, contents), ioExecutor)
-                .thenRun(() -> cache.remove(playerId));
+                .thenRun(() -> cache.computeIfPresent(playerId, (id, current) -> current == contents ? null : current));
     }
 
     public void flush(UUID playerId, int totalSize) {
@@ -134,8 +134,10 @@ public final class InvStore {
 
     public CompletableFuture<Void> flushAllAsync(int totalSize) {
         List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (UUID playerId : cache.keySet()) {
-            ItemStack[] snapshot = getOrLoad(playerId, totalSize);
+        Map<UUID, ItemStack[]> snapshotByPlayer = new HashMap<>(cache);
+        for (Map.Entry<UUID, ItemStack[]> entry : snapshotByPlayer.entrySet()) {
+            UUID playerId = entry.getKey();
+            ItemStack[] snapshot = copyToSize(entry.getValue(), totalSize);
             futures.add(CompletableFuture.runAsync(() -> save(playerId, snapshot), ioExecutor));
         }
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
@@ -157,11 +159,12 @@ public final class InvStore {
     }
 
     private ItemStack[] extractPage(ItemStack[] full, int page, int pageSize) {
-        int maxPages = Math.max(1, full.length / pageSize);
+        int safePageSize = Math.max(1, pageSize);
+        int maxPages = Math.max(1, (full.length + safePageSize - 1) / safePageSize);
         int pageIndex = normalizedPage(page, maxPages) - 1;
-        ItemStack[] out = new ItemStack[pageSize];
-        int start = pageIndex * pageSize;
-        System.arraycopy(full, start, out, 0, Math.min(pageSize, full.length - start));
+        ItemStack[] out = new ItemStack[safePageSize];
+        int start = pageIndex * safePageSize;
+        System.arraycopy(full, start, out, 0, Math.min(safePageSize, Math.max(0, full.length - start)));
         return out;
     }
 
