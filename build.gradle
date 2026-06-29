@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.blanoir'
-version = '3.0.1'
+version = '3.1.0'
 
 repositories {
     mavenCentral()
@@ -20,7 +20,7 @@ repositories {
 
 dependencies {
     compileOnly files('libs/MythicMobs.jar')
-    compileOnly 'io.papermc.paper:paper-api:26.1.2.build.+'
+    compileOnly 'io.papermc.paper:paper-api:26.2.build.+'
     compileOnly 'dev.aurelium:auraskills-api-bukkit:2.3.3'
     compileOnly 'me.clip:placeholderapi:2.11.7'
     compileOnly files('libs/KeyBind.jar')

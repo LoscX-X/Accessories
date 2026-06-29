@@ -10,7 +10,7 @@ import com.blanoir.accessory.database.mysql.SqlManager;
 import com.blanoir.accessory.module.inventory.AccessoryPageManager;
 import com.blanoir.accessory.module.inventory.AccessoryInventoryLifecycleListener;
 import com.blanoir.accessory.module.inventory.AccessoryStore;
-import com.blanoir.accessory.module.inventory.listener.InvListener;
+import com.blanoir.accessory.module.inventory.listener.AccessoryListener;
 import com.blanoir.accessory.utils.lang.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -205,7 +205,7 @@ public final class Accessory extends JavaPlugin {
     private void registerListeners() {
         var pm = getServer().getPluginManager();
         pm.registerEvents(new AccessoryInventoryLifecycleListener(this), this);
-        pm.registerEvents(new InvListener(this), this);
+        pm.registerEvents(new AccessoryListener(this), this);
     }
 
     private void registerCommands() {

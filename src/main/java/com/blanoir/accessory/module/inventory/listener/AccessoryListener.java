@@ -24,7 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class InvListener implements Listener {
+public class AccessoryListener implements Listener {
     private final Accessory plugin;
     private final AccessoryLoad effects;
     private final AccessoryInventoryLifecycleListener invSave;
@@ -34,7 +34,7 @@ public class InvListener implements Listener {
     private final AccessoryInventoryMenu menu;
     private final Set<UUID> pendingRefresh = ConcurrentHashMap.newKeySet();
 
-    public InvListener(Accessory plugin) {
+    public AccessoryListener(Accessory plugin) {
         this.plugin = plugin;
         this.effects = new AccessoryLoad(plugin);
         this.menu = new AccessoryInventoryMenu(plugin);
