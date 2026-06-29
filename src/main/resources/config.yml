@@ -23,6 +23,26 @@ skill-debug: false
 attribute-plus:
   enable: false
 
+# 原版属性 Lore 映射（仅在未接入 AuraSkills / AttributePlus 的原版属性加载模式下生效）
+# enable: 是否启用通过 lore 文本同步追加原版属性
+# mappings:
+#   <自定义名称>:
+#     attribute: "minecraft:max_health" # 要追加的原版属性 ID
+#     keywords: [ "生命" ]              # lore 中包含任意关键词时读取数值
+#
+# 支持格式示例（兼容 MiniMessage 显示后的纯文本）:
+#   生命: +5    -> ADD_NUMBER +5
+#   生命: -5    -> ADD_NUMBER -5
+#   生命: x1.2  -> MULTIPLY_SCALAR_1 +0.2（倍率会自动换算为 Bukkit 属性倍率）
+vanilla-lore-attributes:
+  enable: false
+  mappings:
+    health:
+      attribute: "minecraft:max_health"
+      keywords:
+        - "生命"
+        - "health"
+
 # 存储方式: yml 或 mysql
 database:
   type: "yml"
