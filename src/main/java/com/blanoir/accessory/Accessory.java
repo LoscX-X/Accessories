@@ -1,15 +1,15 @@
 package com.blanoir.accessory;
 
 import com.blanoir.accessory.api.AccessoryService;
+import com.blanoir.accessory.command.AccessoryInventoryCommand;
 import com.blanoir.accessory.hook.aura.AuraSkillsHook;
 import com.blanoir.accessory.hook.myhic.MythicBridgeListener;
 import com.blanoir.accessory.hook.myhic.skills.AccessorySkillListener;
 import com.blanoir.accessory.hook.myhic.skills.AccessorySkills;
 import com.blanoir.accessory.database.mysql.SqlManager;
 import com.blanoir.accessory.module.inventory.AccessoryPageManager;
-import com.blanoir.accessory.module.inventory.InvReload;
-import com.blanoir.accessory.module.inventory.InvSave;
-import com.blanoir.accessory.module.inventory.InvStore;
+import com.blanoir.accessory.module.inventory.AccessoryInventoryLifecycleListener;
+import com.blanoir.accessory.module.inventory.AccessoryStore;
 import com.blanoir.accessory.module.inventory.listener.InvListener;
 import com.blanoir.accessory.utils.lang.Lang;
 import org.bukkit.Bukkit;
@@ -23,13 +23,13 @@ public final class Accessory extends JavaPlugin {
     private Lang lang;
     private AccessoryService accessoryService;
     private AccessorySkills skillEngine;
-    private InvStore inventoryStore;
+    private AccessoryStore inventoryStore;
     private AccessoryPageManager pageManager;
     private SqlManager sqlManager;
 
     public Lang lang() { return lang; }
     public AccessorySkills skillEngine() { return skillEngine; }
-    public InvStore inventoryStore() { return inventoryStore; }
+    public AccessoryStore inventoryStore() { return inventoryStore; }
     public AccessoryPageManager pageManager() { return pageManager; }
 
     @Override
@@ -87,9 +87,9 @@ public final class Accessory extends JavaPlugin {
 
     private void initStorage() {
         String typeRaw = getConfig().getString("database.type", "yml");
-        InvStore.StorageType storageType = InvStore.StorageType.fromConfig(typeRaw);
+        AccessoryStore.StorageType storageType = AccessoryStore.StorageType.fromConfig(typeRaw);
 
-        if (storageType == InvStore.StorageType.MYSQL) {
+        if (storageType == AccessoryStore.StorageType.MYSQL) {
             this.sqlManager = new SqlManager(this);
             this.sqlManager.init(
                     getConfig().getString("database.mysql.host", "127.0.0.1"),
@@ -109,7 +109,7 @@ public final class Accessory extends JavaPlugin {
             getLogger().info("Accessory storage mode: yml");
         }
 
-        this.inventoryStore = new InvStore(this, storageType, sqlManager);
+        this.inventoryStore = new AccessoryStore(this, storageType, sqlManager);
     }
 
     private void startAutoSaveTask() {
@@ -204,16 +204,17 @@ public final class Accessory extends JavaPlugin {
 
     private void registerListeners() {
         var pm = getServer().getPluginManager();
-        pm.registerEvents(new InvSave(this), this);
+        pm.registerEvents(new AccessoryInventoryLifecycleListener(this), this);
         pm.registerEvents(new InvListener(this), this);
     }
 
     private void registerCommands() {
-        var accessoryCmd = new InvReload(this);
+        AccessoryInventoryCommand accessoryCommand = new AccessoryInventoryCommand(this);
+
         var accessory = getCommand("accessory");
         if (accessory != null) {
-            accessory.setExecutor(accessoryCmd);
-            accessory.setTabCompleter(accessoryCmd);
+            accessory.setExecutor(accessoryCommand);
+            accessory.setTabCompleter(accessoryCommand);
         }
     }
 

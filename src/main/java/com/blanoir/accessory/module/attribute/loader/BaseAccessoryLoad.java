@@ -1,4 +1,4 @@
-package com.blanoir.accessory.module.attribute;
+package com.blanoir.accessory.module.attribute.loader;
 
 import com.blanoir.accessory.utils.LoreUtils;
 import org.bukkit.Material;

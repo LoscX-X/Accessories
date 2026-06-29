@@ -15,8 +15,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.BiConsumer;
 
-import static com.blanoir.accessory.module.inventory.InvReload.getStrings;
-
 public final class TraitsCommand implements CommandExecutor, TabCompleter {
 
     private static final MiniMessage MM = MiniMessage.miniMessage();
@@ -54,70 +52,77 @@ public final class TraitsCommand implements CommandExecutor, TabCompleter {
         }
 
         String mode = args[0].toLowerCase(Locale.ROOT);
-        String target = args[1];
+        String targetArg = args[1];
 
-        double val;
+        double value;
         try {
-            val = Double.parseDouble(args[2]);
-        } catch (NumberFormatException e) {
+            value = Double.parseDouble(args[2]);
+        } catch (NumberFormatException ex) {
             sender.sendMessage(MM.deserialize("<red>参数错误: 数值格式无效 -> " + args[2] + "</red>"));
             return true;
         }
 
-        List<Player> targets = resolveTargets(sender, target);
+        List<Player> targets = resolveTargets(sender, targetArg);
         if (targets.isEmpty()) {
-            sender.sendMessage(MM.deserialize("<red>目标不存在或不在线: " + target + "</red>"));
+            sender.sendMessage(MM.deserialize("<red>目标不存在或不在线: " + targetArg + "</red>"));
             return true;
         }
 
         int affected = 0;
-        for (Player p : targets) {
-            switch (mode) {
-                case "give" -> {
-                    addByValue.accept(p, val);
+
+        switch (mode) {
+            case "give" -> {
+                for (Player target : targets) {
+                    addByValue.accept(target, value);
                     affected++;
                 }
-                case "givep" -> {
-                    double ratio = val / 100.0;
-                    addByPercent.accept(p, ratio);
+            }
+            case "givep" -> {
+                double ratio = value / 100.0;
+                for (Player target : targets) {
+                    addByPercent.accept(target, ratio);
                     affected++;
                 }
-                default -> {
-                    sender.sendMessage(MM.deserialize("<red>参数错误: 未知模式 " + mode + " (可用: give, givep)</red>"));
-                    usage(sender, label);
-                    return true;
-                }
+            }
+            default -> {
+                sender.sendMessage(MM.deserialize("<red>参数错误: 未知模式 " + mode + " (可用: give, givep)</red>"));
+                usage(sender, label);
+                return true;
             }
         }
 
         sender.sendMessage(MM.deserialize(
-                "<green>执行成功: 已对 " + affected + " 名玩家应用操作。模式=" + mode + ", 目标=" + target + ", 数值=" + val + "</green>"
+                "<green>执行成功: 已对 " + affected
+                        + " 名玩家应用操作。模式=" + mode
+                        + ", 目标=" + targetArg
+                        + ", 数值=" + value
+                        + "</green>"
         ));
+
         return true;
     }
 
     private void usage(CommandSender sender, String label) {
         sender.sendMessage(MM.deserialize("<yellow>命令格式:</yellow>"));
-        sender.sendMessage(MM.deserialize("<gray>/" + label + " give  &lt;me|玩家|all&gt; &lt;数值&gt;</gray>"));
+        sender.sendMessage(MM.deserialize("<gray>/" + label + " give &lt;me|玩家|all&gt; &lt;数值&gt;</gray>"));
         sender.sendMessage(MM.deserialize("<gray>/" + label + " givep &lt;me|玩家|all&gt; &lt;百分比&gt;</gray>"));
     }
 
-    private List<Player> resolveTargets(CommandSender sender, String target) {
-        target = target.toLowerCase(Locale.ROOT);
+    private List<Player> resolveTargets(CommandSender sender, String targetArg) {
+        String normalized = targetArg.toLowerCase(Locale.ROOT);
 
-        if (target.equals("all")) {
+        if ("all".equals(normalized)) {
             return new ArrayList<>(Bukkit.getOnlinePlayers());
         }
 
-        if (target.equals("me")) {
-            if (sender instanceof Player p) {
-                return List.of(p);
-            }
-            return List.of();
+        if ("me".equals(normalized)) {
+            return sender instanceof Player player ? List.of(player) : List.of();
         }
 
-        Player p = Bukkit.getPlayerExact(target);
-        return p != null ? List.of(p) : List.of();
+        // 注意：这里不能用 lower-case 后的 normalized。
+        // 玩家名大小写可能影响 getPlayerExact。
+        Player player = Bukkit.getPlayerExact(targetArg);
+        return player != null ? List.of(player) : List.of();
     }
 
     @Override
@@ -134,13 +139,15 @@ public final class TraitsCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 2) {
-            List<String> list = new ArrayList<>();
-            list.add("me");
-            list.add("all");
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                list.add(p.getName());
+            List<String> options = new ArrayList<>();
+            options.add("me");
+            options.add("all");
+
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                options.add(player.getName());
             }
-            return filter(args[1], list);
+
+            return filter(args[1], options);
         }
 
         if (args.length == 3) {
@@ -151,6 +158,15 @@ public final class TraitsCommand implements CommandExecutor, TabCompleter {
     }
 
     private List<String> filter(String input, List<String> options) {
-        return getStrings(input, options);
+        String lower = input.toLowerCase(Locale.ROOT);
+        List<String> out = new ArrayList<>();
+
+        for (String option : options) {
+            if (option.toLowerCase(Locale.ROOT).startsWith(lower)) {
+                out.add(option);
+            }
+        }
+
+        return out;
     }
 }

@@ -2,7 +2,7 @@ package com.blanoir.accessory.api;
 
 import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.events.AccessoryPlaceEvent;
-import com.blanoir.accessory.module.attribute.AccessoryLoad;
+import com.blanoir.accessory.module.attribute.loader.AccessoryLoad;
 import com.blanoir.accessory.utils.LoreUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -95,6 +95,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
         }
 
         p.sendActionBar(plugin.lang().lang("Accessory_equipped"));
+
     }
 
     /** lore -> 找到目标槽位：优先 page/*.yml 中 page 对应的 Accessory.<slot>.lore，再兼容旧版配置。 */

@@ -1,6 +1,7 @@
 package com.blanoir.accessory.module.inventory;
 
 import com.blanoir.accessory.Accessory;
+import com.blanoir.accessory.module.inventory.ui.AccessoryInventoryHolder;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -17,7 +18,7 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.List;
 import java.util.UUID;
 
-public class InvSave implements Listener {
+public class AccessoryInventoryLifecycleListener implements Listener {
 
     private final Accessory plugin;
     private final NamespacedKey locked;
@@ -25,7 +26,7 @@ public class InvSave implements Listener {
     private final NamespacedKey prePage;
     private final NamespacedKey nextPage;
 
-    public InvSave(Accessory plugin) {
+    public AccessoryInventoryLifecycleListener(Accessory plugin) {
         this.plugin = plugin;
         this.locked = new NamespacedKey(plugin, "locked");
         this.disabled = new NamespacedKey(plugin, "disabled");
@@ -48,12 +49,12 @@ public class InvSave implements Listener {
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
         Inventory top = event.getView().getTopInventory();
-        if (!(top.getHolder() instanceof InvCreate holder)) {
+        if (!(top.getHolder() instanceof AccessoryInventoryHolder holder)) {
             return;
         }
 
         ItemStack[] snapshot = sanitize(top, holder.currentPage());
-        UUID ownerId = holder.ownerId();
+        UUID ownerId = holder.getOwnerId();
         plugin.inventoryStore().updateSlice(
                 ownerId,
                 plugin.accessoryPageStart(holder.currentPage()),

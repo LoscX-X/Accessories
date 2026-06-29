@@ -1,14 +1,17 @@
 package com.blanoir.accessory.module.inventory;
 
 import com.blanoir.accessory.Accessory;
+import com.blanoir.accessory.module.inventory.ui.AccessoryInventoryMenu;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 
-public class InvLoad {
+public class AccessoryInventoryLoad {
     private final Accessory plugin;
+    private final AccessoryInventoryMenu menu;
 
-    public InvLoad(Accessory plugin) {
+    public AccessoryInventoryLoad(Accessory plugin) {
         this.plugin = plugin;
+        this.menu = new AccessoryInventoryMenu(plugin);
     }
 
     public void openFor(Player player) {
@@ -16,18 +19,26 @@ public class InvLoad {
     }
 
     public void openFor(Player viewer, Player target) {
+        int page = 1;
         int totalPages = plugin.accessoryPages();
-        InvCreate holder = new InvCreate(plugin, target.getUniqueId(), 1, totalPages);
-        Inventory inventory = holder.getInventory();
+        int size = plugin.accessorySize(page);
+
         plugin.inventoryStore().getSliceOrLoadAsync(
                 target.getUniqueId(),
-                plugin.accessoryPageStart(holder.currentPage()),
-                inventory.getSize(),
+                plugin.accessoryPageStart(page),
+                size,
                 plugin.totalAccessoryStorageSize(),
                 cached -> {
-                    inventory.setContents(cached);
                     var service = plugin.service();
-                    holder.decorate(service != null ? service.getDisabledSlots() : null);
+
+                    Inventory inventory = menu.create(
+                            target.getUniqueId(),
+                            page,
+                            totalPages,
+                            cached,
+                            service != null ? service.getDisabledSlots() : null
+                    );
+
                     viewer.openInventory(inventory);
                 }
         );

@@ -1,4 +1,4 @@
-package com.blanoir.accessory.module.attribute;
+package com.blanoir.accessory.module.attribute.loader;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;

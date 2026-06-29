@@ -1,10 +1,11 @@
 package com.blanoir.accessory.module.inventory.listener;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.module.attribute.AccessoryLoad;
+import com.blanoir.accessory.module.attribute.loader.AccessoryLoad;
 import com.blanoir.accessory.events.AccessoryPlaceEvent;
-import com.blanoir.accessory.module.inventory.InvCreate;
-import com.blanoir.accessory.module.inventory.InvSave;
+import com.blanoir.accessory.module.inventory.AccessoryInventoryLifecycleListener;
+import com.blanoir.accessory.module.inventory.ui.AccessoryInventoryHolder;
+import com.blanoir.accessory.module.inventory.ui.AccessoryInventoryMenu;
 import com.blanoir.accessory.utils.LoreUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -19,30 +20,36 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class InvListener implements Listener {
     private final Accessory plugin;
     private final AccessoryLoad effects;
-    private final InvSave invSave;
+    private final AccessoryInventoryLifecycleListener invSave;
     private final NamespacedKey LOCKED;
     private final NamespacedKey PRE_PAGE;
     private final NamespacedKey NEXT_PAGE;
+    private final AccessoryInventoryMenu menu;
+    private final Set<UUID> pendingRefresh = ConcurrentHashMap.newKeySet();
 
     public InvListener(Accessory plugin) {
         this.plugin = plugin;
         this.effects = new AccessoryLoad(plugin);
-        this.invSave = new InvSave(plugin);
+        this.menu = new AccessoryInventoryMenu(plugin);
+        this.invSave = new AccessoryInventoryLifecycleListener(plugin);
         this.LOCKED = new NamespacedKey(plugin, "locked");
         this.PRE_PAGE = new NamespacedKey(plugin, "pre_page");
         this.NEXT_PAGE = new NamespacedKey(plugin, "next_page");
     }
 
     private boolean isNotAccessoryTop(InventoryView view) {
-        return !(view.getTopInventory().getHolder() instanceof InvCreate);
+        return !(view.getTopInventory().getHolder() instanceof AccessoryInventoryHolder);
     }
 
     private int currentPage(InventoryView view) {
-        if (view.getTopInventory().getHolder() instanceof InvCreate holder) {
+        if (view.getTopInventory().getHolder() instanceof AccessoryInventoryHolder holder) {
             return holder.currentPage();
         }
         return 1;
@@ -69,7 +76,7 @@ public class InvListener implements Listener {
         return permission != null && !player.hasPermission(permission);
     }
 
-    private boolean canPlaceInSlot(Player player, int page, int slot, ItemStack item) {
+    private boolean shouldRejectPlacement(Player player, int page, int slot, ItemStack item) {
         if (isSlotDisabled(slot)) return true;
         if (!isSlotConfigured(page, slot)) return true;
 
@@ -89,24 +96,37 @@ public class InvListener implements Listener {
 
     private void scheduleRefresh(Player actor, InventoryView view) {
         Inventory top = view.getTopInventory();
-        if (!(top.getHolder() instanceof InvCreate holder)) {
+        if (!(top.getHolder() instanceof AccessoryInventoryHolder holder)) {
             return;
         }
 
-        Player owner = Bukkit.getPlayer(holder.ownerId());
-        Player refreshTarget = owner != null ? owner : actor;
+        UUID ownerId = holder.getOwnerId();
+
+        if (!pendingRefresh.add(ownerId)) {
+            return;
+        }
+
         Bukkit.getScheduler().runTask(plugin, () -> {
+            pendingRefresh.remove(ownerId);
+
             ItemStack[] snapshot = invSave.sanitize(top, holder.currentPage());
+
             plugin.inventoryStore().updateSlice(
-                    holder.ownerId(),
+                    ownerId,
                     plugin.accessoryPageStart(holder.currentPage()),
                     snapshot,
                     plugin.accessorySize(holder.currentPage()),
                     plugin.totalAccessoryStorageSize()
             );
 
-            ItemStack[] fullContents = plugin.inventoryStore().getOrLoad(holder.ownerId(), plugin.totalAccessoryStorageSize());
+            Player owner = Bukkit.getPlayer(ownerId);
+            Player refreshTarget = owner != null ? owner : actor;
+
+            ItemStack[] fullContents = plugin.inventoryStore()
+                    .getOrLoad(ownerId, plugin.totalAccessoryStorageSize());
+
             effects.rebuildFromContents(refreshTarget, fullContents);
+
             if (plugin.skillEngine() != null) {
                 plugin.skillEngine().refreshPlayer(refreshTarget, fullContents);
             }
@@ -182,7 +202,7 @@ public class InvListener implements Listener {
                         ItemStack going = (e.getAction() == InventoryAction.HOTBAR_SWAP)
                                 ? p.getInventory().getItem(e.getHotbarButton())
                                 : e.getCursor();
-                        if (going != null && !going.getType().isAir() && canPlaceInSlot(p, page, raw, going)) {
+                        if (going != null && !going.getType().isAir() && shouldRejectPlacement(p, page, raw, going)) {
                             e.setCancelled(true);
                             if (hasSlotPermission(p, page, raw)) {
                                 p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
@@ -232,7 +252,7 @@ public class InvListener implements Listener {
         for (var en : e.getNewItems().entrySet()) {
             int raw = en.getKey();
             if (raw >= topSize) continue;
-            if (canPlaceInSlot(p, page, raw, en.getValue())) {
+            if (shouldRejectPlacement(p, page, raw, en.getValue())) {
                 e.setCancelled(true);
                 if (hasSlotPermission(p, page, raw)) {
                     p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
@@ -251,36 +271,48 @@ public class InvListener implements Listener {
     }
 
     private void switchPage(Player viewer, InventoryView view, int targetPage) {
-        if (!(view.getTopInventory().getHolder() instanceof InvCreate holder)) {
+        if (!(view.getTopInventory().getHolder() instanceof AccessoryInventoryHolder holder)) {
             return;
         }
 
         int current = holder.currentPage();
         int total = holder.totalPages();
         int next = Math.max(1, Math.min(total, targetPage));
+
         if (next == current) {
             return;
         }
 
+        UUID ownerId = holder.getOwnerId();
         Inventory top = view.getTopInventory();
+
         ItemStack[] snapshot = invSave.sanitize(top, current);
+
         plugin.inventoryStore().updateSlice(
-                holder.ownerId(),
+                ownerId,
                 plugin.accessoryPageStart(current),
                 snapshot,
                 plugin.accessorySize(current),
                 plugin.totalAccessoryStorageSize()
         );
 
-        InvCreate nextHolder = new InvCreate(plugin, holder.ownerId(), next, total);
-        Inventory nextInventory = nextHolder.getInventory();
-        nextInventory.setContents(plugin.inventoryStore().getSliceOrLoad(
-                holder.ownerId(),
+        ItemStack[] nextContents = plugin.inventoryStore().getSliceOrLoad(
+                ownerId,
                 plugin.accessoryPageStart(next),
-                nextInventory.getSize(),
+                plugin.accessorySize(next),
                 plugin.totalAccessoryStorageSize()
-        ));
-        nextHolder.decorate(plugin.service() != null ? plugin.service().getDisabledSlots() : null);
+        );
+
+        var service = plugin.service();
+
+        Inventory nextInventory = menu.create(
+                ownerId,
+                next,
+                total,
+                nextContents,
+                service != null ? service.getDisabledSlots() : null
+        );
+
         viewer.openInventory(nextInventory);
         scheduleRefresh(viewer, viewer.getOpenInventory());
     }

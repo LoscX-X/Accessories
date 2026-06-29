@@ -1,4 +1,4 @@
-package com.blanoir.accessory.module.attribute;
+package com.blanoir.accessory.module.attribute.loader;
 
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;

@@ -16,7 +16,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-public final class InvStore {
+public final class AccessoryStore {
     private static final String CONTAINS_DIR = "contains";
     private static final String CONTENTS_KEY = "contents";
 
@@ -45,7 +45,7 @@ public final class InvStore {
         return thread;
     });
 
-    public InvStore(JavaPlugin plugin, StorageType storageType, SqlManager sqlManager) {
+    public AccessoryStore(JavaPlugin plugin, StorageType storageType, SqlManager sqlManager) {
         this.plugin = plugin;
         this.storageType = storageType;
         this.sqlManager = sqlManager;
@@ -64,12 +64,7 @@ public final class InvStore {
     }
 
     public ItemStack[] getOrLoad(UUID playerId, int totalSize) {
-        ItemStack[] contents = cache.get(playerId);
-        if (contents == null) {
-            contents = new ItemStack[totalSize];
-            cache.put(playerId, contents);
-            preload(playerId, totalSize);
-        }
+        ItemStack[] contents = cache.computeIfAbsent(playerId, id -> load(id, totalSize));
         return copyToSize(contents, totalSize);
     }
 
@@ -115,9 +110,14 @@ public final class InvStore {
     }
 
     public void saveAndRemove(UUID playerId, int totalSize) {
-        ItemStack[] contents = getOrLoad(playerId, totalSize);
-        CompletableFuture.runAsync(() -> save(playerId, contents), ioExecutor)
-                .thenRun(() -> cache.computeIfPresent(playerId, (id, current) -> current == contents ? null : current));
+        ItemStack[] removed = cache.remove(playerId);
+        ItemStack[] snapshot = copyToSize(removed, totalSize);
+
+        CompletableFuture.runAsync(() -> save(playerId, snapshot), ioExecutor)
+                .exceptionally(ex -> {
+                    plugin.getLogger().warning("Failed to save inventory for " + playerId + ": " + ex.getMessage());
+                    return null;
+                });
     }
 
     public void flush(UUID playerId, int totalSize) {
@@ -289,11 +289,17 @@ public final class InvStore {
     }
 
     private ItemStack[] copyToSize(ItemStack[] source, int size) {
-        ItemStack[] out = new ItemStack[size];
+        ItemStack[] coped = new ItemStack[size];
+
         if (source == null || source.length == 0) {
-            return out;
+            return coped;
         }
-        System.arraycopy(source, 0, out, 0, Math.min(size, source.length));
-        return out;
+
+        int limit = Math.min(size, source.length);
+        for (int i = 0; i < limit; i++) {
+            coped[i] = source[i] == null ? null : source[i].clone();
+        }
+
+        return coped;
     }
 }
