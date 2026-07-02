@@ -93,7 +93,11 @@ public final class AccessoryInventoryMenu {
             return;
         }
 
-        ItemStack disabled = itemFactory.disabledItem(holder.currentPage(), holder.totalPages());
+        ItemStack disabled = itemFactory.disabledItem(
+                plugin.pageManager().disabledSlotItemSection(holder.currentPage()),
+                holder.currentPage(),
+                holder.totalPages()
+        );
 
         for (Integer slot : disabledSlots) {
             if (slot != null && isValidSlot(inventory, slot)) {
@@ -106,21 +110,29 @@ public final class AccessoryInventoryMenu {
         int size = inventory.getSize();
 
         if (holder.hasPreviousPage()) {
-            int slot = plugin.getConfig().getInt("pre_page.slot", 0);
+            int slot = plugin.pageManager().pageButtonSlot(holder.currentPage(), "pre_page", 0);
             if (slot >= 0 && slot < size) {
                 inventory.setItem(
                         slot,
-                        itemFactory.previousPageItem(holder.currentPage(), holder.totalPages())
+                        itemFactory.previousPageItem(
+                                plugin.pageManager().pageButtonItemSection(holder.currentPage(), "pre_page"),
+                                holder.currentPage(),
+                                holder.totalPages()
+                        )
                 );
             }
         }
 
         if (holder.hasNextPage()) {
-            int slot = plugin.getConfig().getInt("next_page.slot", Math.max(0, size - 1));
+            int slot = plugin.pageManager().pageButtonSlot(holder.currentPage(), "next_page", Math.max(0, size - 1));
             if (slot >= 0 && slot < size) {
                 inventory.setItem(
                         slot,
-                        itemFactory.nextPageItem(holder.currentPage(), holder.totalPages())
+                        itemFactory.nextPageItem(
+                                plugin.pageManager().pageButtonItemSection(holder.currentPage(), "next_page"),
+                                holder.currentPage(),
+                                holder.totalPages()
+                        )
                 );
             }
         }

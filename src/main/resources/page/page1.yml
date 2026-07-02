@@ -5,6 +5,37 @@ page: 1
 # 当前页 GUI 大小（格子数），必须是 9 的倍数（最小 9，最大 54）。
 size: 9
 
+# 当前页上一页按钮配置
+pre_page:
+  slot: 0
+  item:
+    type: "ARROW"
+    custom-model-data: 12345
+    hide-tooltip: true
+    name: "<gray>Previous Page"
+    lore:
+      - "<dark_gray>Go to previous page"
+
+# 当前页下一页按钮配置
+next_page:
+  slot: 8
+  item:
+    type: "ARROW"
+    custom-model-data: 12345
+    hide-tooltip: true
+    name: "<gray>Next Page"
+    lore:
+      - "<dark_gray>Go to next page"
+
+# 当前页通过 AccessoryService API 在运行时禁用的槽位样式
+disabled-slot:
+  item:
+    type: "RED_STAINED_GLASS_PANE"
+    hide-tooltip: true
+    name: "<red>Slot Disabled"
+    lore:
+      - "<dark_red>This slot is disabled"
+
 # 当前页面的插槽规则：每个槽位允许放入的物品 lore 关键词
 # 同时支持 permission 检测
 Accessory:
@@ -23,16 +54,25 @@ Accessory:
       - "[Talisman]"
 
 # 当前页面物品/边框配置。每个物品自己配置 slots，可放置多个不同物品。
-# drag: "command" 时点击该物品会执行 command.console / command.player。
+# drag: "command" 时点击该物品会执行 command.console / command.player；也支持 "pre_page" / "next_page" 翻页。
 frame:
   locked:
-    slots: [0, 2, 4, 6, 8]
+    slots: [2, 4, 6]
     type: "BLACK_STAINED_GLASS_PANE"
     custom-model-data: 12345
     hide-tooltip: true
     name: "<gray>Locked"
     lore:
       - "<dark_gray>Slot is locked"
+  next_button:
+    slots: [8]
+    type: "ARROW"
+    custom-model-data: 12345
+    hide-tooltip: true
+    name: "<gray>Next Page"
+    lore:
+      - "<dark_gray>Go to next page"
+    drag: "next_page"
   help:
     slots: []
     type: "BOOK"
