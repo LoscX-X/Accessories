@@ -1,7 +1,6 @@
 package com.blanoir.accessory.module.inventory;
 
 import com.blanoir.accessory.Accessory;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -219,14 +218,36 @@ public final class AccessoryPageManager {
         return null;
     }
 
+    public String frameDragAction(int page, int slot, int size) {
+        FrameItem item = frameItemAt(page, slot, size);
+        return item == null ? "" : item.section().getString("drag", "").trim().toLowerCase();
+    }
+
     public void executeFrameCommand(Player player, int page, int slot, int size) {
         FrameItem item = frameItemAt(page, slot, size);
         if (item == null || !"command".equalsIgnoreCase(item.section().getString("drag", ""))) {
             return;
         }
 
-        executeCommands(player, page, slot, commands(item.section(), "command.console"), true);
-        executeCommands(player, page, slot, commands(item.section(), "command.player"), false);
+        FrameCommandExecutor.execute(player, page, slot, commands(item.section(), "command.console"), true);
+        FrameCommandExecutor.execute(player, page, slot, commands(item.section(), "command.player"), false);
+    }
+
+    public ConfigurationSection pageButtonItemSection(int page, String buttonKey) {
+        return pageOrLegacySection(page, buttonKey + ".item");
+    }
+
+    public int pageButtonSlot(int page, String buttonKey, int defaultSlot) {
+        YamlConfiguration pageConfig = pages.get(page);
+        String path = buttonKey + ".slot";
+        if (pageConfig != null && pageConfig.isInt(path)) {
+            return pageConfig.getInt(path);
+        }
+        return plugin.getConfig().getInt(path, defaultSlot);
+    }
+
+    public ConfigurationSection disabledSlotItemSection(int page) {
+        return pageOrLegacySection(page, "disabled-slot.item");
     }
 
     public ConfigurationSection pageAccessorySection(int page) {
@@ -252,24 +273,6 @@ public final class AccessoryPageManager {
         return List.of();
     }
 
-    private void executeCommands(Player player, int page, int slot, List<String> commands, boolean console) {
-        for (String raw : commands) {
-            if (raw == null || raw.isBlank()) {
-                continue;
-            }
-            String command = raw
-                    .replace("{player}", player.getName())
-                    .replace("{uuid}", player.getUniqueId().toString())
-                    .replace("{page}", String.valueOf(page))
-                    .replace("{slot}", String.valueOf(slot));
-            if (console) {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-            } else {
-                player.performCommand(command);
-            }
-        }
-    }
-
     private List<Integer> validSlots(int page, String itemKey, List<Integer> raw, int size) {
         LinkedHashSet<Integer> out = new LinkedHashSet<>();
         for (Integer slot : raw) {
@@ -289,6 +292,11 @@ public final class AccessoryPageManager {
             return null;
         }
         return pageConfig.getConfigurationSection(path);
+    }
+
+    private ConfigurationSection pageOrLegacySection(int page, String path) {
+        ConfigurationSection pageSection = pageSection(page, path);
+        return pageSection != null ? pageSection : plugin.getConfig().getConfigurationSection(path);
     }
 
     private List<Integer> rawLegacyFrameSlots(int page) {

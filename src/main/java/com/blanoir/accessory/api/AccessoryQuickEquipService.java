@@ -94,7 +94,7 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
             plugin.skillEngine().refreshPlayer(p, contents);
         }
 
-        p.sendActionBar(plugin.lang().lang("Accessory_equipped"));
+        p.sendActionBar(plugin.lang().langComponent("Accessory_equipped"));
 
     }
 

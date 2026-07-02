@@ -27,32 +27,16 @@ public final class AccessoryInventoryItem {
         return markedItem(section, currentPage, totalPages, "locked");
     }
 
-    public ItemStack disabledItem(int currentPage, int totalPages) {
-        return markedItem(
-                plugin.getConfig().getConfigurationSection("disabled-slot.item"),
-                currentPage,
-                totalPages,
-                "disabled",
-                "locked"
-        );
+    public ItemStack disabledItem(ConfigurationSection section, int currentPage, int totalPages) {
+        return markedItem(section, currentPage, totalPages, "disabled", "locked");
     }
 
-    public ItemStack previousPageItem(int currentPage, int totalPages) {
-        return markedItem(
-                plugin.getConfig().getConfigurationSection("pre_page.item"),
-                currentPage,
-                totalPages,
-                "pre_page"
-        );
+    public ItemStack previousPageItem(ConfigurationSection section, int currentPage, int totalPages) {
+        return markedItem(section, currentPage, totalPages, "pre_page");
     }
 
-    public ItemStack nextPageItem(int currentPage, int totalPages) {
-        return markedItem(
-                plugin.getConfig().getConfigurationSection("next_page.item"),
-                currentPage,
-                totalPages,
-                "next_page"
-        );
+    public ItemStack nextPageItem(ConfigurationSection section, int currentPage, int totalPages) {
+        return markedItem(section, currentPage, totalPages, "next_page");
     }
 
     public ItemStack markedItem(ConfigurationSection section,
@@ -83,11 +67,9 @@ public final class AccessoryInventoryItem {
 
         int customModelData = section == null ? -1 : section.getInt("custom-model-data", -1);
         if (customModelData > 0) {
-            try {
-                meta.setCustomModelData(customModelData);
-            } catch (Throwable ignored) {
-                // Keep compatibility with API changes.
-            }
+            var customModelDataComponent = meta.getCustomModelDataComponent();
+            customModelDataComponent.setFloats(List.of((float) customModelData));
+            meta.setCustomModelDataComponent(customModelDataComponent);
         }
 
         String name = section == null ? null : section.getString("name");
