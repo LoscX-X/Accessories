@@ -67,11 +67,9 @@ public final class AccessoryInventoryItem {
 
         int customModelData = section == null ? -1 : section.getInt("custom-model-data", -1);
         if (customModelData > 0) {
-            try {
-                meta.setCustomModelData(customModelData);
-            } catch (Throwable ignored) {
-                // Keep compatibility with API changes.
-            }
+            var customModelDataComponent = meta.getCustomModelDataComponent();
+            customModelDataComponent.setFloats(List.of((float) customModelData));
+            meta.setCustomModelDataComponent(customModelDataComponent);
         }
 
         String name = section == null ? null : section.getString("name");

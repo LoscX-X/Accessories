@@ -2,22 +2,21 @@ package com.blanoir.accessory.hook.myhic;
 import com.blanoir.accessory.module.attribute.aura.traits.Absorb;
 import io.lumine.mythic.api.MythicProvider;
 import io.lumine.mythic.api.skills.placeholders.PlaceholderManager;
-import io.lumine.mythic.core.skills.placeholders.Placeholder;
+import io.lumine.mythic.core.skills.placeholders.all.FunctionalEntityPlaceholder;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+@SuppressWarnings("deprecation")
 public final class MmPlaceHolder {
 
     // <caster.shield>
     public static void registerShieldPlaceholder(JavaPlugin plugin, Absorb absorb) {
         PlaceholderManager pm = MythicProvider.get().getPlaceholderManager();
 
-        pm.register("caster.shield", Placeholder.meta((meta, arg) -> {
-            if (meta.getCaster() == null) return "0";
-            var ae = meta.getCaster().getEntity();
-            if (ae == null || !ae.isPlayer()) return "0";
+        pm.register("caster.shield", new FunctionalEntityPlaceholder((entity, arg) -> {
+            if (entity == null || !entity.isPlayer()) return "0";
 
-            Player p = (Player) ae.getBukkitEntity();
+            Player p = (Player) entity.getBukkitEntity();
             double shield = absorb.getCurrentShield(p);
 
             // 可选：格式化

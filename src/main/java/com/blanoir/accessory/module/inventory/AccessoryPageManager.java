@@ -234,29 +234,20 @@ public final class AccessoryPageManager {
     }
 
     public ConfigurationSection pageButtonItemSection(int page, String buttonKey) {
-        YamlConfiguration pageConfig = pages.get(page);
-        ConfigurationSection pageSection = pageConfig == null ? null : pageConfig.getConfigurationSection(buttonKey + ".item");
-        if (pageSection != null) {
-            return pageSection;
-        }
-        return plugin.getConfig().getConfigurationSection(buttonKey + ".item");
+        return pageOrLegacySection(page, buttonKey + ".item");
     }
 
     public int pageButtonSlot(int page, String buttonKey, int defaultSlot) {
         YamlConfiguration pageConfig = pages.get(page);
-        if (pageConfig != null && pageConfig.isInt(buttonKey + ".slot")) {
-            return pageConfig.getInt(buttonKey + ".slot");
+        String path = buttonKey + ".slot";
+        if (pageConfig != null && pageConfig.isInt(path)) {
+            return pageConfig.getInt(path);
         }
-        return plugin.getConfig().getInt(buttonKey + ".slot", defaultSlot);
+        return plugin.getConfig().getInt(path, defaultSlot);
     }
 
     public ConfigurationSection disabledSlotItemSection(int page) {
-        YamlConfiguration pageConfig = pages.get(page);
-        ConfigurationSection pageSection = pageConfig == null ? null : pageConfig.getConfigurationSection("disabled-slot.item");
-        if (pageSection != null) {
-            return pageSection;
-        }
-        return plugin.getConfig().getConfigurationSection("disabled-slot.item");
+        return pageOrLegacySection(page, "disabled-slot.item");
     }
 
     public ConfigurationSection pageAccessorySection(int page) {
@@ -301,6 +292,11 @@ public final class AccessoryPageManager {
             return null;
         }
         return pageConfig.getConfigurationSection(path);
+    }
+
+    private ConfigurationSection pageOrLegacySection(int page, String path) {
+        ConfigurationSection pageSection = pageSection(page, path);
+        return pageSection != null ? pageSection : plugin.getConfig().getConfigurationSection(path);
     }
 
     private List<Integer> rawLegacyFrameSlots(int page) {

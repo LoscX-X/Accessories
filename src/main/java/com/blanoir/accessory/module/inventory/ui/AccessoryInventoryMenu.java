@@ -110,32 +110,28 @@ public final class AccessoryInventoryMenu {
         int size = inventory.getSize();
 
         if (holder.hasPreviousPage()) {
-            int slot = plugin.pageManager().pageButtonSlot(holder.currentPage(), "pre_page", 0);
-            if (slot >= 0 && slot < size) {
-                inventory.setItem(
-                        slot,
-                        itemFactory.previousPageItem(
-                                plugin.pageManager().pageButtonItemSection(holder.currentPage(), "pre_page"),
-                                holder.currentPage(),
-                                holder.totalPages()
-                        )
-                );
-            }
+            applyPageButton(inventory, holder, "pre_page", 0);
         }
 
         if (holder.hasNextPage()) {
-            int slot = plugin.pageManager().pageButtonSlot(holder.currentPage(), "next_page", Math.max(0, size - 1));
-            if (slot >= 0 && slot < size) {
-                inventory.setItem(
-                        slot,
-                        itemFactory.nextPageItem(
-                                plugin.pageManager().pageButtonItemSection(holder.currentPage(), "next_page"),
-                                holder.currentPage(),
-                                holder.totalPages()
-                        )
-                );
-            }
+            applyPageButton(inventory, holder, "next_page", Math.max(0, size - 1));
         }
+    }
+
+    private void applyPageButton(Inventory inventory,
+                                 AccessoryInventoryHolder holder,
+                                 String buttonKey,
+                                 int defaultSlot) {
+        int slot = plugin.pageManager().pageButtonSlot(holder.currentPage(), buttonKey, defaultSlot);
+        if (!isValidSlot(inventory, slot)) {
+            return;
+        }
+
+        var section = plugin.pageManager().pageButtonItemSection(holder.currentPage(), buttonKey);
+        ItemStack button = "pre_page".equals(buttonKey)
+                ? itemFactory.previousPageItem(section, holder.currentPage(), holder.totalPages())
+                : itemFactory.nextPageItem(section, holder.currentPage(), holder.totalPages());
+        inventory.setItem(slot, button);
     }
 
     private Component title(int currentPage, int totalPages) {

@@ -5,8 +5,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.util.io.BukkitObjectInputStream;
-import org.bukkit.util.io.BukkitObjectOutputStream;
 
 import java.io.*;
 import java.util.*;
@@ -256,32 +254,35 @@ public final class AccessoryStore {
         }
     }
 
-    private String encode(ItemStack[] contents) throws IOException {
-        try (ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-             BukkitObjectOutputStream out = new BukkitObjectOutputStream(byteOut)) {
-            out.writeInt(contents.length);
-            for (ItemStack content : contents) {
-                out.writeObject(content);
-            }
-            out.flush();
-            return Base64.getEncoder().encodeToString(byteOut.toByteArray());
-        }
+    private String encode(ItemStack[] contents) {
+        YamlConfiguration cfg = new YamlConfiguration();
+        cfg.set(CONTENTS_KEY, Arrays.asList(contents));
+        return Base64.getEncoder().encodeToString(cfg.saveToString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
-    private ItemStack[] decode(String encoded, int size) throws IOException, ClassNotFoundException {
-        byte[] data = Base64.getDecoder().decode(encoded);
-        try (ByteArrayInputStream byteIn = new ByteArrayInputStream(data);
-             BukkitObjectInputStream in = new BukkitObjectInputStream(byteIn)) {
-            int length = in.readInt();
-            ItemStack[] contents = new ItemStack[Math.max(size, length)];
-            for (int i = 0; i < length; i++) {
-                Object value = in.readObject();
-                if (value instanceof ItemStack stack) {
-                    contents[i] = stack;
-                }
-            }
-            return copyToSize(contents, size);
+    private ItemStack[] decode(String encoded, int size) {
+        String yaml = new String(Base64.getDecoder().decode(encoded), java.nio.charset.StandardCharsets.UTF_8);
+        YamlConfiguration cfg = new YamlConfiguration();
+        try {
+            cfg.loadFromString(yaml);
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Invalid serialized inventory", ex);
         }
+
+        ItemStack[] out = new ItemStack[size];
+        var raw = cfg.getList(CONTENTS_KEY);
+        if (raw == null || raw.isEmpty()) {
+            return out;
+        }
+
+        int limit = Math.min(size, raw.size());
+        for (int i = 0; i < limit; i++) {
+            Object value = raw.get(i);
+            if (value instanceof ItemStack stack) {
+                out[i] = stack;
+            }
+        }
+        return out;
     }
 
     private File fileOf(UUID playerId) {
