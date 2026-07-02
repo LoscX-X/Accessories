@@ -13,22 +13,31 @@ import java.util.Locale;
 public final class LoreUtils {
     private static final PlainTextComponentSerializer PLAIN = PlainTextComponentSerializer.plainText();
 
-    private LoreUtils() {}
+    private LoreUtils() {
+    }
 
     public static List<String> plainLore(ItemStack item) {
-        if (item == null) return Collections.emptyList();
+        if (item == null || item.getType().isAir()) {
+            return Collections.emptyList();
+        }
 
         ItemMeta meta = item.getItemMeta();
-        if (meta == null) return Collections.emptyList();
+        if (meta == null) {
+            return Collections.emptyList();
+        }
 
         List<Component> lore = meta.lore();
-        if (lore == null || lore.isEmpty()) return Collections.emptyList();
+        if (lore == null || lore.isEmpty()) {
+            return Collections.emptyList();
+        }
 
         List<String> out = new ArrayList<>(lore.size());
         for (Component component : lore) {
-            if (component == null) continue;
+            if (component == null) {
+                continue;
+            }
 
-            String plain = PLAIN.serialize(component).trim();
+            String plain = normalize(PLAIN.serialize(component));
             if (!plain.isEmpty()) {
                 out.add(plain);
             }
@@ -37,21 +46,48 @@ public final class LoreUtils {
         return out.isEmpty() ? Collections.emptyList() : out;
     }
 
-    public static boolean matchesAnyKeyword(List<String> itemLore, List<String> normalizedKeywords) {
-        if (normalizedKeywords == null || normalizedKeywords.isEmpty()) return true;
-        if (itemLore == null || itemLore.isEmpty()) return false;
+    public static boolean matchesAnyKeyword(List<String> itemLore, List<String> keywords) {
+        if (keywords == null || keywords.isEmpty()) {
+            return true;
+        }
+
+        if (itemLore == null || itemLore.isEmpty()) {
+            return false;
+        }
+
+        List<String> normalizedKeywords = new ArrayList<>();
+        for (String keyword : keywords) {
+            String normalized = normalize(keyword);
+            if (!normalized.isEmpty()) {
+                normalizedKeywords.add(normalized);
+            }
+        }
+
+        if (normalizedKeywords.isEmpty()) {
+            return true;
+        }
 
         for (String line : itemLore) {
-            if (line == null || line.isEmpty()) continue;
+            String normalizedLine = normalize(line);
+            if (normalizedLine.isEmpty()) {
+                continue;
+            }
 
-            String lowerLine = line.toLowerCase(Locale.ROOT);
             for (String keyword : normalizedKeywords) {
-                if (lowerLine.contains(keyword)) {
+                if (normalizedLine.contains(keyword)) {
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    private static String normalize(String text) {
+        if (text == null) {
+            return "";
+        }
+
+        return text.trim().toLowerCase(Locale.ROOT);
     }
 }

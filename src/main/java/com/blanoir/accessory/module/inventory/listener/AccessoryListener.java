@@ -20,6 +20,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -138,7 +139,7 @@ public class AccessoryListener implements Listener {
                 player,
                 slot,
                 item.clone(),
-                top.getItem(slot) == null ? null : top.getItem(slot).clone()
+                top.getItem(slot) == null ? null : Objects.requireNonNull(top.getItem(slot)).clone()
         );
         Bukkit.getPluginManager().callEvent(event);
         return event.isCancelled();
@@ -158,66 +159,91 @@ public class AccessoryListener implements Listener {
         int raw = e.getRawSlot();
         int page = currentPage(e.getView());
 
-        if (raw < topSize) {
-            ItemStack clicked = top.getItem(raw);
-            if (hasMarker(clicked, PRE_PAGE) || hasMarker(clicked, NEXT_PAGE)) {
-                e.setCancelled(true);
-                switchPage(p, e.getView(), hasMarker(clicked, PRE_PAGE) ? page - 1 : page + 1);
-                return;
-            }
+        // 点到窗口外部，raw 通常是 -999
+        if (raw < 0) {
+            e.setCancelled(true);
+            return;
         }
 
+        // shift 点击玩家背包，禁止把东西直接塞进饰品 GUI
         if (e.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && raw >= topSize) {
             e.setCancelled(true);
             return;
         }
 
-        List<Integer> FRAME = frameSlots(e.getView());
+        // 只处理上方饰品 GUI，玩家背包普通点击不处理
+        if (raw >= topSize) {
+            return;
+        }
 
-        if (raw < topSize) {
-            boolean isFrame = FRAME.contains(raw);
-            boolean isDisabled = isSlotDisabled(raw);
-            ItemStack cur = e.getCurrentItem();
+        ItemStack clicked = top.getItem(raw);
 
-            if (isFrame || isDisabled) {
-                switch (e.getAction()) {
-                    case PLACE_ALL, PLACE_SOME, PLACE_ONE,
-                         SWAP_WITH_CURSOR, HOTBAR_SWAP,
-                         COLLECT_TO_CURSOR,
-                         MOVE_TO_OTHER_INVENTORY -> {
+        // 翻页按钮
+        if (hasMarker(clicked, PRE_PAGE) || hasMarker(clicked, NEXT_PAGE)) {
+            e.setCancelled(true);
+            switchPage(p, e.getView(), hasMarker(clicked, PRE_PAGE) ? page - 1 : page + 1);
+            return;
+        }
+
+        List<Integer> frame = frameSlots(e.getView());
+
+        boolean isFrame = frame.contains(raw);
+        boolean isDisabled = isSlotDisabled(raw);
+        ItemStack cur = e.getCurrentItem();
+
+        if (isFrame || isDisabled) {
+            switch (e.getAction()) {
+                case PLACE_ALL, PLACE_SOME, PLACE_ONE,
+                     SWAP_WITH_CURSOR, HOTBAR_SWAP,
+                     COLLECT_TO_CURSOR,
+                     MOVE_TO_OTHER_INVENTORY -> {
+                    e.setCancelled(true);
+                    return;
+                }
+                default -> {
+                    if (hasMarker(cur, LOCKED)) {
+                        e.setCancelled(true);
+                        handleFrameDragAction(p, e.getView(), page, raw, topSize);
+                        return;
+                    }
+                }
+            }
+        } else {
+            switch (e.getAction()) {
+                case PLACE_ALL, PLACE_SOME, PLACE_ONE, SWAP_WITH_CURSOR, HOTBAR_SWAP -> {
+                    ItemStack going;
+
+                    if (e.getAction() == InventoryAction.HOTBAR_SWAP) {
+                        int button = e.getHotbarButton();
+
+                        if (button < 0 || button > 8) {
+                            e.setCancelled(true);
+                            return;
+                        }
+
+                        going = p.getInventory().getItem(button);
+                    } else {
+                        going = e.getCursor();
+                    }
+
+                    if (going != null && !going.getType().isAir() && shouldRejectPlacement(p, page, raw, going)) {
+                        e.setCancelled(true);
+
+                        if (hasSlotPermission(p, page, raw)) {
+                            p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
+                        } else {
+                            p.sendMessage(plugin.lang().langComponent("Item_not_match"));
+                        }
+
+                        return;
+                    }
+
+                    if (going != null && !going.getType().isAir() && callPlaceEvent(p, top, raw, going)) {
                         e.setCancelled(true);
                         return;
                     }
-                    default -> {
-                        if (hasMarker(cur, LOCKED)) {
-                            e.setCancelled(true);
-                            handleFrameDragAction(p, e.getView(), page, raw, topSize);
-                            return;
-                        }
-                    }
                 }
-            } else {
-                switch (e.getAction()) {
-                    case PLACE_ALL, PLACE_SOME, PLACE_ONE, SWAP_WITH_CURSOR, HOTBAR_SWAP -> {
-                        ItemStack going = (e.getAction() == InventoryAction.HOTBAR_SWAP)
-                                ? p.getInventory().getItem(e.getHotbarButton())
-                                : e.getCursor();
-                        if (going != null && !going.getType().isAir() && shouldRejectPlacement(p, page, raw, going)) {
-                            e.setCancelled(true);
-                            if (hasSlotPermission(p, page, raw)) {
-                                p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
-                            } else {
-                                p.sendMessage(plugin.lang().langComponent("Item_not_match"));
-                            }
-                            return;
-                        }
-                        if (going != null && !going.getType().isAir() && callPlaceEvent(p, top, raw, going)) {
-                            e.setCancelled(true);
-                            return;
-                        }
-                    }
-                    default -> {
-                    }
+                default -> {
                 }
             }
         }
