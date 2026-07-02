@@ -191,7 +191,7 @@ public class AccessoryListener implements Listener {
                     default -> {
                         if (hasMarker(cur, LOCKED)) {
                             e.setCancelled(true);
-                            plugin.pageManager().executeFrameCommand(p, page, raw, topSize);
+                            handleFrameDragAction(p, e.getView(), page, raw, topSize);
                             return;
                         }
                     }
@@ -268,6 +268,17 @@ public class AccessoryListener implements Listener {
         }
 
         scheduleRefresh(p, e.getView());
+    }
+
+    private void handleFrameDragAction(Player player, InventoryView view, int page, int slot, int topSize) {
+        String drag = plugin.pageManager().frameDragAction(page, slot, topSize);
+        switch (drag) {
+            case "pre_page" -> switchPage(player, view, page - 1);
+            case "next_page" -> switchPage(player, view, page + 1);
+            case "command" -> plugin.pageManager().executeFrameCommand(player, page, slot, topSize);
+            default -> {
+            }
+        }
     }
 
     private void switchPage(Player viewer, InventoryView view, int targetPage) {

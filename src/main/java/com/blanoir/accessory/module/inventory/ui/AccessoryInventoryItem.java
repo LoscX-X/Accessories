@@ -27,32 +27,16 @@ public final class AccessoryInventoryItem {
         return markedItem(section, currentPage, totalPages, "locked");
     }
 
-    public ItemStack disabledItem(int currentPage, int totalPages) {
-        return markedItem(
-                plugin.getConfig().getConfigurationSection("disabled-slot.item"),
-                currentPage,
-                totalPages,
-                "disabled",
-                "locked"
-        );
+    public ItemStack disabledItem(ConfigurationSection section, int currentPage, int totalPages) {
+        return markedItem(section, currentPage, totalPages, "disabled", "locked");
     }
 
-    public ItemStack previousPageItem(int currentPage, int totalPages) {
-        return markedItem(
-                plugin.getConfig().getConfigurationSection("pre_page.item"),
-                currentPage,
-                totalPages,
-                "pre_page"
-        );
+    public ItemStack previousPageItem(ConfigurationSection section, int currentPage, int totalPages) {
+        return markedItem(section, currentPage, totalPages, "pre_page");
     }
 
-    public ItemStack nextPageItem(int currentPage, int totalPages) {
-        return markedItem(
-                plugin.getConfig().getConfigurationSection("next_page.item"),
-                currentPage,
-                totalPages,
-                "next_page"
-        );
+    public ItemStack nextPageItem(ConfigurationSection section, int currentPage, int totalPages) {
+        return markedItem(section, currentPage, totalPages, "next_page");
     }
 
     public ItemStack markedItem(ConfigurationSection section,
