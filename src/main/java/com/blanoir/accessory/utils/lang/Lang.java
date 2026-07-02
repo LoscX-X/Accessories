@@ -3,7 +3,6 @@ package com.blanoir.accessory.utils.lang;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -26,6 +25,7 @@ public final class Lang {
     private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
 
     private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.legacySection();
+    private static final LegacyComponentSerializer AMPERSAND_SERIALIZER = LegacyComponentSerializer.legacyAmpersand();
 
     private final JavaPlugin plugin;
     private final Map<String, String> singleLineMessages = new HashMap<>();
@@ -145,15 +145,7 @@ public final class Lang {
     }
 
     private String format(String input) {
-        String raw = input == null ? "" : input;
-        try {
-            return ChatColor.translateAlternateColorCodes(
-                    '&',
-                    LEGACY_SERIALIZER.serialize(MINI_MESSAGE.deserialize(raw))
-            );
-        } catch (Exception ignored) {
-            return ChatColor.translateAlternateColorCodes('&', raw);
-        }
+        return LEGACY_SERIALIZER.serialize(formatComponent(input));
     }
 
     private List<String> formatLines(List<String> source) {
@@ -173,8 +165,7 @@ public final class Lang {
         try {
             return MINI_MESSAGE.deserialize(raw);
         } catch (Exception ignored) {
-            String legacy = ChatColor.translateAlternateColorCodes('&', raw);
-            return LEGACY_SERIALIZER.deserialize(legacy);
+            return AMPERSAND_SERIALIZER.deserialize(raw);
         }
     }
 

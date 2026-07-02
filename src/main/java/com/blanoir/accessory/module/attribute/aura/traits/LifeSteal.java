@@ -16,6 +16,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 
+@SuppressWarnings("deprecation")
 public class LifeSteal implements BukkitTraitHandler, Listener {
 
     private final AuraSkillsApi auraSkills;

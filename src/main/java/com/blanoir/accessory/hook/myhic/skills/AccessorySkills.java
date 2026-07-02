@@ -12,7 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.ChatColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -27,6 +27,8 @@ public final class AccessorySkills {
     private final NamespacedKey accItemVersion;
     private final NamespacedKey legacyDunItemId;
     private final Map<String, List<SkillEntry>> skillsByItemId = new HashMap<>();
+    private static final PlainTextComponentSerializer PLAIN_TEXT = PlainTextComponentSerializer.plainText();
+
     private final Map<String, String> itemIdByName = new HashMap<>();
     private final Map<UUID, PlayerLoadout> loadouts = new ConcurrentHashMap<>();
     private final Map<UUID, Map<Integer, Integer>> accessorySlotSnapshots = new ConcurrentHashMap<>();
@@ -71,7 +73,7 @@ public final class AccessorySkills {
                     TriggerType trigger = TriggerType.from(Objects.toString(m.get("trigger"), ""));
                     if (skill.isEmpty() || trigger == null) continue;
 
-                    int period = toInt(m.get("period"), 0);
+                    int period = toInt(m.get("period"));
                     TargetType target = TargetType.from(Objects.toString(m.get("target"), ""));
                     Object conditions = m.get("conditions");
                     parsed.add(new SkillEntry(skill, trigger, period, target, conditions));
@@ -219,15 +221,13 @@ public final class AccessorySkills {
             return legacyItemId;
         }
 
-        String displayName = meta.hasDisplayName() ? meta.getDisplayName() : null;
-        if (displayName == null || displayName.isBlank()) return null;
+        if (!meta.hasDisplayName() || meta.displayName() == null) return null;
 
-        return itemIdByName.get(normalizeItemName(displayName));
+        return itemIdByName.get(normalizeItemName(PLAIN_TEXT.serialize(meta.displayName())));
     }
 
     private String normalizeItemName(String raw) {
-        String noColor = ChatColor.stripColor(raw == null ? "" : raw);
-        return noColor.replaceAll("<[^>]*>", "").trim();
+        return (raw == null ? "" : raw).replaceAll("<[^>]*>", "").trim();
     }
 
     private boolean stampItem(ItemStack item, String itemId) {
@@ -389,12 +389,12 @@ public final class AccessorySkills {
         }
 
     }
-    private int toInt(Object val, int def) {
+    private int toInt(Object val) {
         if (val instanceof Number n) return n.intValue();
         try {
             return Integer.parseInt(String.valueOf(val));
         } catch (Exception ignore) {
-            return def;
+            return 0;
         }
     }
 }
