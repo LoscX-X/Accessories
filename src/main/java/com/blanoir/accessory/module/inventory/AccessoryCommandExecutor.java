@@ -5,8 +5,8 @@ import org.bukkit.entity.Player;
 
 import java.util.List;
 
-final class FrameCommandExecutor {
-    private FrameCommandExecutor() {
+final class AccessoryCommandExecutor {
+    private AccessoryCommandExecutor() {
     }
 
     static void execute(Player player, int page, int slot, List<String> commands, boolean console) {

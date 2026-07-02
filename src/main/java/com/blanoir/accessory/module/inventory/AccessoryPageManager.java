@@ -229,8 +229,8 @@ public final class AccessoryPageManager {
             return;
         }
 
-        FrameCommandExecutor.execute(player, page, slot, commands(item.section(), "command.console"), true);
-        FrameCommandExecutor.execute(player, page, slot, commands(item.section(), "command.player"), false);
+        AccessoryCommandExecutor.execute(player, page, slot, commands(item.section(), "command.console"), true);
+        AccessoryCommandExecutor.execute(player, page, slot, commands(item.section(), "command.player"), false);
     }
 
     public ConfigurationSection pageButtonItemSection(int page, String buttonKey) {
