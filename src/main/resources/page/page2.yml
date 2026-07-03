@@ -4,28 +4,6 @@ page: 2
 
 size: 9
 
-# 当前页上一页按钮配置
-pre_page:
-  slot: 0
-  item:
-    type: "ARROW"
-    custom-model-data: 12345
-    hide-tooltip: true
-    name: "<gray>Previous Page"
-    lore:
-      - "<dark_gray>Go to previous page"
-
-# 当前页下一页按钮配置
-next_page:
-  slot: 8
-  item:
-    type: "ARROW"
-    custom-model-data: 12345
-    hide-tooltip: true
-    name: "<gray>Next Page"
-    lore:
-      - "<dark_gray>Go to next page"
-
 # 当前页通过 AccessoryService API 在运行时禁用的槽位样式
 disabled-slot:
   item:
