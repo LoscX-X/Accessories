@@ -1,5 +1,6 @@
 package com.blanoir.accessory;
 
+import com.blanoir.accessory.api.AccessoryQuickEquipService;
 import com.blanoir.accessory.api.AccessoryService;
 import com.blanoir.accessory.command.AccessoryInventoryCommand;
 import com.blanoir.accessory.hook.aura.AuraSkillsHook;
@@ -11,6 +12,7 @@ import com.blanoir.accessory.module.inventory.AccessoryPageManager;
 import com.blanoir.accessory.module.inventory.AccessoryInventoryLifecycleListener;
 import com.blanoir.accessory.module.inventory.AccessoryStore;
 import com.blanoir.accessory.module.inventory.listener.AccessoryListener;
+import com.blanoir.accessory.module.inventory.listener.AccessoryQuickEquipListener;
 import com.blanoir.accessory.utils.lang.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -24,6 +26,7 @@ public final class Accessory extends JavaPlugin {
     private AccessoryService accessoryService;
     private AccessorySkills skillEngine;
     private AccessoryStore inventoryStore;
+    private AccessoryQuickEquipService quickEquipService;
     private AccessoryPageManager pageManager;
     private SqlManager sqlManager;
 
@@ -31,6 +34,7 @@ public final class Accessory extends JavaPlugin {
     public AccessorySkills skillEngine() { return skillEngine; }
     public AccessoryStore inventoryStore() { return inventoryStore; }
     public AccessoryPageManager pageManager() { return pageManager; }
+    public AccessoryQuickEquipService quickEquipService() { return quickEquipService; }
 
     @Override
     public void onEnable() {
@@ -41,6 +45,7 @@ public final class Accessory extends JavaPlugin {
 
         initStorage();
         this.accessoryService = new AccessoryService(this);
+        this.quickEquipService = new AccessoryQuickEquipService(this);
 
         registerCommands();
         registerListeners();
@@ -206,6 +211,7 @@ public final class Accessory extends JavaPlugin {
         var pm = getServer().getPluginManager();
         pm.registerEvents(new AccessoryInventoryLifecycleListener(this), this);
         pm.registerEvents(new AccessoryListener(this), this);
+        pm.registerEvents(new AccessoryQuickEquipListener(this, quickEquipService), this);
     }
 
     private void registerCommands() {

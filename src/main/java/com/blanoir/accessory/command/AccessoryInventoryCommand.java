@@ -43,6 +43,7 @@ public final class AccessoryInventoryCommand implements CommandExecutor, TabComp
             case "reload" -> executeReload(sender, args);
             case "clear" -> executeClear(sender, args);
             case "view" -> executeView(sender, args);
+            case "quickequip" -> executeQuickEquip(sender, args);
             default -> {
                 sender.sendMessage(plugin.lang().lang("Accessory_unknown"));
                 yield true;
@@ -137,6 +138,25 @@ public final class AccessoryInventoryCommand implements CommandExecutor, TabComp
         }
 
         inventoryLoad.openFor(viewer, target);
+        return true;
+    }
+
+    private boolean executeQuickEquip(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(plugin.lang().lang("Only_player_open"));
+            return true;
+        }
+
+        if (args.length < 3) {
+            return true;
+        }
+
+        try {
+            int page = Integer.parseInt(args[1]);
+            int slot = Integer.parseInt(args[2]);
+            plugin.quickEquipService().equipToSlot(player, page, slot);
+        } catch (NumberFormatException ignored) {
+        }
         return true;
     }
 

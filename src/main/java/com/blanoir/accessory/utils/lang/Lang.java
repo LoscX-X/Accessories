@@ -28,6 +28,7 @@ public final class Lang {
     private static final LegacyComponentSerializer AMPERSAND_SERIALIZER = LegacyComponentSerializer.legacyAmpersand();
 
     private final JavaPlugin plugin;
+    private final Map<String, String> rawSingleLineMessages = new HashMap<>();
     private final Map<String, String> singleLineMessages = new HashMap<>();
     private final Map<String, List<String>> multiLineMessages = new HashMap<>();
     private final Map<String, Component> singleLineComponents = new HashMap<>();
@@ -45,6 +46,7 @@ public final class Lang {
         FileConfiguration primary = loadLanguageConfiguration(LangFile);
         FileConfiguration fallback = loadLanguageConfiguration(DEFAULT_LANG);
 
+        Map<String, String> raws = new HashMap<>();
         Map<String, String> singles = new HashMap<>();
         Map<String, List<String>> multis = new HashMap<>();
 
@@ -67,6 +69,7 @@ public final class Lang {
                 String raw = primary.getString(path);
                 if (raw == null) raw = fallback.getString(path, "Missing:" + key);
 
+                raws.put(key, raw);
                 singles.put(key, format(raw));
                 singlesC.put(key, formatComponent(raw));
             }
@@ -74,6 +77,9 @@ public final class Lang {
 
 
 // 写入字符串缓存
+        this.rawSingleLineMessages.clear();
+        this.rawSingleLineMessages.putAll(raws);
+
         this.singleLineMessages.clear();
         this.singleLineMessages.putAll(singles);
 
@@ -99,6 +105,14 @@ public final class Lang {
 
     public Component langComponent(String key) {
         return singleLineComponents.getOrDefault(key, Component.text("Missing:" + key));
+    }
+
+    public Component langComponent(String key, Map<String, String> replacements) {
+        String raw = rawSingleLineMessages.getOrDefault(key, "Missing:" + key);
+        for (Map.Entry<String, String> entry : replacements.entrySet()) {
+            raw = raw.replace("{" + entry.getKey() + "}", entry.getValue());
+        }
+        return formatComponent(raw);
     }
 
 

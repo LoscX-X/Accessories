@@ -4,16 +4,20 @@ import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.events.AccessoryPlaceEvent;
 import com.blanoir.accessory.module.attribute.loader.AccessoryLoad;
 import com.blanoir.accessory.utils.LoreUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public final class AccessoryQuickEquipService {    //这个可以不用管
+public final class AccessoryQuickEquipService {
     private final Accessory plugin;
     private final AccessoryLoad accessoryLoad;
 
@@ -22,42 +26,37 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
         this.accessoryLoad = new AccessoryLoad(plugin);
     }
 
-    /**
-     * 给 KeyEvent / 右键 调用：尝试把主手物品穿戴到饰品槽
-     */
-    public void tryEquipMainHand(Player p) {
-        ItemStack hand = p.getInventory().getItemInMainHand();
+    public void tryEquipMainHand(Player player) {
+        ItemStack hand = player.getInventory().getItemInMainHand();
         if (hand.getType().isAir()) return;
 
-        TargetSlot target = findAccessoryTarget(hand);
-        if (target == null) return;
+        List<TargetSlot> targets = findAccessoryTargets(hand);
+        if (targets.isEmpty()) return;
 
-        equipToSlot(p, target.page(), target.slot());
+        if (targets.size() == 1) {
+            equipToSlot(player, targets.getFirst().page(), targets.getFirst().slot());
+            return;
+        }
+
+        sendTargetSelection(player, targets);
     }
 
-    /**
-     * 兼容旧 API：把主手物品 equip 到第 1 页指定 slot（会替换旧的）
-     */
-    public void equipToSlot(Player p, int slot) {
-        equipToSlot(p, 1, slot);
+    public void equipToSlot(Player player, int slot) {
+        equipToSlot(player, 1, slot);
     }
 
-    /**
-     * 核心：把主手物品 equip 到指定 page/slot（会替换旧的）
-     */
-    public void equipToSlot(Player p, int page, int slot) {
+    public void equipToSlot(Player player, int page, int slot) {
         int pageSize = plugin.accessorySize(page);
         int pages = plugin.accessoryPages();
         if (page < 1 || page > pages || slot < 0 || slot >= pageSize) return;
         if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) return;
-
-        // 防止把饰品塞进外框锁定槽（如果 frame 槽位和 accessory 槽位配置冲突）
         if (isFrameSlot(page, slot)) return;
 
-        ItemStack hand = p.getInventory().getItemInMainHand();
+        ItemStack hand = player.getInventory().getItemInMainHand();
         if (hand.getType().isAir()) return;
+        if (shouldRejectPlacement(player, page, slot, hand)) return;
 
-        ItemStack[] contents = plugin.inventoryStore().getOrLoad(p.getUniqueId(), plugin.totalAccessoryStorageSize());
+        ItemStack[] contents = plugin.inventoryStore().getOrLoad(player.getUniqueId(), plugin.totalAccessoryStorageSize());
         int absoluteSlot = plugin.accessoryPageStart(page) + slot;
         ItemStack old = contents[absoluteSlot];
 
@@ -68,63 +67,59 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
         }
 
         AccessoryPlaceEvent placeEvent = new AccessoryPlaceEvent(
-                p,
+                player,
                 slot,
                 placed.clone(),
                 old == null ? null : old.clone()
         );
         Bukkit.getPluginManager().callEvent(placeEvent);
-        if (placeEvent.isCancelled()) {
-            return;
-        }
+        if (placeEvent.isCancelled()) return;
 
         contents[absoluteSlot] = placed;
-        decrementMainHand(p);
+        replaceMainHandAfterEquip(player, hand, old);
 
-        if (old != null && old.getType() != Material.AIR) {
-            Map<Integer, ItemStack> left = p.getInventory().addItem(old);
-            left.values().forEach(it -> p.getWorld().dropItemNaturally(p.getLocation(), it));
-        }
+        plugin.inventoryStore().update(player.getUniqueId(), contents, plugin.totalAccessoryStorageSize());
+        plugin.inventoryStore().flush(player.getUniqueId(), plugin.totalAccessoryStorageSize());
 
-        plugin.inventoryStore().update(p.getUniqueId(), contents, plugin.totalAccessoryStorageSize());
-        plugin.inventoryStore().flush(p.getUniqueId(), plugin.totalAccessoryStorageSize());
-
-        accessoryLoad.rebuildFromContents(p, contents);
+        accessoryLoad.rebuildFromContents(player, contents);
         if (plugin.skillEngine() != null) {
-            plugin.skillEngine().refreshPlayer(p, contents);
+            plugin.skillEngine().refreshPlayer(player, contents);
         }
 
-        p.sendActionBar(plugin.lang().langComponent("Accessory_equipped"));
-
+        player.sendActionBar(plugin.lang().langComponent(
+                "Accessory_equipped",
+                Map.of("page", String.valueOf(page), "slot", String.valueOf(slot))
+        ));
     }
 
-    /** lore -> 找到目标槽位：优先 page/*.yml 中 page 对应的 Accessory.<slot>.lore，再兼容旧版配置。 */
     public int findAccessorySlot(ItemStack item) {
-        TargetSlot target = findAccessoryTarget(item);
-        return target == null ? -1 : target.slot();
+        List<TargetSlot> targets = findAccessoryTargets(item);
+        return targets.isEmpty() ? -1 : targets.getFirst().slot();
     }
 
-    private TargetSlot findAccessoryTarget(ItemStack item) {
+    private List<TargetSlot> findAccessoryTargets(ItemStack item) {
         if (plugin.skillEngine() != null) {
             plugin.skillEngine().stampKnownAccessoryItem(item);
         }
         List<String> lore = LoreUtils.plainLore(item);
-        if (lore.isEmpty()) return null;
+        if (lore.isEmpty()) return List.of();
 
+        List<TargetSlot> targets = new ArrayList<>();
         int pages = plugin.accessoryPages();
         for (int page = 1; page <= pages; page++) {
             ConfigurationSection pageSec = plugin.pageManager().pageAccessorySection(page);
             if (pageSec == null) continue;
-
-            TargetSlot target = findMatchingSlotInSection(lore, page, pageSec);
-            if (target != null) return target;
+            collectMatchingSlots(lore, page, pageSec, targets);
         }
 
         ConfigurationSection legacySec = plugin.pageManager().legacyAccessorySection();
-        return legacySec == null ? null : findMatchingSlotInSection(lore, 1, legacySec);
+        if (legacySec != null) {
+            collectMatchingSlots(lore, 1, legacySec, targets);
+        }
+        return targets;
     }
 
-    private TargetSlot findMatchingSlotInSection(List<String> lore, int page, ConfigurationSection section) {
+    private void collectMatchingSlots(List<String> lore, int page, ConfigurationSection section, List<TargetSlot> targets) {
         int pageSize = plugin.accessorySize(page);
         for (String key : section.getKeys(false)) {
             if (key.startsWith("page_")) continue;
@@ -141,23 +136,58 @@ public final class AccessoryQuickEquipService {    //这个可以不用管
             if (isFrameSlot(page, slot)) continue;
 
             List<String> need = plugin.pageManager().requiredLore(page, slot);
-            if (need.isEmpty()) continue;
-
-            if (LoreUtils.matchesAnyKeyword(lore, need)) return new TargetSlot(page, slot);
+            if (!need.isEmpty() && LoreUtils.matchesAnyKeyword(lore, need)) {
+                TargetSlot target = new TargetSlot(page, slot);
+                if (!targets.contains(target)) targets.add(target);
+            }
         }
-        return null;
     }
 
-    private void decrementMainHand(Player p) {
-        ItemStack cur = p.getInventory().getItemInMainHand();
-        if (cur.getType().isAir()) return;
-
-        int amt = cur.getAmount();
-        if (amt <= 1) p.getInventory().setItemInMainHand(null);
-        else {
-            cur.setAmount(amt - 1);
-            p.getInventory().setItemInMainHand(cur);
+    private boolean shouldRejectPlacement(Player player, int page, int slot, ItemStack item) {
+        String permission = plugin.pageManager().requiredPermission(page, slot);
+        if (permission != null && !player.hasPermission(permission)) {
+            player.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
+            return true;
         }
+
+        List<String> need = plugin.pageManager().requiredLore(page, slot);
+        if (!LoreUtils.matchesAnyKeyword(LoreUtils.plainLore(item), need)) {
+            player.sendMessage(plugin.lang().langComponent("Item_not_match"));
+            return true;
+        }
+        return false;
+    }
+
+    private void replaceMainHandAfterEquip(Player player, ItemStack hand, ItemStack old) {
+        if (hand.getAmount() <= 1) {
+            player.getInventory().setItemInMainHand(isAir(old) ? null : old.clone());
+            return;
+        }
+
+        ItemStack remaining = hand.clone();
+        remaining.setAmount(hand.getAmount() - 1);
+        player.getInventory().setItemInMainHand(remaining);
+
+        if (!isAir(old)) {
+            Map<Integer, ItemStack> left = player.getInventory().addItem(old.clone());
+            left.values().forEach(it -> player.getWorld().dropItemNaturally(player.getLocation(), it));
+        }
+    }
+
+    private void sendTargetSelection(Player player, List<TargetSlot> targets) {
+        player.sendMessage(plugin.lang().langComponent("Quick_equip_select_header"));
+        for (TargetSlot target : targets) {
+            Component option = plugin.lang().langComponent(
+                    "Quick_equip_select_option",
+                    Map.of("page", String.valueOf(target.page()), "slot", String.valueOf(target.slot()))
+            ).clickEvent(ClickEvent.runCommand("/accessory quickequip " + target.page() + " " + target.slot()))
+                    .hoverEvent(HoverEvent.showText(plugin.lang().langComponent("Quick_equip_select_hover")));
+            player.sendMessage(option);
+        }
+    }
+
+    private boolean isAir(ItemStack item) {
+        return item == null || item.getType() == Material.AIR;
     }
 
     private boolean isFrameSlot(int page, int slot) {
