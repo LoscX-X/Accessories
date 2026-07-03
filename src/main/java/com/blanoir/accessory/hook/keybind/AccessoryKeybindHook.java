@@ -11,7 +11,7 @@ public final class AccessoryKeybindHook implements Listener {
     private final AccessoryQuickEquipService equip;
 
     public AccessoryKeybindHook(Accessory plugin) {
-        this.equip = new AccessoryQuickEquipService(plugin);
+        this.equip = plugin.quickEquipService() != null ? plugin.quickEquipService() : new AccessoryQuickEquipService(plugin);
     }
 
     @EventHandler

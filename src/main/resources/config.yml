@@ -43,6 +43,11 @@ vanilla-lore-attributes:
         - "生命"
         - "health"
 
+# 快速装备：玩家潜行 + 右键主手饰品时，自动按 lore 匹配饰品槽位并切换。
+# 如果多个槽位使用相同 lore（例如 [Ring]），会在聊天栏显示可点击选项。
+quick-equip:
+  shift-right-click: true
+
 # 存储方式: yml 或 mysql
 database:
   type: "yml"
@@ -64,8 +69,8 @@ database:
 
 # 页面物品/边框配置请放在 /plugins/Accessory/page/*.yml 的 frame 下；每个物品自行配置 slots。
 
-# 上一页/下一页按钮与运行时禁用槽位样式请放在 /plugins/Accessory/page/*.yml 中。
-# 兼容旧版：如果页面文件未配置 pre_page / next_page / disabled-slot，会回退读取此文件中的同名配置。
+# 运行时禁用槽位样式请放在 /plugins/Accessory/page/*.yml 的 disabled-slot 下。
+# 翻页按钮请放在 /plugins/Accessory/page/*.yml 的 frame 下，并使用 drag: "pre_page" / "next_page"。
 # 物理护盾恢复设置
 OUT_OF_COMBAT_SECONDS: 12
 SHIELD_REGEN_PERCENT: 0.10
