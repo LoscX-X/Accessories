@@ -200,6 +200,10 @@ public final class AccessoryQuickEquipService {
         return item == null || item.getType() == Material.AIR;
     }
 
+    private boolean isAir(ItemStack item) {
+        return item == null || item.getType() == Material.AIR;
+    }
+
     private boolean isFrameSlot(int page, int slot) {
         return plugin.pageManager().frameSlots(page, plugin.accessorySize(page)).contains(slot);
     }
