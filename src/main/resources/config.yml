@@ -43,7 +43,7 @@ vanilla-lore-attributes:
         - "生命"
         - "health"
 
-# 快速装备：玩家潜行 + 右键主手饰品时，自动按 lore 匹配饰品槽位并切换。
+# 快速装备：玩家潜行 + 右键点击时，检测主手饰品，自动按 lore 匹配饰品槽位并切换。
 # 如果多个槽位使用相同 lore（例如 [Ring]），会在聊天栏显示可点击选项。
 quick-equip:
   shift-right-click: true

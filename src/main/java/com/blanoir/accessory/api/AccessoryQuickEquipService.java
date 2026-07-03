@@ -26,19 +26,20 @@ public final class AccessoryQuickEquipService {
         this.accessoryLoad = new AccessoryLoad(plugin);
     }
 
-    public void tryEquipMainHand(Player player) {
+    public boolean tryEquipMainHand(Player player) {
         ItemStack hand = player.getInventory().getItemInMainHand();
-        if (hand.getType().isAir()) return;
+        if (hand.getType().isAir()) return false;
 
         List<TargetSlot> targets = findAccessoryTargets(hand);
-        if (targets.isEmpty()) return;
+        if (targets.isEmpty()) return false;
 
         if (targets.size() == 1) {
             equipToSlot(player, targets.getFirst().page(), targets.getFirst().slot());
-            return;
+            return true;
         }
 
         sendTargetSelection(player, targets);
+        return true;
     }
 
     public void equipToSlot(Player player, int slot) {
@@ -46,21 +47,25 @@ public final class AccessoryQuickEquipService {
     }
 
     public void equipToSlot(Player player, int page, int slot) {
+        ItemStack hand = player.getInventory().getItemInMainHand();
+        if (isAir(hand)) return;
+        equipItem(player, page, slot, hand, old -> replaceMainHandAfterEquip(player, hand, old));
+    }
+
+
+    private void equipItem(Player player, int page, int slot, ItemStack source, java.util.function.Consumer<ItemStack> oldItemHandler) {
         int pageSize = plugin.accessorySize(page);
         int pages = plugin.accessoryPages();
         if (page < 1 || page > pages || slot < 0 || slot >= pageSize) return;
         if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) return;
         if (isFrameSlot(page, slot)) return;
-
-        ItemStack hand = player.getInventory().getItemInMainHand();
-        if (hand.getType().isAir()) return;
-        if (shouldRejectPlacement(player, page, slot, hand)) return;
+        if (shouldRejectPlacement(player, page, slot, source)) return;
 
         ItemStack[] contents = plugin.inventoryStore().getOrLoad(player.getUniqueId(), plugin.totalAccessoryStorageSize());
         int absoluteSlot = plugin.accessoryPageStart(page) + slot;
         ItemStack old = contents[absoluteSlot];
 
-        ItemStack placed = hand.clone();
+        ItemStack placed = source.clone();
         placed.setAmount(1);
         if (plugin.skillEngine() != null) {
             plugin.skillEngine().stampKnownAccessoryItem(placed);
@@ -76,7 +81,7 @@ public final class AccessoryQuickEquipService {
         if (placeEvent.isCancelled()) return;
 
         contents[absoluteSlot] = placed;
-        replaceMainHandAfterEquip(player, hand, old);
+        oldItemHandler.accept(old);
 
         plugin.inventoryStore().update(player.getUniqueId(), contents, plugin.totalAccessoryStorageSize());
         plugin.inventoryStore().flush(player.getUniqueId(), plugin.totalAccessoryStorageSize());
@@ -159,14 +164,19 @@ public final class AccessoryQuickEquipService {
     }
 
     private void replaceMainHandAfterEquip(Player player, ItemStack hand, ItemStack old) {
-        if (hand.getAmount() <= 1) {
-            player.getInventory().setItemInMainHand(isAir(old) ? null : old.clone());
+        replaceInventoryItemAfterEquip(player, hand, old, item -> player.getInventory().setItemInMainHand(item));
+    }
+
+
+    private void replaceInventoryItemAfterEquip(Player player, ItemStack source, ItemStack old, java.util.function.Consumer<ItemStack> sourceSetter) {
+        if (source.getAmount() <= 1) {
+            sourceSetter.accept(isAir(old) ? null : old.clone());
             return;
         }
 
-        ItemStack remaining = hand.clone();
-        remaining.setAmount(hand.getAmount() - 1);
-        player.getInventory().setItemInMainHand(remaining);
+        ItemStack remaining = source.clone();
+        remaining.setAmount(source.getAmount() - 1);
+        sourceSetter.accept(remaining);
 
         if (!isAir(old)) {
             Map<Integer, ItemStack> left = player.getInventory().addItem(old.clone());
@@ -184,6 +194,10 @@ public final class AccessoryQuickEquipService {
                     .hoverEvent(HoverEvent.showText(plugin.lang().langComponent("Quick_equip_select_hover")));
             player.sendMessage(option);
         }
+    }
+
+    private boolean isAir(ItemStack item) {
+        return item == null || item.getType() == Material.AIR;
     }
 
     private boolean isAir(ItemStack item) {
