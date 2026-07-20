@@ -124,10 +124,10 @@ public final class AccessoryService {
         plugin.inventoryStore().clear(playerId, totalSize);
         plugin.inventoryStore().flush(playerId, totalSize);
 
+        clearOpenAccessoryInventories(playerId);
+
         Player online = Bukkit.getPlayer(playerId);
         if (online != null) {
-            clearOpenAccessoryInventory(online);
-
             ItemStack[] empty = new ItemStack[totalSize];
 
             accessoryLoad.rebuildFromContents(online, empty);
@@ -167,27 +167,35 @@ public final class AccessoryService {
         }
     }
 
-    private void clearOpenAccessoryInventory(Player player) {
+    private void clearOpenAccessoryInventories(UUID ownerId) {
         if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(plugin, () -> clearOpenAccessoryInventory(player));
+            Bukkit.getScheduler().runTask(plugin, () -> clearOpenAccessoryInventories(ownerId));
             return;
         }
 
-        InventoryView view = player.getOpenInventory();
-        Inventory top = view.getTopInventory();
+        List<Integer> disabledSnapshot = getDisabledSlots();
 
-        InventoryHolder holder = top.getHolder();
-        if (!(holder instanceof AccessoryInventoryHolder invHolder)) {
-            return;
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            InventoryView view = viewer.getOpenInventory();
+            Inventory top = view.getTopInventory();
+
+            InventoryHolder holder = top.getHolder();
+            if (!(holder instanceof AccessoryInventoryHolder invHolder)) {
+                continue;
+            }
+
+            if (!invHolder.getOwnerId().equals(ownerId)) {
+                continue;
+            }
+
+            top.clear();
+
+            menu.decorate(
+                    top,
+                    invHolder,
+                    disabledSnapshot
+            );
         }
-
-        top.clear();
-
-        menu.decorate(
-                top,
-                invHolder,
-                getDisabledSlots()
-        );
     }
 
     private int accessorySize() {
