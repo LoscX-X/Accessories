@@ -3,12 +3,11 @@ package com.blanoir.accessory.command;
 import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.module.attribute.loader.AccessoryLoad;
 import com.blanoir.accessory.module.inventory.AccessoryInventoryLoad;
+import io.papermc.paper.command.brigadier.BasicCommand;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -17,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public final class AccessoryInventoryCommand implements CommandExecutor, TabCompleter {
+public final class AccessoryInventoryCommand implements BasicCommand {
 
     private static final List<String> ROOT_COMMANDS = List.of("open", "reload", "clear", "view");
 
@@ -32,23 +31,18 @@ public final class AccessoryInventoryCommand implements CommandExecutor, TabComp
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender,
-                             @NotNull Command command,
-                             @NotNull String label,
-                             @NotNull String[] args) {
+    public void execute(@NotNull CommandSourceStack commandSource, @NotNull String[] args) {
+        CommandSender sender = commandSource.getSender();
         String sub = args.length == 0 ? "open" : args[0].toLowerCase(Locale.ROOT);
 
-        return switch (sub) {
+        switch (sub) {
             case "open" -> executeOpen(sender);
             case "reload" -> executeReload(sender, args);
             case "clear" -> executeClear(sender, args);
             case "view" -> executeView(sender, args);
             case "quickequip" -> executeQuickEquip(sender, args);
-            default -> {
-                sender.sendMessage(plugin.lang().langComponent("Accessory_unknown"));
-                yield true;
-            }
-        };
+            default -> sender.sendMessage(plugin.lang().langComponent("Accessory_unknown"));
+        }
     }
 
     private boolean executeOpen(CommandSender sender) {
@@ -161,10 +155,7 @@ public final class AccessoryInventoryCommand implements CommandExecutor, TabComp
     }
 
     @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender,
-                                      @NotNull Command command,
-                                      @NotNull String alias,
-                                      String[] args) {
+    public List<String> suggest(@NotNull CommandSourceStack commandSource, @NotNull String[] args) {
         if (args.length == 1) {
             return filterByPrefix(args[0], ROOT_COMMANDS);
         }

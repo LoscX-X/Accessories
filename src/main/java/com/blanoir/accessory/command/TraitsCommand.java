@@ -1,12 +1,10 @@
 package com.blanoir.accessory.command;
 
-import com.blanoir.accessory.module.attribute.aura.traits.Absorb;
+import io.papermc.paper.command.brigadier.BasicCommand;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -15,40 +13,43 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.BiConsumer;
 
-public final class TraitsCommand implements CommandExecutor, TabCompleter {
+public final class TraitsCommand implements BasicCommand {
 
     private static final MiniMessage MM = MiniMessage.miniMessage();
 
-    private final BiConsumer<Player, Double> addByValue;
-    private final BiConsumer<Player, Double> addByPercent;
+    private BiConsumer<Player, Double> addByValue;
+    private BiConsumer<Player, Double> addByPercent;
     private final String permissionNode;
+    private final String commandName;
 
-    public TraitsCommand(Absorb absorb) {
-        this(absorb::addShield, absorb::addShieldPercent, "accessory.shield");
+    public TraitsCommand(String permissionNode, String commandName) {
+        this.permissionNode = permissionNode;
+        this.commandName = commandName;
     }
 
-    public TraitsCommand(BiConsumer<Player, Double> addByValue,
-                         BiConsumer<Player, Double> addByPercent,
-                         String permissionNode) {
+    public void configure(BiConsumer<Player, Double> addByValue,
+                          BiConsumer<Player, Double> addByPercent) {
         this.addByValue = addByValue;
         this.addByPercent = addByPercent;
-        this.permissionNode = permissionNode;
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender,
-                             @NotNull Command command,
-                             @NotNull String label,
-                             @NotNull String[] args) {
+    public void execute(@NotNull CommandSourceStack commandSource, @NotNull String[] args) {
+        CommandSender sender = commandSource.getSender();
 
         if (!sender.hasPermission(permissionNode)) {
             sender.sendMessage(MM.deserialize("<red>权限不足: " + permissionNode + "</red>"));
-            return true;
+            return;
+        }
+
+        if (addByValue == null || addByPercent == null) {
+            sender.sendMessage(MM.deserialize("<red>该护盾功能当前不可用（需要 AuraSkills）。</red>"));
+            return;
         }
 
         if (args.length < 3) {
-            usage(sender, label);
-            return true;
+            usage(sender);
+            return;
         }
 
         String mode = args[0].toLowerCase(Locale.ROOT);
@@ -59,13 +60,13 @@ public final class TraitsCommand implements CommandExecutor, TabCompleter {
             value = Double.parseDouble(args[2]);
         } catch (NumberFormatException ex) {
             sender.sendMessage(MM.deserialize("<red>参数错误: 数值格式无效 -> " + args[2] + "</red>"));
-            return true;
+            return;
         }
 
         List<Player> targets = resolveTargets(sender, targetArg);
         if (targets.isEmpty()) {
             sender.sendMessage(MM.deserialize("<red>目标不存在或不在线: " + targetArg + "</red>"));
-            return true;
+            return;
         }
 
         int affected = 0;
@@ -86,8 +87,8 @@ public final class TraitsCommand implements CommandExecutor, TabCompleter {
             }
             default -> {
                 sender.sendMessage(MM.deserialize("<red>参数错误: 未知模式 " + mode + " (可用: give, givep)</red>"));
-                usage(sender, label);
-                return true;
+                usage(sender);
+                return;
             }
         }
 
@@ -99,13 +100,12 @@ public final class TraitsCommand implements CommandExecutor, TabCompleter {
                         + "</green>"
         ));
 
-        return true;
     }
 
-    private void usage(CommandSender sender, String label) {
+    private void usage(CommandSender sender) {
         sender.sendMessage(MM.deserialize("<yellow>命令格式:</yellow>"));
-        sender.sendMessage(MM.deserialize("<gray>/" + label + " give &lt;me|玩家|all&gt; &lt;数值&gt;</gray>"));
-        sender.sendMessage(MM.deserialize("<gray>/" + label + " givep &lt;me|玩家|all&gt; &lt;百分比&gt;</gray>"));
+        sender.sendMessage(MM.deserialize("<gray>/" + commandName + " give &lt;me|玩家|all&gt; &lt;数值&gt;</gray>"));
+        sender.sendMessage(MM.deserialize("<gray>/" + commandName + " givep &lt;me|玩家|all&gt; &lt;百分比&gt;</gray>"));
     }
 
     private List<Player> resolveTargets(CommandSender sender, String targetArg) {
@@ -126,10 +126,8 @@ public final class TraitsCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender,
-                                      @NotNull Command command,
-                                      @NotNull String alias,
-                                      @NotNull String[] args) {
+    public List<String> suggest(@NotNull CommandSourceStack commandSource, @NotNull String[] args) {
+        CommandSender sender = commandSource.getSender();
         if (!sender.hasPermission(permissionNode)) {
             return List.of();
         }

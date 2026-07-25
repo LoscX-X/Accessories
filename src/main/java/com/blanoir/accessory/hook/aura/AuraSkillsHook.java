@@ -5,7 +5,6 @@ import com.blanoir.accessory.module.attribute.aura.CustomStats;
 import com.blanoir.accessory.module.attribute.aura.CustomTraits;
 import com.blanoir.accessory.hook.placeholderapi.AbsorbPlaceholder;
 import com.blanoir.accessory.hook.placeholderapi.MagicAbsorbPlaceholder;
-import com.blanoir.accessory.command.TraitsCommand;
 import com.blanoir.accessory.module.attribute.aura.traits.Absorb;
 import com.blanoir.accessory.module.attribute.aura.traits.Defence;
 import com.blanoir.accessory.module.attribute.aura.traits.HealRegDecrease;
@@ -54,24 +53,8 @@ public final class AuraSkillsHook {
             Absorb absorb = new Absorb(plugin, api);
             MagicAbsorb ms = new MagicAbsorb(plugin, api);
 
-            debugStartup("[Accessory][Aura] Step 4: registering shield commands");
-            var shieldCmd = plugin.getCommand("shield");
-            if (shieldCmd != null) {
-                var exec = new TraitsCommand(absorb);
-                shieldCmd.setExecutor(exec);
-                shieldCmd.setTabCompleter(exec);
-            } else {
-                debugStartup("[Accessory][Aura] Command 'shield' not found.");
-            }
-
-            var magicShieldCmd = plugin.getCommand("magicshield");
-            if (magicShieldCmd != null) {
-                var exec = new TraitsCommand(ms::addShield, ms::addShieldPercent, "accessory.magicshield");
-                magicShieldCmd.setExecutor(exec);
-                magicShieldCmd.setTabCompleter(exec);
-            } else {
-                debugStartup("[Accessory][Aura] Command 'magicshield' not found.");
-            }
+            debugStartup("[Accessory][Aura] Step 4: configuring shield commands");
+            plugin.configureShieldCommands(absorb, ms);
 
             debugStartup("[Accessory][Aura] Step 5: registering Mythic placeholder bridge");
             if (Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {

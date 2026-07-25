@@ -3,6 +3,7 @@ package com.blanoir.accessory;
 import com.blanoir.accessory.api.AccessoryQuickEquipService;
 import com.blanoir.accessory.api.AccessoryService;
 import com.blanoir.accessory.command.AccessoryInventoryCommand;
+import com.blanoir.accessory.command.TraitsCommand;
 import com.blanoir.accessory.hook.aura.AuraSkillsHook;
 import com.blanoir.accessory.hook.myhic.MythicBridgeListener;
 import com.blanoir.accessory.hook.myhic.skills.AccessorySkillListener;
@@ -17,6 +18,7 @@ import com.blanoir.accessory.utils.lang.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 
 import java.io.File;
 
@@ -29,6 +31,18 @@ public final class Accessory extends JavaPlugin {
     private AccessoryQuickEquipService quickEquipService;
     private AccessoryPageManager pageManager;
     private SqlManager sqlManager;
+    private final TraitsCommand shieldCommand = new TraitsCommand("accessory.shield", "shield");
+    private final TraitsCommand magicShieldCommand = new TraitsCommand("accessory.magicshield", "magicshield");
+
+    public Accessory() {
+        getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            var commands = event.registrar();
+            commands.register("accessory", "打开饰品背包或执行管理命令", java.util.List.of("acc", "acre"),
+                    new AccessoryInventoryCommand(this));
+            commands.register("shield", "调整当前物理护盾", shieldCommand);
+            commands.register("magicshield", "调整当前魔法护盾", magicShieldCommand);
+        });
+    }
 
     public Lang lang() { return lang; }
     public AccessorySkills skillEngine() { return skillEngine; }
@@ -47,7 +61,6 @@ public final class Accessory extends JavaPlugin {
         this.accessoryService = new AccessoryService(this);
         this.quickEquipService = new AccessoryQuickEquipService(this);
 
-        registerCommands();
         registerListeners();
 
         startAutoSaveTask();
@@ -221,14 +234,10 @@ public final class Accessory extends JavaPlugin {
         pm.registerEvents(new AccessoryQuickEquipListener(this, quickEquipService), this);
     }
 
-    private void registerCommands() {
-        AccessoryInventoryCommand accessoryCommand = new AccessoryInventoryCommand(this);
-
-        var accessory = getCommand("accessory");
-        if (accessory != null) {
-            accessory.setExecutor(accessoryCommand);
-            accessory.setTabCompleter(accessoryCommand);
-        }
+    public void configureShieldCommands(com.blanoir.accessory.module.attribute.aura.traits.Absorb absorb,
+                                        com.blanoir.accessory.module.attribute.aura.traits.MagicAbsorb magicAbsorb) {
+        shieldCommand.configure(absorb::addShield, absorb::addShieldPercent);
+        magicShieldCommand.configure(magicAbsorb::addShield, magicAbsorb::addShieldPercent);
     }
 
     public int accessorySize() {

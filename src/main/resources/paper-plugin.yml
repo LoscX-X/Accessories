@@ -1,0 +1,38 @@
+name: Accessory
+version: '${version}'
+main: com.blanoir.accessory.Accessory
+api-version: '1.21.8'
+dependencies:
+  server:
+    AuraSkills:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    PlaceholderAPI:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    MythicMobs:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    AttributePlus:
+      load: BEFORE
+      required: false
+      join-classpath: true
+permissions:
+  accessory.reload:
+    description: Allow reloading Accessory
+    default: op
+  accessory.clear:
+    description: Allow clearing player accessories
+    default: op
+  accessory.view:
+    description: Allow opening and editing another player's accessory inventory
+    default: op
+  accessory.shield:
+    description: Allow adjusting physical shield
+    default: op
+  accessory.magicshield:
+    description: Allow adjusting magic shield
+    default: op
