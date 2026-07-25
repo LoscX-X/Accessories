@@ -45,7 +45,7 @@ public final class AccessoryInventoryCommand implements CommandExecutor, TabComp
             case "view" -> executeView(sender, args);
             case "quickequip" -> executeQuickEquip(sender, args);
             default -> {
-                sender.sendMessage(plugin.lang().lang("Accessory_unknown"));
+                sender.sendMessage(plugin.lang().langComponent("Accessory_unknown"));
                 yield true;
             }
         };
@@ -53,7 +53,7 @@ public final class AccessoryInventoryCommand implements CommandExecutor, TabComp
 
     private boolean executeOpen(CommandSender sender) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(plugin.lang().lang("Only_player_open"));
+            sender.sendMessage(plugin.lang().langComponent("Only_player_open"));
             return true;
         }
 
@@ -63,12 +63,12 @@ public final class AccessoryInventoryCommand implements CommandExecutor, TabComp
 
     private boolean executeReload(CommandSender sender, String[] args) {
         if (!sender.hasPermission("accessory.reload")) {
-            sender.sendMessage(plugin.lang().lang("No_permission"));
+            sender.sendMessage(plugin.lang().langComponent("No_permission"));
             return true;
         }
 
         if (args.length > 1) {
-            sender.sendMessage(plugin.lang().lang("Reload_usage"));
+            sender.sendMessage(plugin.lang().langComponent("Reload_usage"));
             return true;
         }
 
@@ -86,54 +86,54 @@ public final class AccessoryInventoryCommand implements CommandExecutor, TabComp
             }
         }
 
-        sender.sendMessage(plugin.lang().lang("Reload_success"));
+        sender.sendMessage(plugin.lang().langComponent("Reload_success"));
         return true;
     }
 
     private boolean executeClear(CommandSender sender, String[] args) {
         if (!sender.hasPermission("accessory.clear")) {
-            sender.sendMessage(plugin.lang().lang("No_permission"));
+            sender.sendMessage(plugin.lang().langComponent("No_permission"));
             return true;
         }
 
         if (args.length < 2) {
-            sender.sendMessage(plugin.lang().lang("Clear_usage"));
+            sender.sendMessage(plugin.lang().langComponent("Clear_usage"));
             return true;
         }
 
         OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
 
         if (target.getName() == null && !target.hasPlayedBefore() && !target.isOnline()) {
-            sender.sendMessage(plugin.lang().lang("Player_not_found"));
+            sender.sendMessage(plugin.lang().langComponent("Player_not_found"));
             return true;
         }
 
         boolean success = plugin.service().clear(target.getUniqueId());
-        sender.sendMessage(plugin.lang().lang(success ? "Clear_success" : "Clear_failed"));
+        sender.sendMessage(plugin.lang().langComponent(success ? "Clear_success" : "Clear_failed"));
 
         return true;
     }
 
     private boolean executeView(CommandSender sender, String[] args) {
         if (!(sender instanceof Player viewer)) {
-            sender.sendMessage(plugin.lang().lang("Only_player_open"));
+            sender.sendMessage(plugin.lang().langComponent("Only_player_open"));
             return true;
         }
 
         if (!viewer.hasPermission("accessory.view")) {
-            sender.sendMessage(plugin.lang().lang("No_permission"));
+            sender.sendMessage(plugin.lang().langComponent("No_permission"));
             return true;
         }
 
         if (args.length < 2) {
-            sender.sendMessage(plugin.lang().lang("View_usage"));
+            sender.sendMessage(plugin.lang().langComponent("View_usage"));
             return true;
         }
 
         Player target = Bukkit.getPlayerExact(args[1]);
 
         if (target == null) {
-            sender.sendMessage(plugin.lang().lang("Player_not_found"));
+            sender.sendMessage(plugin.lang().langComponent("Player_not_found"));
             return true;
         }
 
@@ -143,7 +143,7 @@ public final class AccessoryInventoryCommand implements CommandExecutor, TabComp
 
     private boolean executeQuickEquip(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(plugin.lang().lang("Only_player_open"));
+            sender.sendMessage(plugin.lang().langComponent("Only_player_open"));
             return true;
         }
 

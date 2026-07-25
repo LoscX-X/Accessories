@@ -20,7 +20,8 @@ public final class AccessoryStore {
 
     public enum StorageType {
         MYSQL,
-        YML;
+        YML,
+        ONLY_RAM;
 
         public static StorageType fromConfig(String raw) {
             if (raw == null) {
@@ -28,6 +29,10 @@ public final class AccessoryStore {
             }
             if ("mysql".equalsIgnoreCase(raw)) {
                 return MYSQL;
+            }
+            if ("only-ram".equalsIgnoreCase(raw) || "only_ram".equalsIgnoreCase(raw)
+                    || "ram".equalsIgnoreCase(raw)) {
+                return ONLY_RAM;
             }
             return YML;
         }
@@ -37,6 +42,7 @@ public final class AccessoryStore {
     private final StorageType storageType;
     private final SqlManager sqlManager;
     private final Map<UUID, ItemStack[]> cache = new ConcurrentHashMap<>();
+    private final Set<UUID> mysqlDeletedPlayers = ConcurrentHashMap.newKeySet();
     private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread thread = new Thread(r, "accessory-io");
         thread.setDaemon(true);
@@ -78,11 +84,13 @@ public final class AccessoryStore {
     }
 
     public void update(UUID playerId, ItemStack[] contents, int totalSize) {
+        mysqlDeletedPlayers.remove(playerId);
         cache.put(playerId, copyToSize(contents, totalSize));
     }
 
 
     public void updateSlice(UUID playerId, int start, ItemStack[] pageContents, int pageSize, int totalSize) {
+        mysqlDeletedPlayers.remove(playerId);
         ItemStack[] full = getOrLoad(playerId, totalSize);
         int safeStart = Math.max(0, Math.min(start, full.length));
         int safeSize = Math.max(0, Math.min(pageSize, full.length - safeStart));
@@ -93,6 +101,7 @@ public final class AccessoryStore {
     }
 
     public void updatePage(UUID playerId, int page, ItemStack[] pageContents, int pageSize, int totalPages) {
+        mysqlDeletedPlayers.remove(playerId);
         int totalSize = totalSize(pageSize, totalPages);
         ItemStack[] full = getOrLoad(playerId, totalSize);
         int pageIndex = normalizedPage(page, totalPages) - 1;
@@ -104,7 +113,14 @@ public final class AccessoryStore {
     }
 
     public void clear(UUID playerId, int totalSize) {
-        cache.put(playerId, new ItemStack[totalSize]);
+        ItemStack[] empty = new ItemStack[totalSize];
+        cache.put(playerId, empty);
+        if (storageType == StorageType.MYSQL && sqlManager != null) {
+            mysqlDeletedPlayers.add(playerId);
+            CompletableFuture.runAsync(() -> deleteFromMysql(playerId), ioExecutor);
+        } else if (storageType == StorageType.YML) {
+            CompletableFuture.runAsync(() -> saveToDisk(playerId, empty), ioExecutor);
+        }
     }
 
     public void saveAndRemove(UUID playerId, int totalSize) {
@@ -174,15 +190,32 @@ public final class AccessoryStore {
     }
 
     private ItemStack[] load(UUID playerId, int size) {
-        return storageType == StorageType.MYSQL ? loadFromMysql(playerId, size) : loadFromDisk(playerId, size);
+        return switch (storageType) {
+            case MYSQL -> loadFromMysql(playerId, size);
+            case YML -> loadFromDisk(playerId, size);
+            case ONLY_RAM -> new ItemStack[size];
+        };
     }
 
     private void save(UUID playerId, ItemStack[] contents) {
         if (storageType == StorageType.MYSQL) {
+            if (mysqlDeletedPlayers.contains(playerId)) {
+                return;
+            }
             saveToMysql(playerId, contents);
             return;
         }
-        saveToDisk(playerId, contents);
+        if (storageType == StorageType.YML) {
+            saveToDisk(playerId, contents);
+        }
+    }
+
+    private void deleteFromMysql(UUID playerId) {
+        try {
+            sqlManager.deleteInventory(playerId);
+        } catch (Exception ex) {
+            plugin.getLogger().warning("Failed to delete inventory from MySQL for " + playerId + ": " + ex.getMessage());
+        }
     }
 
     private ItemStack[] loadFromMysql(UUID playerId, int size) {
