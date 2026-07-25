@@ -122,7 +122,6 @@ public final class AccessoryService {
         int totalSize = plugin.totalAccessoryStorageSize();
 
         plugin.inventoryStore().clear(playerId, totalSize);
-        plugin.inventoryStore().flush(playerId, totalSize);
 
         clearOpenAccessoryInventories(playerId);
 

@@ -82,6 +82,15 @@ public class SqlManager {
         }
     }
 
+    public void deleteInventory(UUID playerId) throws SQLException {
+        String sql = "DELETE FROM accessory_inventory WHERE player_uuid = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, playerId.toString());
+            ps.executeUpdate();
+        }
+    }
+
     public void shutdown() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();

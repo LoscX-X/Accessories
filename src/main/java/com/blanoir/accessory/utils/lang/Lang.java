@@ -38,7 +38,7 @@ public final class Lang {
 
     public Lang(JavaPlugin plugin,String langFile) {
         this.plugin = plugin;
-        this.LangFile = langFile;
+        this.LangFile = normalizeFileName(langFile);
         reload();
     }
 
@@ -120,6 +120,11 @@ public final class Lang {
         ensureLanguageFileIfPossible(fileName);
         File file = new File(plugin.getDataFolder(), LANGUAGE_DIR + "/" + fileName);
         return YamlConfiguration.loadConfiguration(file);
+    }
+
+    private String normalizeFileName(String fileName) {
+        String normalized = fileName == null || fileName.isBlank() ? DEFAULT_LANG : fileName.trim();
+        return normalized.toLowerCase(Locale.ROOT).endsWith(".yml") ? normalized : normalized + ".yml";
     }
 
     private void ensureLanguageFileIfPossible(String fileName) {

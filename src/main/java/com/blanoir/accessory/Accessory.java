@@ -62,6 +62,7 @@ public final class Accessory extends JavaPlugin {
     public void reloadPluginSettings() {
         if (inventoryStore != null) {
             inventoryStore.flushAllAsync(totalAccessoryStorageSize()).join();
+            inventoryStore.shutdown();
         }
         if (sqlManager != null) {
             sqlManager.shutdown();
@@ -73,8 +74,11 @@ public final class Accessory extends JavaPlugin {
         } else {
             pageManager.reload();
         }
-        lang.reload();
+        initLang();
         initStorage();
+        if (skillEngine != null) {
+            skillEngine.loadConfig();
+        }
     }
 
     @Override
@@ -109,9 +113,12 @@ public final class Accessory extends JavaPlugin {
                     getConfig().getInt("database.mysql.idle-timeout", 600000)
             );
             getLogger().info("Accessory storage mode: mysql");
-        } else {
+        } else if (storageType == AccessoryStore.StorageType.YML) {
             this.sqlManager = null;
             getLogger().info("Accessory storage mode: yml");
+        } else {
+            this.sqlManager = null;
+            getLogger().info("Accessory storage mode: only-ram (data will not be persisted)");
         }
 
         this.inventoryStore = new AccessoryStore(this, storageType, sqlManager);
@@ -154,7 +161,7 @@ public final class Accessory extends JavaPlugin {
     }
 
     private void initLang() {
-        String LangFile = getConfig().getString("Lang","en_US");
+        String LangFile = getConfig().getString("Lang", "en_US");
         lang = new Lang(this,LangFile);
     }
 

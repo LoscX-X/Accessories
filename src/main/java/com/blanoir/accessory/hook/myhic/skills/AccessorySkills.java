@@ -83,6 +83,8 @@ public final class AccessorySkills {
 
         this.skillSignature = signature;
         skillsByItemId.replaceAll((itemId, entries) -> List.copyOf(entries));
+        debug("技能配置已重载: files=" + skillConfigs.size() + ", items=" + skillsByItemId.size()
+                + ", signature=" + skillSignature);
     }
 
     private List<YamlConfiguration> collectSkillConfigs() {
@@ -298,10 +300,19 @@ public final class AccessorySkills {
 
     private void trigger(Player caster, TriggerType trigger, Entity eventTarget) {
         PlayerLoadout loadout = loadouts.get(caster.getUniqueId());
-        if (loadout == null) return;
+        if (loadout == null) {
+            debug("跳过技能触发（没有已加载的饰品）: player=" + caster.getName() + ", trigger=" + trigger);
+            return;
+        }
 
         List<ResolvedEntry> entries = loadout.byTrigger().get(trigger);
-        if (entries == null || entries.isEmpty()) return;
+        if (entries == null || entries.isEmpty()) {
+            debug("跳过技能触发（没有匹配技能）: player=" + caster.getName() + ", trigger=" + trigger);
+            return;
+        }
+
+        debug("触发饰品技能: player=" + caster.getName() + ", trigger=" + trigger
+                + ", skills=" + entries.size() + ", eventTarget=" + entityName(eventTarget));
 
         for (ResolvedEntry entry : entries) {
             Entity target = switch (entry.target()) {
@@ -314,11 +325,17 @@ public final class AccessorySkills {
     }
 
     private void cast(Player caster, String skillName, Entity target) {
-        MythicBukkit.inst().getAPIHelper().castSkill(caster, skillName, meta -> {
+        boolean success = MythicBukkit.inst().getAPIHelper().castSkill(caster, skillName, meta -> {
             if (target != null) {
                 meta.setEntityTarget(BukkitAdapter.adapt(target));
             }
         });
+        debug("执行 MythicMobs 技能: player=" + caster.getName() + ", skill=" + skillName
+                + ", target=" + entityName(target) + ", success=" + success);
+    }
+
+    private String entityName(Entity entity) {
+        return entity == null ? "none" : entity.getType() + "(" + entity.getUniqueId() + ")";
     }
 
     private void debug(String message) {
