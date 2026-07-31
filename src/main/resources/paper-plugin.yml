@@ -1,4 +1,4 @@
-name: Accessory
+name: BlancAccessory
 version: '${version}'
 main: com.blanoir.accessory.Accessory
 api-version: '1.21.8'
