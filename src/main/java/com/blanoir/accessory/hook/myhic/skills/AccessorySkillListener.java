@@ -65,6 +65,11 @@ public final class AccessorySkillListener implements Listener {
         plugin.skillEngine().triggerKill(killer, event.getEntity());
     }
 
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onDeath(PlayerDeathEvent event) {
+        plugin.skillEngine().triggerDeath(event.getEntity());
+    }
+
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void onLaunch(ProjectileLaunchEvent event) {
         if (!(event.getEntity().getShooter() instanceof Player player)) return;

@@ -31,6 +31,7 @@ public final class AccessorySkills {
 
     private final Map<String, String> itemIdByName = new HashMap<>();
     private final Map<UUID, PlayerLoadout> loadouts = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<String, Long>> cooldowns = new ConcurrentHashMap<>();
     private final Map<UUID, Map<Integer, Integer>> accessorySlotSnapshots = new ConcurrentHashMap<>();
     private final Set<UUID> shootHandledProjectiles = ConcurrentHashMap.newKeySet();
 
@@ -74,9 +75,10 @@ public final class AccessorySkills {
                     if (skill.isEmpty() || trigger == null) continue;
 
                     int period = toInt(m.get("period"));
+                    int cooldown = Math.max(0, toInt(m.get("cooldown")));
                     TargetType target = TargetType.from(Objects.toString(m.get("target"), ""));
                     Object conditions = m.get("conditions");
-                    parsed.add(new SkillEntry(skill, trigger, period, target, conditions));
+                    parsed.add(new SkillEntry(skill, trigger, period, cooldown, target, conditions));
                 }
             }
         }
@@ -118,7 +120,8 @@ public final class AccessorySkills {
                 if (loadout == null || loadout.timers().isEmpty()) continue;
                 for (TimerEntry timerEntry : loadout.timers()) {
                     if (tick % timerEntry.period() == 0) {
-                        cast(p, timerEntry.skill(), p);
+                        Entity target = timerEntry.entry().target() == TargetType.NONE ? null : p;
+                        castIfReady(p, timerEntry.entry(), target);
                     }
                 }
             }
@@ -127,6 +130,7 @@ public final class AccessorySkills {
 
     public void onQuit(Player player) {
         loadouts.remove(player.getUniqueId());
+        cooldowns.remove(player.getUniqueId());
         accessorySlotSnapshots.remove(player.getUniqueId());
     }
 
@@ -175,16 +179,19 @@ public final class AccessorySkills {
                 debug("饰品写入 PDC 成功: player=" + player.getName() + ", slot=" + slot + ", itemId=" + itemId + ", signature=" + skillSignature);
             }
 
-            for (SkillEntry entry : entries) {
+            for (int entryIndex = 0; entryIndex < entries.size(); entryIndex++) {
+                SkillEntry entry = entries.get(entryIndex);
                 TargetType target = entry.target() == null ? TargetType.defaultFor(entry.trigger()) : entry.target();
                 if (!target.supports(entry.trigger())) {
                     target = TargetType.defaultFor(entry.trigger());
                 }
-                ResolvedEntry resolved = new ResolvedEntry(entry.skill(), entry.trigger(), target);
+                String cooldownKey = itemId + ':' + slot + ':' + entryIndex;
+                ResolvedEntry resolved = new ResolvedEntry(entry.skill(), entry.trigger(), target,
+                        entry.cooldown(), cooldownKey);
                 byTrigger.computeIfAbsent(entry.trigger(), k -> new ArrayList<>()).add(resolved);
                 if (entry.trigger() == TriggerType.ON_TIMER) {
                     int period = Math.max(1, entry.period());
-                    timers.add(new TimerEntry(entry.skill(), period));
+                    timers.add(new TimerEntry(resolved, period));
                 }
             }
         }
@@ -279,6 +286,20 @@ public final class AccessorySkills {
         trigger(caster, TriggerType.ON_KILL, targetForEvent(TargetType.TARGETED, caster, victim, null));
     }
 
+    public void triggerDeath(Player caster) {
+        trigger(caster, TriggerType.ON_DEATH, caster);
+    }
+
+    /** Clears every accessory skill cooldown for one player. */
+    public void refreshAllCooldowns(Player player) {
+        if (player != null) cooldowns.remove(player.getUniqueId());
+    }
+
+    /** Clears every accessory skill cooldown for every player. */
+    public void refreshAllCooldowns() {
+        cooldowns.clear();
+    }
+
     public void triggerShoot(Player caster, Entity projectile) {
         if (projectile != null && !shootHandledProjectiles.add(projectile.getUniqueId())) return;
         trigger(caster, TriggerType.ON_SHOOT, targetForEvent(TargetType.PROJECTILE, caster, projectile, null));
@@ -320,11 +341,24 @@ public final class AccessorySkills {
                 case NONE -> null;
                 default -> eventTarget;
             };
-            cast(caster, entry.skill(), target);
+            castIfReady(caster, entry, target);
         }
     }
 
-    private void cast(Player caster, String skillName, Entity target) {
+    private void castIfReady(Player caster, ResolvedEntry entry, Entity target) {
+        Map<String, Long> playerCooldowns = cooldowns.computeIfAbsent(caster.getUniqueId(), ignored -> new ConcurrentHashMap<>());
+        long readyAt = playerCooldowns.getOrDefault(entry.cooldownKey(), 0L);
+        if (tick < readyAt) {
+            debug("跳过技能触发（冷却中）: player=" + caster.getName() + ", skill=" + entry.skill()
+                    + ", remaining=" + (readyAt - tick));
+            return;
+        }
+        if (cast(caster, entry.skill(), target) && entry.cooldown() > 0) {
+            playerCooldowns.put(entry.cooldownKey(), tick + entry.cooldown());
+        }
+    }
+
+    private boolean cast(Player caster, String skillName, Entity target) {
         boolean success = MythicBukkit.inst().getAPIHelper().castSkill(caster, skillName, meta -> {
             if (target != null) {
                 meta.setEntityTarget(BukkitAdapter.adapt(target));
@@ -332,6 +366,7 @@ public final class AccessorySkills {
         });
         debug("执行 MythicMobs 技能: player=" + caster.getName() + ", skill=" + skillName
                 + ", target=" + entityName(target) + ", success=" + success);
+        return success;
     }
 
     private String entityName(Entity entity) {
@@ -348,17 +383,17 @@ public final class AccessorySkills {
                                  List<TimerEntry> timers) {
     }
 
-    private record SkillEntry(String skill, TriggerType trigger, int period, TargetType target, Object conditions) {
+    private record SkillEntry(String skill, TriggerType trigger, int period, int cooldown, TargetType target, Object conditions) {
     }
 
-    private record ResolvedEntry(String skill, TriggerType trigger, TargetType target) {
+    private record ResolvedEntry(String skill, TriggerType trigger, TargetType target, int cooldown, String cooldownKey) {
     }
 
-    private record TimerEntry(String skill, int period) {
+    private record TimerEntry(ResolvedEntry entry, int period) {
     }
 
     public enum TriggerType {
-        ON_ATTACK, ON_DAMAGED, ON_SHOOT, ON_KILL, ON_TIMER;
+        ON_ATTACK, ON_DAMAGED, ON_SHOOT, ON_KILL, ON_DEATH, ON_TIMER;
 
         static TriggerType from(String raw) {
             return switch (raw) {
@@ -366,6 +401,7 @@ public final class AccessorySkills {
                 case "onDamaged" -> ON_DAMAGED;
                 case "onShoot" -> ON_SHOOT;
                 case "onKill" -> ON_KILL;
+                case "onDeath" -> ON_DEATH;
                 case "onTimer" -> ON_TIMER;
                 default -> null;
             };
@@ -401,7 +437,7 @@ public final class AccessorySkills {
                 case ON_ATTACK, ON_KILL -> TARGETED;
                 case ON_DAMAGED -> ATTACKER;
                 case ON_SHOOT -> PROJECTILE;
-                case ON_TIMER -> SELF;
+                case ON_DEATH, ON_TIMER -> SELF;
             };
         }
 
