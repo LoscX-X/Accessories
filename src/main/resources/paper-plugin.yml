@@ -1,7 +1,8 @@
 name: BlancAccessory
-version: '${version}'
+version: '4.0.0'
 main: com.blanoir.accessory.Accessory
-api-version: '1.21.8'
+api-version: '26.1.2'
+authors: [Blanoir]
 dependencies:
   server:
     AuraSkills:

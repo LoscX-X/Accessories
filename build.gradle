@@ -34,7 +34,12 @@ dependencies {
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(25))
 }
-
+shadowJar {
+    archiveFileName = "Blanc-Accessory.jar"
+    archiveClassifier.set("")
+    mergeServiceFiles()
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+}
 tasks {
     runServer {
         minecraftVersion('1.21.12')
