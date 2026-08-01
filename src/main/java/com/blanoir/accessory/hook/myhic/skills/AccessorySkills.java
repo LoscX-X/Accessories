@@ -76,9 +76,10 @@ public final class AccessorySkills {
 
                     int period = toInt(m.get("period"));
                     int cooldown = Math.max(0, toInt(m.get("cooldown")));
+                    boolean forceSync = toBoolean(m.get("forcesync"));
                     TargetType target = TargetType.from(Objects.toString(m.get("target"), ""));
                     Object conditions = m.get("conditions");
-                    parsed.add(new SkillEntry(skill, trigger, period, cooldown, target, conditions));
+                    parsed.add(new SkillEntry(skill, trigger, period, cooldown, forceSync, target, conditions));
                 }
             }
         }
@@ -187,7 +188,7 @@ public final class AccessorySkills {
                 }
                 String cooldownKey = itemId + ':' + slot + ':' + entryIndex;
                 ResolvedEntry resolved = new ResolvedEntry(entry.skill(), entry.trigger(), target,
-                        entry.cooldown(), cooldownKey);
+                        entry.cooldown(), entry.forceSync(), cooldownKey);
                 byTrigger.computeIfAbsent(entry.trigger(), k -> new ArrayList<>()).add(resolved);
                 if (entry.trigger() == TriggerType.ON_TIMER) {
                     int period = Math.max(1, entry.period());
@@ -353,18 +354,22 @@ public final class AccessorySkills {
                     + ", remaining=" + (readyAt - tick));
             return;
         }
-        if (cast(caster, entry.skill(), target) && entry.cooldown() > 0) {
+        if (cast(caster, entry, target) && entry.cooldown() > 0) {
             playerCooldowns.put(entry.cooldownKey(), tick + entry.cooldown());
         }
     }
 
-    private boolean cast(Player caster, String skillName, Entity target) {
-        boolean success = MythicBukkit.inst().getAPIHelper().castSkill(caster, skillName, meta -> {
+    private boolean cast(Player caster, ResolvedEntry entry, Entity target) {
+        boolean success = MythicBukkit.inst().getAPIHelper().castSkill(caster, entry.skill(), meta -> {
             if (target != null) {
                 meta.setEntityTarget(BukkitAdapter.adapt(target));
             }
+            if (entry.trigger() == TriggerType.ON_DEATH && entry.forceSync()) {
+                meta.setIsAsync(false);
+                meta.setExecuteAfterDeath(true);
+            }
         });
-        debug("执行 MythicMobs 技能: player=" + caster.getName() + ", skill=" + skillName
+        debug("执行 MythicMobs 技能: player=" + caster.getName() + ", skill=" + entry.skill()
                 + ", target=" + entityName(target) + ", success=" + success);
         return success;
     }
@@ -383,10 +388,12 @@ public final class AccessorySkills {
                                  List<TimerEntry> timers) {
     }
 
-    private record SkillEntry(String skill, TriggerType trigger, int period, int cooldown, TargetType target, Object conditions) {
+    private record SkillEntry(String skill, TriggerType trigger, int period, int cooldown, boolean forceSync,
+                              TargetType target, Object conditions) {
     }
 
-    private record ResolvedEntry(String skill, TriggerType trigger, TargetType target, int cooldown, String cooldownKey) {
+    private record ResolvedEntry(String skill, TriggerType trigger, TargetType target, int cooldown, boolean forceSync,
+                                 String cooldownKey) {
     }
 
     private record TimerEntry(ResolvedEntry entry, int period) {
@@ -449,5 +456,9 @@ public final class AccessorySkills {
         } catch (Exception ignore) {
             return 0;
         }
+    }
+
+    private boolean toBoolean(Object val) {
+        return val instanceof Boolean bool ? bool : Boolean.parseBoolean(String.valueOf(val));
     }
 }
