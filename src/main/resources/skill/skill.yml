@@ -25,14 +25,15 @@ items:
       #   - self: 施法者自己
       #   - targeted: 当前目标（例如攻击目标）
       # period: 仅 onTimer 生效，单位 tick（20 tick = 1 秒）
-      # cooldown: 技能成功触发后的冷却时间，单位 tick（0 或不填写表示无冷却）
-      # forcesync: 仅 onDeath 生效；强制同步执行并允许技能在玩家死亡后继续执行
-      # cancelevent: 仅 onDeath 生效；直接取消 Paper PlayerDeathEvent，从而阻止玩家死亡
+      # cooldown: 技能成功触发后的冷却时间，单位 秒（0 或不填写表示无冷却）
+      # forcesync: 仅 onDeath 生效；强制同步执行（onDeath 技能已自动允许死亡后继续执行）
+      # cancelevent: 仅 onDeath 生效；技能成功释放时取消 Paper PlayerDeathEvent 阻止死亡
+      #              （该技能处于冷却/释放失败时不会取消，玩家正常死亡）
       # conditions: 预留字段，兼容后续扩展
       - skill: ExampleAttackSkill
         trigger: onAttack
         target: targeted
-        cooldown: 20
+        cooldown: 5
 
       - skill: ExampleDeathSkill
         trigger: onDeath

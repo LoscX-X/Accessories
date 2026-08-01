@@ -291,11 +291,18 @@ public final class AccessorySkills {
     /** Triggers death skills and returns whether the Paper death event should be cancelled. */
     public boolean triggerDeath(Player caster) {
         PlayerLoadout loadout = loadouts.get(caster.getUniqueId());
-        trigger(caster, TriggerType.ON_DEATH, caster);
         if (loadout == null) return false;
 
         List<ResolvedEntry> entries = loadout.byTrigger().get(TriggerType.ON_DEATH);
-        return entries != null && entries.stream().anyMatch(ResolvedEntry::cancelEvent);
+        if (entries == null || entries.isEmpty()) return false;
+
+        boolean cancel = false;
+        for (ResolvedEntry entry : entries) {
+            if (castIfReady(caster, entry, resolveTarget(entry, caster, caster)) && entry.cancelEvent()) {
+                cancel = true;
+            }
+        }
+        return cancel;
     }
 
     /** Clears every accessory skill cooldown for one player. */
@@ -344,26 +351,35 @@ public final class AccessorySkills {
                 + ", skills=" + entries.size() + ", eventTarget=" + entityName(eventTarget));
 
         for (ResolvedEntry entry : entries) {
-            Entity target = switch (entry.target()) {
-                case SELF -> caster;
-                case NONE -> null;
-                default -> eventTarget;
-            };
-            castIfReady(caster, entry, target);
+            castIfReady(caster, entry, resolveTarget(entry, caster, eventTarget));
         }
     }
 
-    private void castIfReady(Player caster, ResolvedEntry entry, Entity target) {
+    private Entity resolveTarget(ResolvedEntry entry, Player caster, Entity eventTarget) {
+        return switch (entry.target()) {
+            case SELF -> caster;
+            case NONE -> null;
+            default -> eventTarget;
+        };
+    }
+
+    /** Returns whether the skill actually executed this time (not on cooldown). */
+    private boolean castIfReady(Player caster, ResolvedEntry entry, Entity target) {
         Map<String, Long> playerCooldowns = cooldowns.computeIfAbsent(caster.getUniqueId(), ignored -> new ConcurrentHashMap<>());
         long readyAt = playerCooldowns.getOrDefault(entry.cooldownKey(), 0L);
         if (tick < readyAt) {
             debug("跳过技能触发（冷却中）: player=" + caster.getName() + ", skill=" + entry.skill()
-                    + ", remaining=" + (readyAt - tick));
-            return;
+                    + ", remaining=" + ((readyAt - tick) / 20.0) + "s");
+            return false;
         }
-        if (cast(caster, entry, target) && entry.cooldown() > 0) {
-            playerCooldowns.put(entry.cooldownKey(), tick + entry.cooldown());
+        if (cast(caster, entry, target)) {
+            if (entry.cooldown() > 0) {
+                // cooldown 配置单位为秒，内部按 tick 计时
+                playerCooldowns.put(entry.cooldownKey(), tick + entry.cooldown() * 20L);
+            }
+            return true;
         }
+        return false;
     }
 
     private boolean cast(Player caster, ResolvedEntry entry, Entity target) {
@@ -371,9 +387,12 @@ public final class AccessorySkills {
             if (target != null) {
                 meta.setEntityTarget(BukkitAdapter.adapt(target));
             }
-            if (entry.trigger() == TriggerType.ON_DEATH && entry.forceSync()) {
-                meta.setIsAsync(false);
+            if (entry.trigger() == TriggerType.ON_DEATH) {
+                // onDeath 默认允许技能在玩家死亡后继续执行
                 meta.setExecuteAfterDeath(true);
+                if (entry.forceSync()) {
+                    meta.setIsAsync(false);
+                }
             }
         });
         debug("执行 MythicMobs 技能: player=" + caster.getName() + ", skill=" + entry.skill()
