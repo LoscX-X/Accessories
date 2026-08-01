@@ -288,8 +288,14 @@ public final class AccessorySkills {
         trigger(caster, TriggerType.ON_KILL, targetForEvent(TargetType.TARGETED, caster, victim, null));
     }
 
-    public void triggerDeath(Player caster) {
+    /** Triggers death skills and returns whether the Paper death event should be cancelled. */
+    public boolean triggerDeath(Player caster) {
+        PlayerLoadout loadout = loadouts.get(caster.getUniqueId());
         trigger(caster, TriggerType.ON_DEATH, caster);
+        if (loadout == null) return false;
+
+        List<ResolvedEntry> entries = loadout.byTrigger().get(TriggerType.ON_DEATH);
+        return entries != null && entries.stream().anyMatch(ResolvedEntry::cancelEvent);
     }
 
     /** Clears every accessory skill cooldown for one player. */
@@ -368,9 +374,6 @@ public final class AccessorySkills {
             if (entry.trigger() == TriggerType.ON_DEATH && entry.forceSync()) {
                 meta.setIsAsync(false);
                 meta.setExecuteAfterDeath(true);
-            }
-            if (entry.trigger() == TriggerType.ON_DEATH && entry.cancelEvent()) {
-                meta.cancelEvent();
             }
         });
         debug("执行 MythicMobs 技能: player=" + caster.getName() + ", skill=" + entry.skill()
