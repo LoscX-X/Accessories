@@ -288,7 +288,30 @@ public final class AccessorySkills {
         trigger(caster, TriggerType.ON_KILL, targetForEvent(TargetType.TARGETED, caster, victim, null));
     }
 
-    /** Triggers death skills and returns whether the Paper death event should be cancelled. */
+    /**
+     * Whether the Paper death event should be cancelled before casting death skills.
+     * Only true when a cancelevent skill is actually off cooldown,
+     * so a skill on cooldown cannot keep the player immortal.
+     */
+    public boolean shouldCancelDeath(Player caster) {
+        PlayerLoadout loadout = loadouts.get(caster.getUniqueId());
+        if (loadout == null) return false;
+
+        List<ResolvedEntry> entries = loadout.byTrigger().get(TriggerType.ON_DEATH);
+        if (entries == null || entries.isEmpty()) return false;
+
+        Map<String, Long> playerCooldowns = cooldowns.get(caster.getUniqueId());
+        for (ResolvedEntry entry : entries) {
+            if (!entry.cancelEvent()) continue;
+            long readyAt = playerCooldowns == null ? 0L : playerCooldowns.getOrDefault(entry.cooldownKey(), 0L);
+            if (tick >= readyAt) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Casts all equipped onDeath skills and returns whether any cancelevent skill actually executed.
+     */
     public boolean triggerDeath(Player caster) {
         PlayerLoadout loadout = loadouts.get(caster.getUniqueId());
         if (loadout == null) return false;
@@ -296,13 +319,13 @@ public final class AccessorySkills {
         List<ResolvedEntry> entries = loadout.byTrigger().get(TriggerType.ON_DEATH);
         if (entries == null || entries.isEmpty()) return false;
 
-        boolean cancel = false;
+        boolean anyCancelCast = false;
         for (ResolvedEntry entry : entries) {
             if (castIfReady(caster, entry, resolveTarget(entry, caster, caster)) && entry.cancelEvent()) {
-                cancel = true;
+                anyCancelCast = true;
             }
         }
-        return cancel;
+        return anyCancelCast;
     }
 
     /** Clears every accessory skill cooldown for one player. */

@@ -45,7 +45,7 @@ public final class AccessorySkillListener implements Listener {
         plugin.skillEngine().triggerAttack(attacker, event.getEntity());
     }
 
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onDamaged(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         Entity attacker = null;
@@ -67,8 +67,19 @@ public final class AccessorySkillListener implements Listener {
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onDeath(PlayerDeathEvent event) {
-        if (plugin.skillEngine().triggerDeath(event.getEntity())) {
+        Player player = event.getEntity();
+
+        // 先取消死亡再释放技能：死亡类 aura/效果挂在“存活”玩家身上，不会被死亡状态清掉
+        boolean cancelled = plugin.skillEngine().shouldCancelDeath(player);
+        if (cancelled) {
             event.setCancelled(true);
+        }
+
+        boolean anyCancelCast = plugin.skillEngine().triggerDeath(player);
+
+        // 取消后技能实际没放出来（释放失败）时恢复死亡流程，避免凭空免死
+        if (cancelled && !anyCancelCast) {
+            event.setCancelled(false);
         }
     }
 

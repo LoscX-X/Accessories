@@ -15,7 +15,7 @@ items:
       # skill: MythicMobs 技能名
       # trigger: 触发方式
       #   - onAttack: 玩家造成伤害时触发
-      #   - onDamaged: 玩家受伤时触发
+      #   - onDamaged: 玩家受伤时触发（伤害即使被其他机制取消也会触发，便于刷新免伤类 aura）
       #   - onInteract: 玩家交互时触发
       #   - onKill: 玩家击杀实体时触发
       #   - onDeath: 玩家死亡时触发
@@ -27,8 +27,9 @@ items:
       # period: 仅 onTimer 生效，单位 tick（20 tick = 1 秒）
       # cooldown: 技能成功触发后的冷却时间，单位 秒（0 或不填写表示无冷却）
       # forcesync: 仅 onDeath 生效；强制同步执行（onDeath 技能已自动允许死亡后继续执行）
-      # cancelevent: 仅 onDeath 生效；技能成功释放时取消 Paper PlayerDeathEvent 阻止死亡
-      #              （该技能处于冷却/释放失败时不会取消，玩家正常死亡）
+      # cancelevent: 仅 onDeath 生效；先取消 Paper PlayerDeathEvent 再释放技能，
+      #              避免死亡状态清掉技能挂上的 aura/效果
+      #              （技能处于冷却或释放失败时会恢复死亡流程，玩家正常死亡）
       # conditions: 预留字段，兼容后续扩展
       - skill: ExampleAttackSkill
         trigger: onAttack
