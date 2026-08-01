@@ -25,6 +25,7 @@ dependencies {
     compileOnly 'me.clip:placeholderapi:2.11.7'
     compileOnly files('libs/KeyBind.jar')
     compileOnly files('libs/AttributePlus.jar')
+    compileOnly files('libs/BlancAttribute.jar')
 
     implementation 'redis.clients:jedis:5.2.0'
     implementation 'com.mysql:mysql-connector-j:9.6.0'
