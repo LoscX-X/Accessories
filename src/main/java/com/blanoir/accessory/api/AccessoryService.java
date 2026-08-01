@@ -109,6 +109,20 @@ public final class AccessoryService {
         }
     }
 
+    /** 清除指定玩家的所有饰品技能冷却。 */
+    public void refreshAllCooldowns(Player player) {
+        if (plugin.skillEngine() != null) {
+            plugin.skillEngine().refreshAllCooldowns(player);
+        }
+    }
+
+    /** 清除所有玩家的所有饰品技能冷却。 */
+    public void refreshAllCooldowns() {
+        if (plugin.skillEngine() != null) {
+            plugin.skillEngine().refreshAllCooldowns();
+        }
+    }
+
     /**
      * 清空某玩家的 accessory 背包
      * 这里必须走 AccessoryStore，不能直接写 contains/*.yml
