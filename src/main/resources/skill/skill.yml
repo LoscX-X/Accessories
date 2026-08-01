@@ -26,7 +26,8 @@ items:
       #   - targeted: 当前目标（例如攻击目标）
       # period: 仅 onTimer 生效，单位 tick（20 tick = 1 秒）
       # cooldown: 技能成功触发后的冷却时间，单位 tick（0 或不填写表示无冷却）
-      # forcesync: 仅 onDeath 生效；强制同步执行并允许玩家死亡后继续执行技能
+      # forcesync: 仅 onDeath 生效；强制同步执行并允许技能在玩家死亡后继续执行
+      # cancelevent: 仅 onDeath 生效；取消 MythicMobs 技能调用事件（不能取消 Bukkit 玩家死亡事件）
       # conditions: 预留字段，兼容后续扩展
       - skill: ExampleAttackSkill
         trigger: onAttack
@@ -37,6 +38,7 @@ items:
         trigger: onDeath
         target: self
         forcesync: true
+        cancelevent: false
 
       - skill: ExampleTimerSkill
         trigger: onTimer

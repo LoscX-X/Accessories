@@ -76,10 +76,11 @@ public final class AccessorySkills {
 
                     int period = toInt(m.get("period"));
                     int cooldown = Math.max(0, toInt(m.get("cooldown")));
-                    boolean forceSync = toBoolean(m.get("forcesync"));
+                    boolean forceSync = trigger == TriggerType.ON_DEATH && toBoolean(m.get("forcesync"));
+                    boolean cancelEvent = trigger == TriggerType.ON_DEATH && toBoolean(m.get("cancelevent"));
                     TargetType target = TargetType.from(Objects.toString(m.get("target"), ""));
                     Object conditions = m.get("conditions");
-                    parsed.add(new SkillEntry(skill, trigger, period, cooldown, forceSync, target, conditions));
+                    parsed.add(new SkillEntry(skill, trigger, period, cooldown, forceSync, cancelEvent, target, conditions));
                 }
             }
         }
@@ -188,7 +189,7 @@ public final class AccessorySkills {
                 }
                 String cooldownKey = itemId + ':' + slot + ':' + entryIndex;
                 ResolvedEntry resolved = new ResolvedEntry(entry.skill(), entry.trigger(), target,
-                        entry.cooldown(), entry.forceSync(), cooldownKey);
+                        entry.cooldown(), entry.forceSync(), entry.cancelEvent(), cooldownKey);
                 byTrigger.computeIfAbsent(entry.trigger(), k -> new ArrayList<>()).add(resolved);
                 if (entry.trigger() == TriggerType.ON_TIMER) {
                     int period = Math.max(1, entry.period());
@@ -368,6 +369,9 @@ public final class AccessorySkills {
                 meta.setIsAsync(false);
                 meta.setExecuteAfterDeath(true);
             }
+            if (entry.trigger() == TriggerType.ON_DEATH && entry.cancelEvent()) {
+                meta.cancelEvent();
+            }
         });
         debug("执行 MythicMobs 技能: player=" + caster.getName() + ", skill=" + entry.skill()
                 + ", target=" + entityName(target) + ", success=" + success);
@@ -389,11 +393,11 @@ public final class AccessorySkills {
     }
 
     private record SkillEntry(String skill, TriggerType trigger, int period, int cooldown, boolean forceSync,
-                              TargetType target, Object conditions) {
+                              boolean cancelEvent, TargetType target, Object conditions) {
     }
 
     private record ResolvedEntry(String skill, TriggerType trigger, TargetType target, int cooldown, boolean forceSync,
-                                 String cooldownKey) {
+                                 boolean cancelEvent, String cooldownKey) {
     }
 
     private record TimerEntry(ResolvedEntry entry, int period) {
