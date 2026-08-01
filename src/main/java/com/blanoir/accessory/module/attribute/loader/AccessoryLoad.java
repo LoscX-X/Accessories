@@ -29,8 +29,14 @@ public final class AccessoryLoad {
     }
 
     private AccessoryLoadHandler createDelegate(JavaPlugin plugin) {
+        boolean hasBlancAttribute = Bukkit.getPluginManager().getPlugin("BlancAttribute") != null;
         boolean hasAttributePlus = Bukkit.getPluginManager().getPlugin("AttributePlus") != null;
         boolean hasAura = Bukkit.getPluginManager().getPlugin("AuraSkills") != null;
+
+        if (hasBlancAttribute) {
+            infoOnce(plugin, "BlancAttribute-enabled", "BlancAttribute hook enabled.");
+            return new BlancAttributeAccessoryLoad(plugin);
+        }
 
         if (hasAttributePlus) {
             infoOnce(plugin, "AttributePlus-enabled", "AttributePlus hook enabled.");

@@ -21,6 +21,10 @@ dependencies:
       load: BEFORE
       required: false
       join-classpath: true
+    BlancAttribute:
+      load: BEFORE
+      required: false
+      join-classpath: true
 permissions:
   accessory.reload:
     description: Allow reloading Accessory
