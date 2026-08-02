@@ -408,7 +408,11 @@ public final class AccessorySkills {
     private boolean cast(Player caster, ResolvedEntry entry, Entity target) {
         boolean success = MythicBukkit.inst().getAPIHelper().castSkill(caster, entry.skill(), meta -> {
             if (target != null) {
-                meta.setEntityTarget(BukkitAdapter.adapt(target));
+                io.lumine.mythic.api.adapters.AbstractEntity adapted = BukkitAdapter.adapt(target);
+                // MM 5.13 的 <target.xxx> 占位符从 trigger 实体解析，而不是 entityTarget；
+                // 饰品通过 API 施法时 trigger 默认是 null，必须一并设置，否则 <target.mhp> 等无法解析
+                meta.setEntityTarget(adapted);
+                meta.setTrigger(adapted);
             }
             if (entry.trigger() == TriggerType.ON_DEATH) {
                 // onDeath 默认允许技能在玩家死亡后继续执行
