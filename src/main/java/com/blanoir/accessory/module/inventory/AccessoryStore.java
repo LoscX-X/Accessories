@@ -1,5 +1,6 @@
 package com.blanoir.accessory.module.inventory;
 
+import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.database.mysql.SqlManager;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -79,8 +80,8 @@ public final class AccessoryStore {
     }
 
     public ItemStack[] getPageOrLoad(UUID playerId, int page, int pageSize, int totalPages) {
-        ItemStack[] full = getOrLoad(playerId, totalSize(pageSize, totalPages));
-        return extractPage(full, page, pageSize);
+        // 多页面/每页大小不同时按真实页偏移读取，避免复制到错误的页
+        return getSliceOrLoad(playerId, pageStart(page, pageSize, totalPages), pageSize, totalSize(pageSize, totalPages));
     }
 
     public void update(UUID playerId, ItemStack[] contents, int totalSize) {
@@ -101,15 +102,7 @@ public final class AccessoryStore {
     }
 
     public void updatePage(UUID playerId, int page, ItemStack[] pageContents, int pageSize, int totalPages) {
-        mysqlDeletedPlayers.remove(playerId);
-        int totalSize = totalSize(pageSize, totalPages);
-        ItemStack[] full = getOrLoad(playerId, totalSize);
-        int pageIndex = normalizedPage(page, totalPages) - 1;
-        int start = pageIndex * pageSize;
-        for (int i = 0; i < pageSize; i++) {
-            full[start + i] = i < pageContents.length ? pageContents[i] : null;
-        }
-        cache.put(playerId, full);
+        updateSlice(playerId, pageStart(page, pageSize, totalPages), pageContents, pageSize, totalSize(pageSize, totalPages));
     }
 
     public void clear(UUID playerId, int totalSize) {
@@ -165,18 +158,18 @@ public final class AccessoryStore {
         return out;
     }
 
-    private ItemStack[] extractPage(ItemStack[] full, int page, int pageSize) {
-        int safePageSize = Math.max(1, pageSize);
-        int maxPages = Math.max(1, (full.length + safePageSize - 1) / safePageSize);
-        int pageIndex = normalizedPage(page, maxPages) - 1;
-        ItemStack[] out = new ItemStack[safePageSize];
-        int start = pageIndex * safePageSize;
-        System.arraycopy(full, start, out, 0, Math.min(safePageSize, Math.max(0, full.length - start)));
-        return out;
+    private int totalSize(int pageSize, int totalPages) {
+        if (plugin instanceof Accessory accessory && accessory.pageManager() != null) {
+            return accessory.pageManager().totalStorageSize();
+        }
+        return Math.max(pageSize, pageSize * Math.max(1, totalPages));
     }
 
-    private int totalSize(int pageSize, int totalPages) {
-        return Math.max(pageSize, pageSize * Math.max(1, totalPages));
+    private int pageStart(int page, int pageSize, int totalPages) {
+        if (plugin instanceof Accessory accessory && accessory.pageManager() != null) {
+            return accessory.pageManager().pageStart(page);
+        }
+        return (normalizedPage(page, totalPages) - 1) * pageSize;
     }
 
     private int normalizedPage(int page, int totalPages) {
