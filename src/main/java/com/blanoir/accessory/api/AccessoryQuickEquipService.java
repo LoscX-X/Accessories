@@ -155,6 +155,16 @@ public final class AccessoryQuickEquipService {
             return true;
         }
 
+        if (plugin.limitManager() != null) {
+            ItemStack[] contents = plugin.inventoryStore()
+                    .getOrLoad(player.getUniqueId(), plugin.totalAccessoryStorageSize());
+            int absoluteSlot = plugin.accessoryPageStart(page) + slot;
+            if (plugin.limitManager().wouldExceedLimit(contents, absoluteSlot, item)) {
+                player.sendMessage(plugin.lang().langComponent("Item_limit_reached"));
+                return true;
+            }
+        }
+
         List<String> need = plugin.pageManager().requiredLore(page, slot);
         if (!LoreUtils.matchesAnyKeyword(LoreUtils.plainLore(item), need)) {
             player.sendMessage(plugin.lang().langComponent("Item_not_match"));

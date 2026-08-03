@@ -8,10 +8,12 @@ import com.blanoir.accessory.hook.aura.AuraSkillsHook;
 import com.blanoir.accessory.hook.myhic.MythicBridgeListener;
 import com.blanoir.accessory.hook.myhic.skills.AccessorySkillListener;
 import com.blanoir.accessory.hook.myhic.skills.AccessorySkills;
+import com.blanoir.accessory.hook.placeholderapi.SkillCooldownPlaceholder;
 import com.blanoir.accessory.database.mysql.SqlManager;
 import com.blanoir.accessory.module.inventory.AccessoryPageManager;
 import com.blanoir.accessory.module.inventory.AccessoryInventoryLifecycleListener;
 import com.blanoir.accessory.module.inventory.AccessoryStore;
+import com.blanoir.accessory.module.inventory.ItemLimitManager;
 import com.blanoir.accessory.module.inventory.listener.AccessoryListener;
 import com.blanoir.accessory.module.inventory.listener.AccessoryQuickEquipListener;
 import com.blanoir.accessory.utils.lang.Lang;
@@ -30,6 +32,7 @@ public final class Accessory extends JavaPlugin {
     private AccessoryStore inventoryStore;
     private AccessoryQuickEquipService quickEquipService;
     private AccessoryPageManager pageManager;
+    private ItemLimitManager limitManager;
     private SqlManager sqlManager;
     private final TraitsCommand shieldCommand = new TraitsCommand("accessory.shield", "shield");
     private final TraitsCommand magicShieldCommand = new TraitsCommand("accessory.magicshield", "magicshield");
@@ -49,6 +52,7 @@ public final class Accessory extends JavaPlugin {
     public AccessoryStore inventoryStore() { return inventoryStore; }
     public AccessoryPageManager pageManager() { return pageManager; }
     public AccessoryQuickEquipService quickEquipService() { return quickEquipService; }
+    public ItemLimitManager limitManager() { return limitManager; }
 
     @Override
     public void onEnable() {
@@ -56,6 +60,9 @@ public final class Accessory extends JavaPlugin {
         initLang();
         initSkillConfigs();
         initPageConfigs();
+
+        this.limitManager = new ItemLimitManager(this);
+        this.limitManager.reload();
 
         initStorage();
         this.accessoryService = new AccessoryService(this);
@@ -86,6 +93,9 @@ public final class Accessory extends JavaPlugin {
             initPageConfigs();
         } else {
             pageManager.reload();
+        }
+        if (limitManager != null) {
+            limitManager.reload();
         }
         initLang();
         initStorage();
@@ -212,10 +222,23 @@ public final class Accessory extends JavaPlugin {
             for (Player online : Bukkit.getOnlinePlayers()) {
                 this.skillEngine.refreshFromStored(online);
             }
+            registerSkillCooldownPlaceholder();
             getLogger().info("MythicMobs hook enabled (delayed init).");
         } catch (Throwable t) {
             this.skillEngine = null;
             getLogger().warning("MythicMobs hook failed, Mythic skill bridge disabled.");
+        }
+    }
+
+    private void registerSkillCooldownPlaceholder() {
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null) {
+            return;
+        }
+        try {
+            new SkillCooldownPlaceholder(this).register();
+            getLogger().info("PlaceholderAPI skill cooldown placeholders registered: %blacc_cd_1% ~ %blacc_cd_10%");
+        } catch (Throwable t) {
+            getLogger().warning("Failed to register skill cooldown placeholders: " + t.getMessage());
         }
     }
 

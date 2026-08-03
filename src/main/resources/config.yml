@@ -83,3 +83,16 @@ MAGIC_SHIELD_REGEN_PERCENT: 0.10
 
 # 是否显示吸血效果的调试演示数值
 Life_Steal_demonstrate: false
+
+# 同一物品最多可同时装备/生效的数量（skilled_item 数量检测）
+# 每条规则支持:
+#   id:       技能/饰品 ID（acc_item_id / dun_item_id）
+#   name:     物品显示名（包含匹配，可写字符串或列表）
+#   lore:     lore 关键词列表（命中任意一个即匹配）
+#   material: 材料名，如 DIAMOND_SWORD
+#   max:      最多可装备次数（<=0 表示不限制）
+# 不写 id/name/lore/material 时，规则键名会同时作为 ID、显示名和 lore 关键词兜底匹配。
+item-limits:
+  example_ring:
+    id: example_ring
+    max: 1

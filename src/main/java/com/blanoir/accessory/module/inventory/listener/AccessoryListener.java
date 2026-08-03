@@ -77,12 +77,30 @@ public class AccessoryListener implements Listener {
         return permission != null && !player.hasPermission(permission);
     }
 
-    private boolean shouldRejectPlacement(Player player, int page, int slot, ItemStack item) {
+    private boolean shouldRejectPlacement(Player player, int page, int slot, ItemStack item, Inventory top) {
         if (isSlotDisabled(slot)) return true;
         if (!isSlotConfigured(page, slot)) return true;
 
         if (hasSlotPermission(player, page, slot)) {
             return true;
+        }
+
+        // 同一物品数量限制：把当前 GUI 页面合并进仓库快照后再判断。
+        if (plugin.limitManager() != null) {
+            ItemStack[] contents = plugin.inventoryStore()
+                    .getOrLoad(player.getUniqueId(), plugin.totalAccessoryStorageSize());
+            if (top != null) {
+                int start = plugin.accessoryPageStart(page);
+                ItemStack[] gui = top.getContents();
+                for (int i = 0; i < gui.length && start + i < contents.length; i++) {
+                    contents[start + i] = gui[i];
+                }
+            }
+            int absoluteSlot = plugin.accessoryPageStart(page) + slot;
+            if (plugin.limitManager().wouldExceedLimit(contents, absoluteSlot, item)) {
+                player.sendMessage(plugin.lang().langComponent("Item_limit_reached"));
+                return true;
+            }
         }
 
         List<String> need = requiredLore(page, slot);
@@ -226,7 +244,7 @@ public class AccessoryListener implements Listener {
                         going = e.getCursor();
                     }
 
-                    if (going != null && !going.getType().isAir() && shouldRejectPlacement(p, page, raw, going)) {
+                    if (going != null && !going.getType().isAir() && shouldRejectPlacement(p, page, raw, going, top)) {
                         e.setCancelled(true);
 
                         if (hasSlotPermission(p, page, raw)) {
@@ -278,7 +296,7 @@ public class AccessoryListener implements Listener {
         for (var en : e.getNewItems().entrySet()) {
             int raw = en.getKey();
             if (raw >= topSize) continue;
-            if (shouldRejectPlacement(p, page, raw, en.getValue())) {
+            if (shouldRejectPlacement(p, page, raw, en.getValue(), top)) {
                 e.setCancelled(true);
                 if (hasSlotPermission(p, page, raw)) {
                     p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));

@@ -1,6 +1,6 @@
 # 全局签名：用于标记当前技能配置版本。
 # 当签名变化时，插件会重新写入饰品物品上的 PDC 标记。
-signature: 1
+signature: 2
 
 # items 下每个键为饰品唯一 ID。
 # 该 ID 需要与饰品识别逻辑（PDC dun_item_id / acc_item_id 或 name）匹配。
@@ -15,6 +15,8 @@ items:
       # skill: MythicMobs 技能名
       # trigger: 触发方式
       #   - onAttack: 玩家造成伤害时触发
+      #   - onCriticalHit: 玩家造成暴击伤害时触发
+      #     施放时 MythicMobs 技能的 trigger 为被暴击实体（可用 <target.xxx> / <trigger.xxx> 获取）
       #   - onDamaged: 玩家受伤时触发（伤害即使被其他机制取消也会触发，便于刷新免伤类 aura）
       #   - onInteract: 玩家交互时触发
       #   - onKill: 玩家击杀实体时触发
@@ -27,6 +29,9 @@ items:
       #   - targeted: 当前目标（例如攻击目标）
       # period: 仅 onTimer 生效，单位 tick（20 tick = 1 秒）
       # cooldown: 技能成功触发后的冷却时间，单位 秒（0 或不填写表示无冷却）
+      # cd: PlaceholderAPI 冷却展示槽位 1-10，对应 %blacc_cd_1% ~ %blacc_cd_10%
+      #     不填写时按冷却时长升序自动填入剩余槽位（冷却短的在上）
+      # cd-format: 该技能的冷却展示格式，支持 {cd}=剩余秒 / {max}=总冷却秒 / {skill}=技能名
       # forcesync: 仅 onDeath 生效；强制同步执行（onDeath 技能已自动允许死亡后继续执行）
       # cancelevent: 仅 onDeath 生效；先取消 Paper PlayerDeathEvent 再释放技能，
       #              避免死亡状态清掉技能挂上的 aura/效果
@@ -36,6 +41,8 @@ items:
         trigger: onAttack
         target: targeted
         cooldown: 5
+        cd: 1
+        cd-format: "&7攻击 &c{cd}s"
 
       - skill: ExampleDeathSkill
         trigger: onDeath

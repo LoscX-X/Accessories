@@ -43,6 +43,11 @@ public final class AccessorySkillListener implements Listener {
         if (!(event.getDamager() instanceof Player attacker)) return;
 
         plugin.skillEngine().triggerAttack(attacker, event.getEntity());
+
+        // Paper 已按原版条件标记该次伤害是否为暴击（跳劈/满蓄力等）。
+        if (event.isCritical()) {
+            plugin.skillEngine().triggerCriticalHit(attacker, event.getEntity());
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR)

@@ -80,7 +80,10 @@ public final class AccessorySkills {
                     boolean cancelEvent = trigger == TriggerType.ON_DEATH && toBoolean(m.get("cancelevent"));
                     TargetType target = TargetType.from(Objects.toString(m.get("target"), ""));
                     Object conditions = m.get("conditions");
-                    parsed.add(new SkillEntry(skill, trigger, period, cooldown, forceSync, cancelEvent, target, conditions));
+                    int cdSlot = Math.max(0, Math.min(10, toInt(m.get("cd"))));
+                    String cdFormat = Objects.toString(m.get("cd-format"), "").trim();
+                    parsed.add(new SkillEntry(skill, trigger, period, cooldown, forceSync, cancelEvent,
+                            target, conditions, cdSlot, cdFormat));
                 }
             }
         }
@@ -155,12 +158,19 @@ public final class AccessorySkills {
         EnumMap<TriggerType, List<ResolvedEntry>> byTrigger = new EnumMap<>(TriggerType.class);
         Set<String> equippedItemIds = new LinkedHashSet<>();
         List<TimerEntry> timers = new ArrayList<>();
+        List<ResolvedEntry> allResolved = new ArrayList<>();
 
         Map<Integer, Integer> previousSnapshot = accessorySlotSnapshots.get(player.getUniqueId());
         Map<Integer, Integer> currentSnapshot = new HashMap<>();
 
         for (int slot = 0; slot < contents.length; slot++) {
             if (!isAccessorySlot(slot)) continue;
+
+            // 同一物品超过配置的最大装备数量时，多余的副本不注册技能。
+            if (plugin.limitManager() != null && !plugin.limitManager().isSlotAllowed(contents, slot)) {
+                debug("跳过超出数量限制的饰品: player=" + player.getName() + ", slot=" + slot);
+                continue;
+            }
 
             ItemStack item = contents[slot];
             int itemHash = item == null ? 0 : item.hashCode();
@@ -189,8 +199,10 @@ public final class AccessorySkills {
                 }
                 String cooldownKey = itemId + ':' + slot + ':' + entryIndex;
                 ResolvedEntry resolved = new ResolvedEntry(entry.skill(), entry.trigger(), target,
-                        entry.cooldown(), entry.forceSync(), entry.cancelEvent(), cooldownKey);
+                        entry.cooldown(), entry.forceSync(), entry.cancelEvent(), cooldownKey,
+                        entry.cdSlot(), entry.cdFormat());
                 byTrigger.computeIfAbsent(entry.trigger(), k -> new ArrayList<>()).add(resolved);
+                allResolved.add(resolved);
                 if (entry.trigger() == TriggerType.ON_TIMER) {
                     int period = Math.max(1, entry.period());
                     timers.add(new TimerEntry(resolved, period));
@@ -199,7 +211,83 @@ public final class AccessorySkills {
         }
 
         accessorySlotSnapshots.put(player.getUniqueId(), currentSnapshot);
-        loadouts.put(player.getUniqueId(), new PlayerLoadout(equippedItemIds, byTrigger, timers));
+        loadouts.put(player.getUniqueId(), new PlayerLoadout(
+                equippedItemIds, byTrigger, timers, buildCooldownDisplay(allResolved)));
+    }
+
+    /**
+     * 构建冷却展示槽位（%blacc_cd_1% ~ %blacc_cd_10%）：
+     * 配置了 cd 的固定占位；未配置 cd 的按冷却时长升序自动填入剩余槽位（冷却短的在上）。
+     */
+    private Map<Integer, CooldownDisplayEntry> buildCooldownDisplay(List<ResolvedEntry> entries) {
+        Map<Integer, CooldownDisplayEntry> pinned = new LinkedHashMap<>();
+        List<ResolvedEntry> auto = new ArrayList<>();
+
+        for (ResolvedEntry entry : entries) {
+            if (entry.cdSlot() <= 0 && entry.cdFormat().isEmpty()) {
+                continue;
+            }
+            if (entry.cdSlot() > 0) {
+                CooldownDisplayEntry old = pinned.get(entry.cdSlot());
+                if (old == null || entry.cooldown() > old.entry().cooldown()) {
+                    pinned.put(entry.cdSlot(), new CooldownDisplayEntry(entry, entry.cdFormat()));
+                }
+            } else {
+                auto.add(entry);
+            }
+        }
+
+        auto.sort(Comparator.comparingInt(ResolvedEntry::cooldown));
+        Set<String> seenAuto = new HashSet<>();
+        Map<Integer, CooldownDisplayEntry> display = new LinkedHashMap<>(pinned);
+        int slot = 1;
+        for (ResolvedEntry entry : auto) {
+            // 同一技能名只展示一次（多副本时保留冷却最短的那个）。
+            if (!seenAuto.add(entry.skill())) {
+                continue;
+            }
+            while (slot <= 10 && display.containsKey(slot)) {
+                slot++;
+            }
+            if (slot > 10) {
+                break;
+            }
+            display.put(slot, new CooldownDisplayEntry(entry, entry.cdFormat()));
+            slot++;
+        }
+        return display;
+    }
+
+    /**
+     * PlaceholderAPI：%blacc_cd_&lt;1-10&gt;% 的格式化冷却文本。
+     * 支持占位符 {cd}=剩余秒 / {max}=总冷却秒 / {skill}=技能名。
+     */
+    public String formatCooldown(Player player, int slot) {
+        if (player == null || slot < 1 || slot > 10) {
+            return "";
+        }
+        PlayerLoadout loadout = loadouts.get(player.getUniqueId());
+        if (loadout == null) {
+            return "";
+        }
+        CooldownDisplayEntry display = loadout.cooldownDisplay().get(slot);
+        if (display == null) {
+            return "";
+        }
+
+        ResolvedEntry entry = display.entry();
+        Map<String, Long> playerCooldowns = cooldowns.get(player.getUniqueId());
+        long readyAt = playerCooldowns == null ? 0L : playerCooldowns.getOrDefault(entry.cooldownKey(), 0L);
+        long remainingTicks = Math.max(0L, readyAt - tick);
+        int seconds = (int) Math.ceil(remainingTicks / 20.0);
+        if (entry.cooldown() <= 0) {
+            seconds = 0;
+        }
+
+        String format = display.format() == null || display.format().isEmpty() ? "{cd}s" : display.format();
+        return format.replace("{cd}", String.valueOf(seconds))
+                .replace("{max}", String.valueOf(entry.cooldown()))
+                .replace("{skill}", entry.skill());
     }
 
     private boolean isAccessorySlot(int absoluteSlot) {
@@ -287,6 +375,13 @@ public final class AccessorySkills {
     public void triggerKill(Player caster, Entity victim) {
         // onKill 的 MythicMobs trigger 必须是被杀实体，<target.xxx> / <trigger.xxx> 才能取到被杀者
         trigger(caster, TriggerType.ON_KILL, targetForEvent(TargetType.TARGETED, caster, victim, null), victim);
+    }
+
+    public void triggerCriticalHit(Player caster, Entity victim) {
+        // onCriticalHit 与 onKill 一致：MythicMobs trigger 设为被暴击实体，
+        // 这样 <target.xxx> / <trigger.xxx> 都能取到受害者。
+        trigger(caster, TriggerType.ON_CRITICAL_HIT,
+                targetForEvent(TargetType.TARGETED, caster, victim, null), victim);
     }
 
     /**
@@ -442,26 +537,32 @@ public final class AccessorySkills {
 
     private record PlayerLoadout(Set<String> equippedItemIds,
                                  EnumMap<TriggerType, List<ResolvedEntry>> byTrigger,
-                                 List<TimerEntry> timers) {
+                                 List<TimerEntry> timers,
+                                 Map<Integer, CooldownDisplayEntry> cooldownDisplay) {
     }
 
     private record SkillEntry(String skill, TriggerType trigger, int period, int cooldown, boolean forceSync,
-                              boolean cancelEvent, TargetType target, Object conditions) {
+                              boolean cancelEvent, TargetType target, Object conditions,
+                              int cdSlot, String cdFormat) {
     }
 
     private record ResolvedEntry(String skill, TriggerType trigger, TargetType target, int cooldown, boolean forceSync,
-                                 boolean cancelEvent, String cooldownKey) {
+                                 boolean cancelEvent, String cooldownKey, int cdSlot, String cdFormat) {
     }
 
     private record TimerEntry(ResolvedEntry entry, int period) {
     }
 
+    private record CooldownDisplayEntry(ResolvedEntry entry, String format) {
+    }
+
     public enum TriggerType {
-        ON_ATTACK, ON_DAMAGED, ON_SHOOT, ON_KILL, ON_DEATH, ON_TIMER;
+        ON_ATTACK, ON_CRITICAL_HIT, ON_DAMAGED, ON_SHOOT, ON_KILL, ON_DEATH, ON_TIMER;
 
         static TriggerType from(String raw) {
             return switch (raw) {
                 case "onAttack" -> ON_ATTACK;
+                case "onCriticalHit" -> ON_CRITICAL_HIT;
                 case "onDamaged" -> ON_DAMAGED;
                 case "onShoot" -> ON_SHOOT;
                 case "onKill" -> ON_KILL;
@@ -490,7 +591,9 @@ public final class AccessorySkills {
         boolean supports(TriggerType trigger) {
             return switch (this) {
                 case SELF, NONE -> true;
-                case TARGETED -> trigger == TriggerType.ON_ATTACK || trigger == TriggerType.ON_KILL;
+                case TARGETED -> trigger == TriggerType.ON_ATTACK
+                        || trigger == TriggerType.ON_CRITICAL_HIT
+                        || trigger == TriggerType.ON_KILL;
                 case ATTACKER -> trigger == TriggerType.ON_DAMAGED;
                 case PROJECTILE -> trigger == TriggerType.ON_SHOOT;
             };
@@ -498,7 +601,7 @@ public final class AccessorySkills {
 
         static TargetType defaultFor(TriggerType trigger) {
             return switch (trigger) {
-                case ON_ATTACK, ON_KILL -> TARGETED;
+                case ON_ATTACK, ON_CRITICAL_HIT, ON_KILL -> TARGETED;
                 case ON_DAMAGED -> ATTACKER;
                 case ON_SHOOT -> PROJECTILE;
                 case ON_DEATH, ON_TIMER -> SELF;

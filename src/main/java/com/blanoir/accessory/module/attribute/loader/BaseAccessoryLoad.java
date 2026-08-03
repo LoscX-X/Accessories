@@ -1,5 +1,6 @@
 package com.blanoir.accessory.module.attribute.loader;
 
+import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.utils.LoreUtils;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -47,10 +48,16 @@ abstract class BaseAccessoryLoad implements AccessoryLoadHandler {
 
         Set<String> currentTags = new LinkedHashSet<>();
         ItemStack[] safeContents = contents == null ? new ItemStack[0] : contents;
+        Set<Integer> allowedSlotSet = allowedSlots(safeContents);
 
         for (int slot = 0; slot < safeContents.length; slot++) {
             ItemStack item = safeContents[slot];
             if (item == null || item.getType() == Material.AIR) continue;
+
+            // 同一物品超过配置的最大装备数量时，多余的副本不生效（属性/标签都不叠加）。
+            if (allowedSlotSet != null && !allowedSlotSet.contains(slot)) {
+                continue;
+            }
 
             // 饰品检测：lore 中没有属性词条的物品不做任何属性变化，
             // 避免无属性饰品被重复套用/清除属性。
@@ -68,6 +75,13 @@ abstract class BaseAccessoryLoad implements AccessoryLoadHandler {
 
         finishExternalModifiers(player);
         saveAppliedTags(player, currentTags);
+    }
+
+    private Set<Integer> allowedSlots(ItemStack[] contents) {
+        if (!(plugin instanceof Accessory accessory) || accessory.limitManager() == null) {
+            return null;
+        }
+        return accessory.limitManager().allowedSlots(contents);
     }
 
     protected abstract void clearTraitModifiers(Player player);
