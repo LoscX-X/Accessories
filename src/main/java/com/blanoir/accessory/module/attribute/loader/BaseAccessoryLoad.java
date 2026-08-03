@@ -52,9 +52,13 @@ abstract class BaseAccessoryLoad implements AccessoryLoadHandler {
             ItemStack item = safeContents[slot];
             if (item == null || item.getType() == Material.AIR) continue;
 
-            applyTraitModifiers(player, item, slot);
-            applyExternalModifiers(player, item, slot);
-            applyItemAttributes(player, item, slot);
+            // 饰品检测：lore 中没有属性词条的物品不做任何属性变化，
+            // 避免无属性饰品被重复套用/清除属性。
+            if (LoreUtils.hasAttributeLore(item)) {
+                applyTraitModifiers(player, item, slot);
+                applyExternalModifiers(player, item, slot);
+                applyItemAttributes(player, item, slot);
+            }
 
             for (String tag : parseTags(item)) {
                 player.addScoreboardTag(tag);

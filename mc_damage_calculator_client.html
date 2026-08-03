@@ -1,0 +1,1965 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blanc · MC 伤害与数值叠加计算器</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090b10;
+      --panel: rgba(18, 22, 31, .88);
+      --panel-2: rgba(24, 29, 40, .88);
+      --line: rgba(255,255,255,.09);
+      --line-strong: rgba(255,255,255,.16);
+      --text: #f3f5f8;
+      --muted: #929aaa;
+      --soft: #c9ced8;
+      --accent: #8fc6ff;
+      --accent-2: #b494ff;
+      --good: #78d7a2;
+      --warn: #ffc875;
+      --bad: #ff8d9b;
+      --shadow: 0 22px 70px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% -10%, rgba(106, 162, 255, .16), transparent 30%),
+        radial-gradient(circle at 95% 5%, rgba(174, 119, 255, .12), transparent 32%),
+        linear-gradient(180deg, #0b0e14 0%, var(--bg) 60%);
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; }
+
+    .shell { width: min(1480px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 72px; }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      padding: 24px 4px 26px;
+    }
+    .eyebrow { color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: 8px 0 8px; font-size: clamp(30px, 4vw, 52px); line-height: 1.04; letter-spacing: -.04em; }
+    .hero p { margin: 0; max-width: 850px; color: var(--muted); line-height: 1.75; }
+    .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .btn {
+      border: 1px solid var(--line-strong);
+      background: rgba(255,255,255,.045);
+      padding: 10px 14px;
+      border-radius: 11px;
+      cursor: pointer;
+      transition: .18s ease;
+      white-space: nowrap;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: rgba(143,198,255,.55); background: rgba(143,198,255,.09); }
+    .btn.primary { background: linear-gradient(135deg, rgba(110,176,255,.28), rgba(167,116,255,.22)); border-color: rgba(143,198,255,.45); }
+    .btn.danger:hover { border-color: rgba(255,141,155,.55); background: rgba(255,141,155,.08); }
+    .btn.small { padding: 7px 10px; font-size: 12px; border-radius: 9px; }
+
+    .grid { display: grid; grid-template-columns: 390px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .left, .right { display: grid; gap: 18px; }
+    .card {
+      background: linear-gradient(180deg, rgba(25,30,42,.92), rgba(15,18,26,.92));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(14px);
+    }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); }
+    .card-head h2 { font-size: 16px; margin: 0; letter-spacing: -.01em; }
+    .card-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .card-body { padding: 18px 20px 20px; }
+
+    .section-title { margin: 4px 0 12px; color: var(--soft); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .field-grid.one { grid-template-columns: 1fr; }
+    .field { display: grid; gap: 7px; min-width: 0; }
+    .field.full { grid-column: 1 / -1; }
+    label { color: var(--muted); font-size: 12px; line-height: 1.3; }
+    input, select, textarea {
+      width: 100%;
+      min-width: 0;
+      color: var(--text);
+      background: rgba(7,9,14,.72);
+      border: 1px solid var(--line-strong);
+      border-radius: 10px;
+      padding: 10px 11px;
+      outline: none;
+      transition: .16s ease;
+    }
+    input:focus, select:focus, textarea:focus { border-color: rgba(143,198,255,.65); box-shadow: 0 0 0 3px rgba(143,198,255,.08); }
+    input[type="checkbox"] { width: 17px; height: 17px; padding: 0; accent-color: #8fc6ff; }
+    input[type="range"] { padding: 0; border: 0; background: transparent; }
+    .inline-check { display: flex; align-items: center; gap: 9px; min-height: 40px; color: var(--soft); font-size: 13px; }
+    .hint { color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .formula-strip {
+      display: grid;
+      gap: 6px;
+      margin-top: 12px;
+      padding: 11px 12px;
+      border: 1px solid rgba(143,198,255,.18);
+      border-radius: 11px;
+      background: rgba(143,198,255,.045);
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+    .formula-strip b { color: var(--soft); }
+    .damage-parts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+    .damage-part { padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.025); }
+    .damage-part span { display:block; color:var(--muted); font-size:10px; }
+    .damage-part strong { display:block; margin-top:4px; font-size:15px; font-variant-numeric:tabular-nums; }
+    .divider { height: 1px; background: var(--line); margin: 18px 0; }
+
+    .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .metric {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.025);
+    }
+    .metric .k { color: var(--muted); font-size: 11px; margin-bottom: 8px; }
+    .metric .v { font-size: clamp(21px, 2.4vw, 34px); font-weight: 780; letter-spacing: -.04em; overflow-wrap: anywhere; }
+    .metric .s { margin-top: 7px; color: var(--muted); font-size: 11px; }
+    .metric.accent { border-color: rgba(143,198,255,.35); background: linear-gradient(135deg, rgba(93,163,255,.11), rgba(159,102,255,.07)); }
+    .metric.good .v { color: var(--good); }
+    .metric.warn .v { color: var(--warn); }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(110px, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .phase { position: relative; padding: 11px 12px; border-radius: 12px; background: rgba(255,255,255,.03); border: 1px solid var(--line); }
+    .phase strong { display: block; font-size: 12px; }
+    .phase span { color: var(--muted); font-size: 10px; }
+    .phase:not(:last-child)::after { content: "→"; position: absolute; right: -9px; top: 50%; transform: translate(50%,-50%); color: #5e6676; z-index: 2; }
+
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .stack-list { display: grid; gap: 10px; }
+    .empty {
+      padding: 26px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 14px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.7;
+    }
+    .modifier-row {
+      display: grid;
+      grid-template-columns: 34px 112px 82px 70px 92px minmax(140px, 1fr) minmax(105px, .65fr) 34px;
+      gap: 8px;
+      align-items: end;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.025);
+    }
+    .modifier-row.dragging { opacity: .55; }
+    .drag { align-self: center; cursor: grab; user-select: none; color: #697285; font-size: 18px; text-align: center; }
+    .row-field { display: grid; gap: 5px; min-width: 0; }
+    .row-field label { font-size: 10px; }
+    .row-field input, .row-field select { padding: 8px 8px; font-size: 12px; border-radius: 9px; }
+    .remove { align-self: center; width: 32px; height: 32px; padding: 0; border-radius: 9px; }
+    .step-disabled { opacity: .38; pointer-events: none; }
+    .row-error { grid-column: 2 / -1; color: var(--bad); font-size: 11px; display: none; }
+    .row-error.show { display: block; }
+
+    .notice { margin-top: 12px; padding: 12px 14px; border-radius: 12px; font-size: 12px; line-height: 1.65; }
+    .notice.warn { color: #ffe2ac; background: rgba(255,188,84,.08); border: 1px solid rgba(255,188,84,.22); }
+    .notice.info { color: #cfe7ff; background: rgba(107,177,255,.07); border: 1px solid rgba(107,177,255,.2); }
+
+    .table-wrap { overflow: auto; max-height: 480px; }
+    table { width: 100%; border-collapse: collapse; min-width: 780px; }
+    th, td { padding: 11px 12px; text-align: left; border-bottom: 1px solid var(--line); font-size: 12px; vertical-align: top; }
+    th { position: sticky; top: 0; z-index: 1; color: var(--muted); background: #151a24; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; }
+    td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+    td.note { color: var(--muted); min-width: 240px; }
+    .tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; border: 1px solid var(--line); border-radius: 99px; font-size: 10px; color: var(--soft); background: rgba(255,255,255,.035); }
+
+    .chart-wrap { height: 270px; padding: 8px 4px 2px; }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .principles { display: grid; gap: 10px; }
+    .principle { padding: 12px 13px; border-left: 2px solid rgba(143,198,255,.45); background: rgba(255,255,255,.025); border-radius: 0 10px 10px 0; }
+    .principle strong { display: block; font-size: 13px; margin-bottom: 4px; }
+    .principle span { color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .codebox { min-height: 130px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; line-height: 1.6; }
+
+    .footer { margin-top: 22px; color: var(--muted); font-size: 11px; line-height: 1.7; text-align: center; }
+
+    @media (max-width: 1160px) {
+      .grid { grid-template-columns: 1fr; }
+      .left { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .left .card:last-child { grid-column: 1 / -1; }
+      .modifier-row { grid-template-columns: 30px 1fr 1fr 72px 88px 1.5fr 1fr 34px; }
+    }
+    @media (max-width: 820px) {
+      .shell { width: min(100% - 20px, 1480px); padding-top: 12px; }
+      .hero { grid-template-columns: 1fr; }
+      .hero-actions { justify-content: flex-start; }
+      .left { grid-template-columns: 1fr; }
+      .left .card:last-child { grid-column: auto; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .damage-parts { grid-template-columns: 1fr; }
+      .pipeline { grid-template-columns: 1fr; }
+      .phase:not(:last-child)::after { content: "↓"; right: 50%; top: auto; bottom: -12px; transform: translate(50%,50%); }
+      .modifier-row { grid-template-columns: 28px repeat(2, minmax(0,1fr)) 34px; }
+      .modifier-row .mechanic { grid-column: 2; }
+      .modifier-row .mode { grid-column: 3; }
+      .modifier-row .step { grid-column: 2; }
+      .modifier-row .op { grid-column: 3; }
+      .modifier-row .amount { grid-column: 2 / 4; }
+      .modifier-row .cap { grid-column: 2 / 4; }
+      .modifier-row .remove { grid-column: 4; grid-row: 1; }
+      .row-error { grid-column: 2 / 5; }
+    }
+  </style>
+  <style id="apple-gold-theme">
+    :root {
+      color-scheme: light;
+      --bg: #f5f5f7;
+      --panel: #ffffff;
+      --panel-2: #fbfbfd;
+      --line: rgba(29, 29, 31, .085);
+      --line-strong: rgba(29, 29, 31, .14);
+      --text: #1d1d1f;
+      --muted: #6e6e73;
+      --soft: #3f3f42;
+      --accent: #b47b16;
+      --accent-2: #d3a64b;
+      --gold-deep: #8c5e0d;
+      --gold-soft: #fff8e8;
+      --good: #237a4b;
+      --warn: #a66308;
+      --bad: #c93434;
+      --shadow: 0 18px 50px rgba(51, 42, 22, .055), 0 2px 10px rgba(51, 42, 22, .035);
+      --shadow-hover: 0 24px 70px rgba(51, 42, 22, .08), 0 4px 14px rgba(51, 42, 22, .045);
+      --radius: 24px;
+    }
+
+    * { -webkit-tap-highlight-color: transparent; }
+
+    html {
+      background: #f5f5f7;
+      scroll-padding-top: 24px;
+    }
+
+    body {
+      color: var(--text);
+      background:
+        radial-gradient(circle at 72% -8%, rgba(219, 181, 102, .16), transparent 27rem),
+        radial-gradient(circle at -5% 20%, rgba(235, 218, 180, .22), transparent 24rem),
+        linear-gradient(180deg, #fbfbfc 0, #f5f5f7 22rem, #f5f5f7 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+      letter-spacing: -.008em;
+    }
+
+    ::selection {
+      color: #1d1d1f;
+      background: rgba(218, 177, 92, .28);
+    }
+
+    button,
+    input,
+    select,
+    textarea { font-family: inherit; }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+      outline: 3px solid rgba(197, 145, 43, .2);
+      outline-offset: 2px;
+    }
+
+    .shell {
+      width: min(1440px, calc(100% - 48px));
+      padding: 0 0 84px;
+    }
+
+    .hero {
+      position: relative;
+      isolation: isolate;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 520px);
+      align-items: center;
+      gap: 52px;
+      min-height: 260px;
+      padding: 54px 8px 42px;
+      border-bottom: 1px solid rgba(29, 29, 31, .08);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      top: 26px;
+      right: 4%;
+      width: 240px;
+      height: 150px;
+      border-radius: 999px;
+      background: rgba(216, 177, 99, .13);
+      filter: blur(72px);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--gold-deep);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .18em;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #f3d58e, #a96d0b);
+      box-shadow: 0 0 0 5px rgba(201, 151, 52, .1);
+    }
+
+    h1 {
+      max-width: 840px;
+      margin: 13px 0 14px;
+      color: #161617;
+      font-size: clamp(36px, 4.1vw, 60px);
+      font-weight: 680;
+      line-height: 1.04;
+      letter-spacing: -.052em;
+      text-wrap: balance;
+    }
+
+    .hero p {
+      max-width: 820px;
+      color: #68686d;
+      font-size: 15px;
+      line-height: 1.75;
+    }
+
+    .hero p b {
+      color: #353537;
+      font-weight: 600;
+    }
+
+    .hero-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      justify-content: stretch;
+      padding: 18px;
+      border: 1px solid rgba(29, 29, 31, .075);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, .66);
+      box-shadow: 0 14px 40px rgba(54, 42, 14, .045);
+      backdrop-filter: saturate(180%) blur(22px);
+      -webkit-backdrop-filter: saturate(180%) blur(22px);
+    }
+
+    .hero-actions .btn:last-child { grid-column: 1 / -1; }
+
+    .btn {
+      min-height: 42px;
+      padding: 10px 15px;
+      color: #323234;
+      border: 1px solid rgba(29, 29, 31, .11);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .92);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, .025);
+      font-size: 13px;
+      font-weight: 580;
+      transition: transform .22s cubic-bezier(.2,.8,.2,1), border-color .22s ease, background .22s ease, box-shadow .22s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      color: #1d1d1f;
+      border-color: rgba(164, 110, 13, .32);
+      background: #fffdf8;
+      box-shadow: 0 7px 18px rgba(87, 61, 10, .08);
+    }
+
+    .btn:active { transform: scale(.98); }
+
+    .btn.primary {
+      color: #2f2106;
+      border-color: rgba(161, 105, 8, .18);
+      background: linear-gradient(135deg, #f2d58e 0%, #d7aa50 100%);
+      box-shadow: 0 8px 20px rgba(159, 107, 15, .15);
+    }
+
+    .btn.primary:hover {
+      border-color: rgba(139, 89, 4, .28);
+      background: linear-gradient(135deg, #f6dea2 0%, #ddb35d 100%);
+      box-shadow: 0 10px 24px rgba(159, 107, 15, .2);
+    }
+
+    .btn.danger { color: #7c4b4b; }
+    .btn.danger:hover {
+      color: #a72d2d;
+      border-color: rgba(201, 52, 52, .22);
+      background: #fff8f7;
+    }
+
+    .btn.small {
+      min-height: 34px;
+      padding: 7px 12px;
+      font-size: 12px;
+    }
+
+    .grid {
+      grid-template-columns: minmax(350px, 410px) minmax(0, 1fr);
+      gap: 24px;
+      padding-top: 28px;
+    }
+
+    .left,
+    .right { gap: 24px; }
+
+    .card {
+      border: 1px solid rgba(29, 29, 31, .075);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .92);
+      box-shadow: var(--shadow);
+      backdrop-filter: saturate(140%) blur(18px);
+      -webkit-backdrop-filter: saturate(140%) blur(18px);
+      transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(163, 112, 20, .13);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .right > .card:first-child {
+      border-color: rgba(175, 122, 25, .18);
+      background:
+        radial-gradient(circle at 94% 0, rgba(229, 197, 131, .2), transparent 19rem),
+        rgba(255, 255, 255, .96);
+    }
+
+    .card-head {
+      align-items: flex-start;
+      padding: 22px 24px 18px;
+      border-bottom: 1px solid rgba(29, 29, 31, .07);
+      background: rgba(255, 255, 255, .52);
+    }
+
+    .card-head h2 {
+      color: #232325;
+      font-size: 17px;
+      font-weight: 650;
+      letter-spacing: -.025em;
+    }
+
+    .card-head p {
+      max-width: 760px;
+      margin-top: 6px;
+      color: #7a7a80;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .card-body { padding: 22px 24px 24px; }
+
+    .section-title {
+      margin-bottom: 13px;
+      color: var(--gold-deep);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+    }
+
+    .field-grid { gap: 14px 12px; }
+    .field { gap: 7px; }
+
+    label {
+      color: #707075;
+      font-size: 11px;
+      font-weight: 520;
+      letter-spacing: .01em;
+    }
+
+    input,
+    select,
+    textarea {
+      min-height: 43px;
+      color: #1d1d1f;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: #f5f5f7;
+      padding: 10px 12px;
+      box-shadow: inset 0 0 0 1px rgba(29, 29, 31, .035);
+      transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+
+    input:hover,
+    select:hover,
+    textarea:hover { background: #f1f1f3; }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: rgba(179, 122, 19, .48);
+      background: #fffdf9;
+      box-shadow: 0 0 0 4px rgba(197, 145, 43, .11);
+    }
+
+    input[readonly] {
+      color: #89898e;
+      background: #fafafa;
+    }
+
+    input[type="checkbox"] {
+      min-height: auto;
+      width: 18px;
+      height: 18px;
+      accent-color: #b77e17;
+      box-shadow: none;
+    }
+
+    input[type="range"] {
+      min-height: 24px;
+      accent-color: #b77e17;
+    }
+
+    .inline-check {
+      min-height: 43px;
+      color: #525256;
+      font-size: 12px;
+    }
+
+    .hint { color: #85858a; }
+
+    .formula-strip {
+      margin-top: 16px;
+      padding: 14px 15px;
+      color: #72633f;
+      border: 1px solid rgba(182, 128, 27, .14);
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(255, 249, 233, .9), rgba(255, 253, 247, .9));
+      font-size: 11px;
+      line-height: 1.68;
+    }
+
+    .formula-strip b { color: #5e4314; }
+
+    .damage-parts {
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .damage-part {
+      padding: 12px;
+      border: 1px solid rgba(29, 29, 31, .065);
+      border-radius: 14px;
+      background: #fafafa;
+    }
+
+    .damage-part span { color: #86868b; }
+    .damage-part strong {
+      color: #28282a;
+      font-size: 17px;
+      font-weight: 650;
+      letter-spacing: -.025em;
+    }
+
+    .divider {
+      margin: 21px 0;
+      background: rgba(29, 29, 31, .07);
+    }
+
+    .summary-grid { gap: 11px; }
+
+    .metric {
+      min-height: 118px;
+      padding: 17px;
+      border: 1px solid rgba(29, 29, 31, .065);
+      border-radius: 18px;
+      background: rgba(249, 249, 250, .86);
+    }
+
+    .metric .k {
+      color: #7a7a80;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .035em;
+    }
+
+    .metric .v {
+      color: #202022;
+      font-size: clamp(24px, 2.3vw, 36px);
+      font-weight: 680;
+      letter-spacing: -.055em;
+    }
+
+    .metric .s { color: #88888d; }
+
+    .metric.accent {
+      border-color: rgba(171, 116, 15, .2);
+      background: linear-gradient(145deg, #fff9ec 0%, #fffdf8 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .8);
+    }
+
+    .metric.accent .v { color: #98650d; }
+    .metric.good { background: #f5faf7; }
+    .metric.good .v { color: var(--good); }
+    .metric.warn { background: #fffaf2; }
+    .metric.warn .v { color: var(--warn); }
+
+    .pipeline {
+      gap: 10px;
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(29, 29, 31, .07);
+    }
+
+    .phase {
+      min-height: 70px;
+      padding: 13px;
+      border: 1px solid rgba(29, 29, 31, .065);
+      border-radius: 15px;
+      background: rgba(250, 250, 250, .9);
+    }
+
+    .phase strong {
+      color: #3b3b3e;
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .phase span {
+      display: block;
+      margin-top: 4px;
+      color: #89898e;
+      line-height: 1.45;
+    }
+
+    .phase:not(:last-child)::after {
+      color: #b9872f;
+      font-weight: 700;
+    }
+
+    .toolbar { justify-content: flex-end; }
+    .stack-list { gap: 12px; }
+
+    .empty {
+      padding: 36px 24px;
+      color: #89898e;
+      border: 1px dashed rgba(151, 104, 17, .24);
+      border-radius: 18px;
+      background: #fffdf8;
+    }
+
+    .modifier-row {
+      grid-template-columns: 34px 112px 82px 70px 96px minmax(150px, 1fr) minmax(115px, .7fr) 34px;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid rgba(29, 29, 31, .07);
+      border-radius: 17px;
+      background: #fafafa;
+      transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+
+    .modifier-row:hover {
+      border-color: rgba(172, 117, 17, .18);
+      background: #fffdf9;
+      box-shadow: 0 8px 24px rgba(69, 49, 11, .045);
+    }
+
+    .modifier-row.dragging {
+      opacity: .5;
+      box-shadow: 0 16px 36px rgba(60, 42, 7, .12);
+    }
+
+    .drag {
+      color: #b6a984;
+      font-size: 16px;
+    }
+
+    .row-field input,
+    .row-field select {
+      min-height: 36px;
+      padding: 8px 9px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    .remove { border-radius: 50%; }
+    .row-error { color: var(--bad); }
+
+    .notice {
+      margin-top: 14px;
+      padding: 13px 15px;
+      border-radius: 14px;
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    .notice.info {
+      color: #66552f;
+      border: 1px solid rgba(181, 126, 24, .13);
+      background: #fffbf1;
+    }
+
+    .notice.warn {
+      color: #865509;
+      border: 1px solid rgba(184, 109, 8, .16);
+      background: #fff8eb;
+    }
+
+    code {
+      padding: 2px 5px;
+      color: #7a5007;
+      border-radius: 6px;
+      background: rgba(188, 132, 28, .09);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .table-wrap {
+      max-height: 520px;
+      scrollbar-color: #d8c7a2 transparent;
+    }
+
+    table { min-width: 820px; }
+
+    th,
+    td {
+      padding: 13px 14px;
+      color: #3d3d40;
+      border-bottom: 1px solid rgba(29, 29, 31, .065);
+      font-size: 11px;
+    }
+
+    th {
+      color: #7c7c81;
+      background: rgba(250, 250, 250, .96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    tbody tr { transition: background .16s ease; }
+    tbody tr:hover { background: #fffaf0; }
+    td.note { color: #7d7d82; }
+
+    .tag {
+      color: #62502c;
+      border-color: rgba(173, 119, 20, .14);
+      background: #fffaf0;
+    }
+
+    #statusTag {
+      padding: 6px 10px;
+      font-weight: 600;
+    }
+
+    .chart-wrap {
+      height: 300px;
+      padding: 10px 5px 3px;
+    }
+
+    .principles { gap: 9px; }
+
+    .principle {
+      padding: 13px 14px;
+      border-left: 2px solid #c2953e;
+      border-radius: 0 13px 13px 0;
+      background: #faf9f6;
+    }
+
+    .principle strong {
+      color: #3c3527;
+      font-weight: 620;
+    }
+
+    .principle span { color: #79746a; }
+
+    .codebox {
+      min-height: 150px;
+      color: #4d3a16;
+      background: #faf8f3;
+      font-size: 11px;
+      line-height: 1.72;
+    }
+
+    .footer {
+      max-width: 920px;
+      margin: 32px auto 0;
+      color: #8b8b90;
+      font-size: 11px;
+    }
+
+    @media (max-width: 1240px) {
+      .hero { grid-template-columns: minmax(0, 1fr) 410px; gap: 34px; }
+      .grid { grid-template-columns: 360px minmax(0, 1fr); }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pipeline { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+      .phase:nth-child(3)::after { display: none; }
+      .modifier-row { grid-template-columns: 30px 1fr 1fr 72px 88px 1.4fr 1fr 34px; }
+    }
+
+    @media (max-width: 1160px) {
+      .shell { width: min(100% - 36px, 1000px); }
+      .hero { grid-template-columns: 1fr; min-height: auto; padding-top: 44px; }
+      .hero-actions { max-width: 640px; }
+      .grid { grid-template-columns: 1fr; }
+      .left { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .left .card:last-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 820px) {
+      .shell {
+        width: min(100% - 20px, 720px);
+        padding-bottom: 52px;
+      }
+
+      .hero {
+        gap: 28px;
+        padding: 34px 4px 28px;
+      }
+
+      h1 { font-size: clamp(34px, 10vw, 48px); }
+      .hero p { font-size: 14px; }
+      .hero-actions { padding: 12px; border-radius: 18px; }
+
+      .grid {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding-top: 18px;
+      }
+
+      .left,
+      .right { display: contents; }
+
+      .right > .card:nth-child(1) { order: 1; }
+      .left > .card:nth-child(1) { order: 2; }
+      .left > .card:nth-child(2) { order: 3; }
+      .right > .card:nth-child(2) { order: 4; }
+      .right > .card:nth-child(3) { order: 5; }
+      .right > .card:nth-child(4) { order: 6; }
+      .right > .card:nth-child(5) { order: 7; }
+      .left > .card:nth-child(3) { order: 8; }
+
+      .card { border-radius: 20px; }
+      .card-head { padding: 19px 18px 15px; }
+      .card-body { padding: 18px; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pipeline { grid-template-columns: 1fr; }
+      .phase:nth-child(3)::after { display: block; }
+      .metric { min-height: 108px; padding: 15px; }
+      .modifier-row { background: #fafafa; }
+    }
+
+    @media (max-width: 560px) {
+      .hero-actions { grid-template-columns: 1fr; }
+      .hero-actions .btn { width: 100%; }
+      .field-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .metric { min-height: 100px; padding: 13px; border-radius: 15px; }
+      .metric .v { font-size: 25px; }
+      .damage-parts { grid-template-columns: 1fr; }
+      .card-head { flex-direction: column; }
+      .card-head > select { width: 100% !important; }
+      .toolbar { width: 100%; justify-content: flex-start; }
+      .toolbar .btn { flex: 1 1 auto; }
+      .modifier-row { grid-template-columns: 28px repeat(2, minmax(0,1fr)) 34px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">Blanc Balance Lab</div>
+        <h1>MC 伤害与叠加计算器</h1>
+        <p>模拟 Java 版近战原始伤害、护甲/韧性/抗性/保护/吸收，并按你设置的<b>伤害修正步骤</b>（时机、优先级、运算方式）顺序执行。</p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn primary" id="loadExample">载入叠加示例</button>
+        <button class="btn" id="loadCritExample">55.68 暴击示例</button>
+        <button class="btn" id="exportConfig">导出配置</button>
+        <button class="btn" id="importConfig">导入配置</button>
+        <input id="importFile" type="file" accept="application/json" hidden />
+        <button class="btn danger" id="resetAll">重置</button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <aside class="left">
+        <section class="card">
+          <div class="card-head">
+            <div><h2>① 原版攻击输入</h2><p>可直接输入原始伤害（raw damage），或按 Java 近战公式构造。</p></div>
+          </div>
+          <div class="card-body">
+            <div class="field full">
+              <label>输入模式</label>
+              <select id="inputMode">
+                <option value="melee">Java 近战构造</option>
+                <option value="raw">直接输入原始伤害（raw damage）</option>
+              </select>
+            </div>
+
+            <div id="meleeFields">
+              <div class="divider"></div>
+              <div class="field-grid">
+                <div class="field full">
+                  <label>主手装备</label>
+                  <select id="weaponPreset">
+                    <option value="custom">自定义</option>
+                    <option value="hand">空手</option>
+                    <option value="wood_sword">木剑</option>
+                    <option value="gold_sword">金剑</option>
+                    <option value="stone_sword">石剑</option>
+                    <option value="iron_sword">铁剑</option>
+                    <option value="diamond_sword">钻石剑</option>
+                    <option value="netherite_sword" selected>下界合金剑</option>
+                    <option value="wood_axe">木斧</option>
+                    <option value="gold_axe">金斧</option>
+                    <option value="stone_axe">石斧</option>
+                    <option value="iron_axe">铁斧</option>
+                    <option value="diamond_axe">钻石斧</option>
+                    <option value="netherite_axe">下界合金斧</option>
+                    <option value="trident">三叉戟（近战）</option>
+                    <option value="mace">重锤（普通近战，不含坠落加成）</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>装备总攻击伤害</label>
+                  <input id="attackDamage" type="number" step="0.1" value="8" />
+                </div>
+                <div class="field">
+                  <label>额外攻击属性（参与暴击）</label>
+                  <input id="attributeBonus" type="number" step="0.1" value="0" />
+                </div>
+                <div class="field">
+                  <label>力量等级（0=无，1=I）</label>
+                  <input id="strengthLevel" type="number" min="0" step="1" value="0" />
+                </div>
+                <div class="field">
+                  <label>暴击后固定加算（不参与暴击）</label>
+                  <input id="postCritBonus" type="number" step="0.1" value="0" />
+                </div>
+
+                <div class="field">
+                  <label>武器附魔</label>
+                  <select id="weaponEnchant">
+                    <option value="none">无</option>
+                    <option value="sharpness">锋利</option>
+                    <option value="smite">亡灵杀手</option>
+                    <option value="bane">节肢杀手</option>
+                    <option value="custom">自定义附魔伤害</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>附魔等级</label>
+                  <input id="enchantLevel" type="number" min="0" max="255" step="1" value="0" />
+                </div>
+                <div class="field">
+                  <label>目标生物类别</label>
+                  <select id="creatureType">
+                    <option value="other">普通 / 其他</option>
+                    <option value="undead">亡灵</option>
+                    <option value="arthropod">节肢</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>实际附魔额外伤害</label>
+                  <input id="enchantDamage" type="number" step="0.1" value="0" readonly />
+                </div>
+
+                <div class="field full">
+                  <label>攻击蓄力 <span id="cooldownLabel">100%</span></label>
+                  <input id="cooldown" type="range" min="0" max="1" step="0.01" value="1" />
+                </div>
+                <div class="inline-check"><input id="critical" type="checkbox" /><span>暴击（仅“攻击属性段”×1.5）</span></div>
+                <div class="field">
+                  <label>攻击间隔（秒）</label>
+                  <input id="attackInterval" type="number" min="0.05" step="0.025" value="0.625" />
+                </div>
+              </div>
+              <div class="formula-strip">
+                <div><b>原版构造：</b>攻击属性段 × 蓄力系数 → 暴击 ×1.5；附魔段只乘蓄力；随后再加“不参与暴击”的固定伤害。</div>
+                <div><b>55.68 → 65.28 示例：</b>19.2 + 36.48 = 55.68；暴击后 19.2 × 1.5 + 36.48 = 65.28。攻击修正的加法默认位于原版暴击之后，因此不会被暴击再乘一次。</div>
+              </div>
+              <div class="damage-parts">
+                <div class="damage-part"><span>攻击属性段</span><strong id="attributePartPreview">0</strong></div>
+                <div class="damage-part"><span>暴击额外增加</span><strong id="critPartPreview">0</strong></div>
+                <div class="damage-part"><span>附魔 / 后置加算</span><strong id="postPartPreview">0</strong></div>
+              </div>
+            </div>
+
+            <div id="rawFields" hidden>
+              <div class="divider"></div>
+              <div class="field-grid">
+                <div class="field full">
+                  <label>原始伤害（raw damage）</label>
+                  <input id="rawDamage" type="number" min="0" step="0.1" value="8" />
+                </div>
+                <div class="field full">
+                  <label>攻击间隔（秒）</label>
+                  <input id="rawAttackInterval" type="number" min="0.05" step="0.05" value="0.625" />
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="field-grid">
+              <div class="field">
+                <label>伤害事件</label>
+                <select id="eventType">
+                  <option value="melee">实体近战</option>
+                  <option value="projectile">投射物</option>
+                  <option value="environment">环境伤害（无攻击者）</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>格挡比例</label>
+                <input id="blockPercent" type="number" min="0" max="100" step="1" value="0" />
+              </div>
+              <div class="field">
+                <label>施法者当前生命</label>
+                <input id="casterHp" type="number" min="0" step="0.1" value="20" />
+              </div>
+              <div class="field">
+                <label>施法者最大生命</label>
+                <input id="casterMaxHp" type="number" min="0.1" step="0.1" value="20" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <div><h2>② 目标防御</h2><p>按照原版减伤链计算；可模拟绕过标签。</p></div>
+            <select id="armorPreset" style="width:auto">
+              <option value="custom">自定义</option>
+              <option value="none">无甲</option>
+              <option value="leather">全套皮革甲</option>
+              <option value="gold">全套金甲</option>
+              <option value="chain">全套锁链甲</option>
+              <option value="iron">全套铁甲</option>
+              <option value="diamond">全套钻石甲</option>
+              <option value="netherite">全套下界合金甲</option>
+            </select>
+          </div>
+          <div class="card-body">
+            <div class="field-grid">
+              <div class="field"><label>护甲值</label><input id="armor" type="number" min="0" step="0.1" value="20" /></div>
+              <div class="field"><label>护甲韧性</label><input id="toughness" type="number" min="0" step="0.1" value="12" /></div>
+              <div class="field"><label>有效保护 EPF（0–20）</label><input id="epf" type="number" min="0" max="20" step="1" value="0" /></div>
+              <div class="field"><label>抗性等级（0=无，1=I）</label><input id="resistance" type="number" min="0" step="1" value="0" /></div>
+              <div class="field"><label>当前生命</label><input id="targetHp" type="number" min="0" step="0.1" value="20" /></div>
+              <div class="field"><label>最大生命</label><input id="targetMaxHp" type="number" min="0.1" step="0.1" value="20" /></div>
+              <div class="field full"><label>吸收生命</label><input id="absorption" type="number" min="0" step="0.1" value="0" /></div>
+              <div class="inline-check"><input id="bypassArmor" type="checkbox" /><span>绕过护甲</span></div>
+              <div class="inline-check"><input id="bypassResistance" type="checkbox" /><span>绕过抗性</span></div>
+              <div class="inline-check"><input id="bypassMagic" type="checkbox" /><span>绕过保护附魔</span></div>
+              <div class="inline-check"><input id="ignoreAbsorption" type="checkbox" /><span>忽略吸收生命</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div><h2>数值策划检查表</h2><p>不是“算出一个数”，而是建立可验证的系统。</p></div></div>
+          <div class="card-body principles">
+            <div class="principle"><strong>先定义战斗目标</strong><span>明确击杀时间、容错次数、资源消耗、强弱区间，而不是先拍攻击力。</span></div>
+            <div class="principle"><strong>建立基准单位</strong><span>固定标准玩家、标准敌人、标准装备和标准回合时长，所有数值围绕基准比较。</span></div>
+            <div class="principle"><strong>拆分乘区与加区</strong><span>记录每个增益进入哪个阶段，避免多个倍率无意识指数膨胀。</span></div>
+            <div class="principle"><strong>做边界与敏感性测试</strong><span>测试 0、负数、极高护甲、低血、高血、叠满倍率、除零和封顶。</span></div>
+            <div class="principle"><strong>用实战数据校准</strong><span>理论模型负责缩小范围；最终通过命中率、走位损失、控制时间和玩家失误率回填。</span></div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="right">
+        <section class="card">
+          <div class="card-head">
+            <div><h2>实时结果</h2><p>每次输入都会立即重算。</p></div>
+            <div class="tag" id="statusTag">计算正常</div>
+          </div>
+          <div class="card-body">
+            <div class="summary-grid">
+              <div class="metric"><div class="k">原始攻击</div><div class="v" id="rawMetric">0</div><div class="s" id="rawHearts">0 心</div></div>
+              <div class="metric"><div class="k">纯原版最终伤害</div><div class="v" id="vanillaMetric">0</div><div class="s" id="vanillaReduction">减伤 0%</div></div>
+              <div class="metric accent"><div class="k">叠加后最终伤害</div><div class="v" id="finalMetric">0</div><div class="s" id="finalHearts">0 心</div></div>
+              <div class="metric good"><div class="k">实际扣除生命</div><div class="v" id="healthMetric">0</div><div class="s" id="absorbMetric">吸收 0</div></div>
+              <div class="metric"><div class="k">相对原版倍率</div><div class="v" id="ratioMetric">×0</div><div class="s" id="deltaMetric">变化 0%</div></div>
+              <div class="metric"><div class="k">预计击杀次数</div><div class="v" id="hitsMetric">∞</div><div class="s">按当前生命计算</div></div>
+              <div class="metric"><div class="k">预计 TTK</div><div class="v" id="ttkMetric">∞</div><div class="s">忽略无敌帧与命中损失</div></div>
+              <div class="metric warn"><div class="k">目标剩余生命</div><div class="v" id="remainingMetric">0</div><div class="s" id="lethalMetric">未击杀</div></div>
+            </div>
+
+            <div class="pipeline">
+              <div class="phase"><strong>伤害修正 · 减伤前</strong><span>最低优先级 · 原始伤害</span></div>
+              <div class="phase"><strong>攻击修正 · 减伤前</strong><span>优先级排序</span></div>
+              <div class="phase"><strong>原版减伤</strong><span>护甲 → 抗性 → EPF → 吸收</span></div>
+              <div class="phase"><strong>攻击修正 · 减伤后</strong><span>直接改写最终伤害</span></div>
+              <div class="phase"><strong>伤害修正 · 减伤后</strong><span>重新计算减伤</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <div><h2>③ 伤害修正步骤</h2><p>每个步骤的数值/公式支持 + - × ÷、括号和通用变量（targetHp、targetMaxHp、targetHpPercent、damage 等）。同一优先级内按 设为 → 加/减 → 乘/除 的顺序执行。</p></div>
+            <div class="toolbar">
+              <button class="btn small primary" id="addAttack">+ 攻击修正</button>
+              <button class="btn small" id="addDamage">+ 伤害修正</button>
+              <button class="btn small danger" id="clearModifiers">清空</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="modifierList" class="stack-list"></div>
+            <div class="notice info">减法按“加负数”、除法按“乘倒数”处理；这两种只是便捷写法，运算结果等价。</div>
+            <div class="notice warn" id="endWarning" hidden><b>注意：</b>伤害修正若在“减伤后”阶段修改最终伤害，会把这个结果当作新的原始伤害并重新计算护甲/抗性/保护，因此减伤可能再次生效。</div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div><h2>计算流水</h2><p>用于检查每个乘区和修正阶段究竟改变了什么。</p></div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>阶段</th><th>修正 / 公式</th><th>输入</th><th>输出</th><th>说明</th></tr></thead>
+              <tbody id="traceBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div><h2>护甲敏感性曲线</h2><p>固定其余参数，将护甲从 0 扫描到 30；虚线为原版，实线为当前叠加结果。</p></div></div>
+          <div class="card-body chart-wrap"><canvas id="armorChart"></canvas></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <div><h2>叠加公式预览</h2><p>按实际执行顺序展示每个修正步骤的数值变化，可直接复制分享。</p></div>
+            <button class="btn small" id="copyPreview">复制</button>
+          </div>
+          <div class="card-body"><textarea id="previewBox" class="codebox" readonly></textarea></div>
+        </section>
+      </section>
+    </div>
+
+    <div class="footer">计算仅作数值参考。未模拟伤害类型标签的全部特殊规则、无敌帧、击退、横扫、多目标、重锤坠落伤害、横扫附魔和其他附加效果。</div>
+  </main>
+
+  <template id="modifierTemplate">
+    <div class="modifier-row" draggable="true">
+      <div class="drag" title="拖动调整执行顺序">⋮⋮</div>
+      <div class="row-field mechanic"><label>类型</label><select data-key="mechanic"><option value="attack">攻击修正</option><option value="damage">伤害修正</option></select></div>
+      <div class="row-field mode"><label>时机</label><select data-key="mode"><option value="start">减伤前</option><option value="end">减伤后</option></select></div>
+      <div class="row-field step"><label>优先级</label><input data-key="step" type="number" min="0" max="1000" step="1" value="0" /></div>
+      <div class="row-field op"><label>运算</label><select data-key="operation"><option value="set">设为</option><option value="add" selected>加</option><option value="subtract">减</option><option value="multiply">乘 (×)</option><option value="divide">除 (÷)</option></select></div>
+      <div class="row-field amount"><label>数值 / 公式</label><input data-key="amount" value="0" placeholder="例如 2 - (targetHpPercent / 100)" /></div>
+      <div class="row-field cap"><label>伤害上限（可空）</label><input data-key="maxDamage" value="" placeholder="例如 targetMaxHp * 0.2" /></div>
+      <button class="btn small danger remove" type="button" title="删除">×</button>
+      <div class="row-error"></div>
+    </div>
+  </template>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const $ = (id) => document.getElementById(id);
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const finite = (v, fallback = 0) => Number.isFinite(v) ? v : fallback;
+    const n = (id, fallback = 0) => finite(parseFloat($(id).value), fallback);
+    const fmt = (v, d = 3) => {
+      if (!Number.isFinite(v)) return '∞';
+      const a = Math.abs(v);
+      if (a >= 1000000) return v.toExponential(3);
+      return Number(v.toFixed(d)).toLocaleString('zh-CN', { maximumFractionDigits: d });
+    };
+    const escapeHtml = (s) => String(s).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+    const state = {
+      modifiers: [],
+      nextId: 1,
+      dragId: null,
+      lastResult: null
+    };
+
+    const operationOrder = { set: 0, add: 1, subtract: 1, multiply: 2, divide: 2 };
+
+    function tokenizeExpression(source) {
+      const normalized = String(source ?? '').trim()
+        .replace(/[×·]/g, '*')
+        .replace(/÷/g, '/')
+        .replace(/<\s*([a-zA-Z][\w.]*)\s*>/g, (_, name) => name.replace(/\./g, '_'));
+      if (!normalized) return [{ type: 'number', value: 0 }, { type: 'eof' }];
+
+      const tokens = [];
+      let i = 0;
+      while (i < normalized.length) {
+        const ch = normalized[i];
+        if (/\s/.test(ch)) { i++; continue; }
+        if (/[()+\-*/]/.test(ch)) { tokens.push({ type: ch }); i++; continue; }
+        if (/[0-9.]/.test(ch)) {
+          const start = i;
+          let dots = 0;
+          while (i < normalized.length && /[0-9.eE+\-]/.test(normalized[i])) {
+            const current = normalized[i];
+            if (current === '.') dots++;
+            if ((current === '+' || current === '-') && i > start && !/[eE]/.test(normalized[i - 1])) break;
+            i++;
+          }
+          const raw = normalized.slice(start, i);
+          const value = Number(raw);
+          if (!Number.isFinite(value) || dots > 1) throw new Error(`无效数字：${raw}`);
+          tokens.push({ type: 'number', value });
+          continue;
+        }
+        if (/[a-zA-Z_]/.test(ch)) {
+          const start = i;
+          while (i < normalized.length && /[a-zA-Z0-9_]/.test(normalized[i])) i++;
+          tokens.push({ type: 'identifier', value: normalized.slice(start, i) });
+          continue;
+        }
+        throw new Error(`不支持的字符：${ch}`);
+      }
+      tokens.push({ type: 'eof' });
+      return tokens;
+    }
+
+    function evaluateExpression(source, context) {
+      const tokens = tokenizeExpression(source);
+      let p = 0;
+      const peek = () => tokens[p];
+      const take = (type) => {
+        const token = tokens[p];
+        if (token.type !== type) throw new Error(`预期 ${type}，实际 ${token.type}`);
+        p++;
+        return token;
+      };
+      const parsePrimary = () => {
+        const token = peek();
+        if (token.type === 'number') { p++; return token.value; }
+        if (token.type === 'identifier') {
+          p++;
+          if (!(token.value in context)) throw new Error(`未知变量：${token.value.replace(/_/g, '.')}`);
+          return finite(Number(context[token.value]), 0);
+        }
+        if (token.type === '(') {
+          p++;
+          const value = parseAddSub();
+          take(')');
+          return value;
+        }
+        throw new Error(`表达式缺少数值`);
+      };
+      const parseUnary = () => {
+        if (peek().type === '+') { p++; return parseUnary(); }
+        if (peek().type === '-') { p++; return -parseUnary(); }
+        return parsePrimary();
+      };
+      const parseMulDiv = () => {
+        let value = parseUnary();
+        while (peek().type === '*' || peek().type === '/') {
+          const op = tokens[p++].type;
+          const rhs = parseUnary();
+          if (op === '/' && rhs === 0) throw new Error('表达式发生除以 0');
+          value = op === '*' ? value * rhs : value / rhs;
+        }
+        return value;
+      };
+      const parseAddSub = () => {
+        let value = parseMulDiv();
+        while (peek().type === '+' || peek().type === '-') {
+          const op = tokens[p++].type;
+          const rhs = parseMulDiv();
+          value = op === '+' ? value + rhs : value - rhs;
+        }
+        return value;
+      };
+      const result = parseAddSub();
+      if (peek().type !== 'eof') throw new Error('表达式尾部存在多余内容');
+      if (!Number.isFinite(result)) throw new Error('表达式结果不是有限数值');
+      return result;
+    }
+
+    const weaponPresets = {
+      hand: { damage: 1, interval: 0.25 },
+      wood_sword: { damage: 4, interval: 0.625 },
+      gold_sword: { damage: 4, interval: 0.625 },
+      stone_sword: { damage: 5, interval: 0.625 },
+      iron_sword: { damage: 6, interval: 0.625 },
+      diamond_sword: { damage: 7, interval: 0.625 },
+      netherite_sword: { damage: 8, interval: 0.625 },
+      wood_axe: { damage: 7, interval: 1.25 },
+      gold_axe: { damage: 7, interval: 1.0 },
+      stone_axe: { damage: 9, interval: 1.25 },
+      iron_axe: { damage: 9, interval: 1.111111 },
+      diamond_axe: { damage: 9, interval: 1.0 },
+      netherite_axe: { damage: 10, interval: 1.0 },
+      trident: { damage: 9, interval: 0.909091 },
+      mace: { damage: 6, interval: 0.625 }
+    };
+
+    function calculateEnchantDamage() {
+      const type = $('weaponEnchant').value;
+      const level = Math.max(0, Math.floor(n('enchantLevel', 0)));
+      const creature = $('creatureType').value;
+      if (type === 'custom') return Math.max(0, n('enchantDamage', 0));
+      if (level <= 0 || type === 'none') return 0;
+      if (type === 'sharpness') return .5 * level + .5;
+      if (type === 'smite') return creature === 'undead' ? 2.5 * level : 0;
+      if (type === 'bane') return creature === 'arthropod' ? 2.5 * level : 0;
+      return 0;
+    }
+
+    function getInputs(overrideArmor = null) {
+      const targetMaxHp = Math.max(.0001, n('targetMaxHp', 20));
+      const targetHp = Math.max(0, n('targetHp', 20));
+      const cooldown = clamp(n('cooldown', 1), 0, 1);
+      let raw;
+      let attackBreakdown = null;
+      if ($('inputMode').value === 'raw') {
+        raw = Math.max(0, n('rawDamage', 0));
+      } else {
+        const equipmentDamage = Math.max(0, n('attackDamage', 0));
+        const attributeBonus = n('attributeBonus', 0);
+        const strengthBonus = Math.max(0, Math.floor(n('strengthLevel', 0))) * 3;
+        const attributeDamage = Math.max(0, equipmentDamage + attributeBonus + strengthBonus);
+        const cooldownFactor = 0.2 + 0.8 * cooldown * cooldown;
+        const scaledAttribute = attributeDamage * cooldownFactor;
+        const criticalBonus = $('critical').checked ? scaledAttribute * 0.5 : 0;
+        const enchantRaw = calculateEnchantDamage();
+        const enchantScaled = enchantRaw * cooldown;
+        const postCritBonus = n('postCritBonus', 0);
+        raw = scaledAttribute + criticalBonus + enchantScaled + postCritBonus;
+        attackBreakdown = {
+          equipmentDamage,
+          attributeBonus,
+          strengthBonus,
+          attributeDamage,
+          cooldown,
+          cooldownFactor,
+          scaledAttribute,
+          criticalBonus,
+          enchantRaw,
+          enchantScaled,
+          postCritBonus,
+          total: raw
+        };
+      }
+      return {
+        raw: sanitizeDamage(raw),
+        attackBreakdown,
+        attackInterval: Math.max(.01, $('inputMode').value === 'raw' ? n('rawAttackInterval', .625) : n('attackInterval', .625)),
+        eventType: $('eventType').value,
+        blockPercent: clamp(n('blockPercent', 0), 0, 100),
+        armor: overrideArmor === null ? Math.max(0, n('armor', 0)) : overrideArmor,
+        toughness: Math.max(0, n('toughness', 0)),
+        epf: clamp(n('epf', 0), 0, 20),
+        resistance: Math.max(0, Math.floor(n('resistance', 0))),
+        targetHp,
+        targetMaxHp,
+        absorption: Math.max(0, n('absorption', 0)),
+        bypassArmor: $('bypassArmor').checked,
+        bypassResistance: $('bypassResistance').checked,
+        bypassMagic: $('bypassMagic').checked,
+        ignoreAbsorption: $('ignoreAbsorption').checked,
+        casterHp: Math.max(0, n('casterHp', 20)),
+        casterMaxHp: Math.max(.0001, n('casterMaxHp', 20))
+      };
+    }
+
+    function contextFor(inputs, current, raw, finalDamage, step = 0) {
+      return {
+        targetHp: inputs.targetHp,
+        targetMaxHp: inputs.targetMaxHp,
+        targetHpPercent: inputs.targetMaxHp > 0 ? inputs.targetHp / inputs.targetMaxHp * 100 : 0,
+        casterHp: inputs.casterHp,
+        casterMaxHp: inputs.casterMaxHp,
+        casterHpPercent: inputs.casterMaxHp > 0 ? inputs.casterHp / inputs.casterMaxHp * 100 : 0,
+        target_hp: inputs.targetHp,
+        target_mhp: inputs.targetMaxHp,
+        target_php: inputs.targetMaxHp > 0 ? inputs.targetHp / inputs.targetMaxHp * 100 : 0,
+        caster_hp: inputs.casterHp,
+        caster_mhp: inputs.casterMaxHp,
+        caster_php: inputs.casterMaxHp > 0 ? inputs.casterHp / inputs.casterMaxHp * 100 : 0,
+        base: current,
+        damage: current,
+        value: current,
+        raw,
+        final: finalDamage,
+        armor: inputs.armor,
+        toughness: inputs.toughness,
+        epf: inputs.epf,
+        resistance: inputs.resistance,
+        step
+      };
+    }
+
+    function applyOperation(value, operation, amount) {
+      switch (operation) {
+        case 'set': return amount;
+        case 'add': return value + amount;
+        case 'subtract': return value - amount;
+        case 'multiply': return value * amount;
+        case 'divide':
+          if (amount === 0) throw new Error('DIV 的 amount 不能为 0');
+          return value / amount;
+        default: return value;
+      }
+    }
+
+    function sanitizeDamage(value) {
+      if (!Number.isFinite(value)) return value > 0 ? 1_000_000_000 : 0;
+      return clamp(value, 0, 1_000_000_000);
+    }
+
+    function vanillaReduce(rawDamage, inputs, includeAbsorption = true) {
+      let value = Math.max(0, rawDamage);
+      const parts = [];
+
+      if (inputs.blockPercent > 0) {
+        const before = value;
+        value *= (1 - inputs.blockPercent / 100);
+        parts.push({ name: '格挡', before, after: value, detail: `${fmt(inputs.blockPercent, 1)}%` });
+      }
+
+      if (!inputs.bypassArmor) {
+        const before = value;
+        const armorFactor = Math.min(20, Math.max(inputs.armor / 5, inputs.armor - value / (2 + inputs.toughness / 4)));
+        value *= 1 - armorFactor / 25;
+        parts.push({ name: '护甲/韧性', before, after: value, detail: `有效护甲 ${fmt(armorFactor)}` });
+      }
+
+      if (!inputs.bypassResistance && inputs.resistance > 0) {
+        const before = value;
+        value *= Math.max(0, 1 - 0.2 * inputs.resistance);
+        parts.push({ name: '抗性', before, after: value, detail: `${inputs.resistance} 级` });
+      }
+
+      if (!inputs.bypassMagic && inputs.epf > 0) {
+        const before = value;
+        value *= 1 - clamp(inputs.epf, 0, 20) / 25;
+        parts.push({ name: '保护 EPF', before, after: value, detail: `${fmt(inputs.epf, 0)}/20` });
+      }
+
+      const beforeAbsorption = value;
+      let absorbed = 0;
+      if (includeAbsorption && !inputs.ignoreAbsorption && inputs.absorption > 0) {
+        absorbed = Math.min(inputs.absorption, value);
+        value -= absorbed;
+        parts.push({ name: '吸收生命', before: beforeAbsorption, after: value, detail: `吸收 ${fmt(absorbed)}` });
+      }
+      return { final: sanitizeDamage(value), beforeAbsorption: sanitizeDamage(beforeAbsorption), absorbed, parts };
+    }
+
+    function appliesToEvent(modifier, inputs) {
+      if (modifier.mechanic === 'attack') return inputs.eventType === 'melee' || inputs.eventType === 'projectile';
+      if (!modifier.onlyByEntity) return true;
+      return inputs.eventType === 'melee' || inputs.eventType === 'projectile';
+    }
+
+    function sortedAttack(modifiers, mode) {
+      return modifiers
+        .filter(m => m.mechanic === 'attack' && m.mode === mode)
+        .slice()
+        .sort((a, b) => (clamp(parseInt(a.step) || 0, 0, 1000) - clamp(parseInt(b.step) || 0, 0, 1000)) ||
+          (operationOrder[a.operation] - operationOrder[b.operation]) || (a.seq - b.seq));
+    }
+
+    function runModifier(modifier, current, inputs, raw, finalDamage) {
+      const step = clamp(parseInt(modifier.step) || 0, 0, 1000);
+      const ctx = contextFor(inputs, current, raw, finalDamage, step);
+      const amount = evaluateExpression(modifier.amount || '0', ctx);
+      let output = applyOperation(current, modifier.operation, amount);
+      let cap = null;
+      if (String(modifier.maxDamage || '').trim()) {
+        cap = Math.max(0, evaluateExpression(modifier.maxDamage, ctx));
+        output = Math.min(output, cap);
+      }
+      return { output: sanitizeDamage(output), amount, cap };
+    }
+
+    function simulate(inputs, modifiers, collectTrace = true) {
+      const trace = [];
+      const steps = [];
+      const errors = new Map();
+      let index = 1;
+      const push = (phase, formula, before, after, note) => {
+        if (collectTrace) trace.push({ index: index++, phase, formula, before, after, note });
+      };
+      const pushStep = (phase, m, before, after, r, note) => {
+        push(phase, describeModifier(m, r.amount), before, after, capNote(r.cap, note));
+        steps.push({ label: m.label, phase, operation: m.operation, symbol: opSymbol(m.operation), amount: r.amount, before, after, cap: r.cap });
+      };
+
+      let raw = sanitizeDamage(inputs.raw);
+      if ($('inputMode').value === 'raw' || !inputs.attackBreakdown) {
+        push('原版攻击构造', '直接使用输入值', 0, raw, '以此作为原始伤害的起点');
+      } else {
+        const b = inputs.attackBreakdown;
+        push('原版攻击构造', '装备 + 属性 + 力量', 0, b.attributeDamage,
+          `装备 ${fmt(b.equipmentDamage)}；属性加成 ${fmt(b.attributeBonus)}；力量 ${fmt(b.strengthBonus)}`);
+        push('原版攻击构造', `蓄力系数 ${fmt(b.cooldownFactor, 4)}`, b.attributeDamage, b.scaledAttribute,
+          `0.2 + 0.8 × ${fmt(b.cooldown, 2)}²`);
+        if (b.criticalBonus > 0) {
+          push('原版暴击', '攻击属性段额外 +50%', b.scaledAttribute, b.scaledAttribute + b.criticalBonus,
+            `只增加 ${fmt(b.criticalBonus)}；附魔和后置加算不进入此乘区`);
+        }
+        if (b.enchantScaled !== 0) {
+          push('原版附魔', '附魔伤害 × 蓄力', b.scaledAttribute + b.criticalBonus,
+            b.scaledAttribute + b.criticalBonus + b.enchantScaled,
+            `${fmt(b.enchantRaw)} × ${fmt(b.cooldown, 2)} = ${fmt(b.enchantScaled)}`);
+        }
+        if (b.postCritBonus !== 0) {
+          push('后置固定加算', '不参与暴击', b.scaledAttribute + b.criticalBonus + b.enchantScaled, raw,
+            `${b.postCritBonus >= 0 ? '+' : ''}${fmt(b.postCritBonus)}`);
+        }
+        if (b.enchantScaled === 0 && b.postCritBonus === 0 && b.criticalBonus === 0) {
+          push('原版攻击构造', '最终原始伤害', b.scaledAttribute, raw, '无暴击、附魔或后置加算');
+        }
+      }
+
+      // 伤害修正 · 减伤前：同一阶段按添加顺序执行。
+      for (const m of modifiers.filter(m => m.mechanic === 'damage' && m.mode === 'start').sort((a,b) => a.seq - b.seq)) {
+        if (!appliesToEvent(m, inputs)) { push('伤害修正 · 减伤前', m.label, raw, raw, '启用了“仅实体伤害”，且当前是环境伤害，跳过'); continue; }
+        const before = raw;
+        try {
+          const r = runModifier(m, raw, inputs, raw, vanillaReduce(raw, inputs).final);
+          raw = r.output;
+          pushStep('伤害修正 · 减伤前', m, before, raw, r, '结果成为新的原始伤害');
+        } catch (e) { errors.set(m.id, e.message); push('伤害修正 · 减伤前 · 错误', m.label, before, before, e.message); }
+      }
+
+      // 攻击修正 · 减伤前：按优先级与运算顺序执行。
+      let attackStart = raw;
+      for (const m of sortedAttack(modifiers, 'start')) {
+        if (!appliesToEvent(m, inputs)) { push('攻击修正 · 减伤前', m.label, attackStart, attackStart, '环境伤害无攻击者，攻击修正不生效，跳过'); continue; }
+        const before = attackStart;
+        try {
+          const r = runModifier(m, attackStart, inputs, raw, vanillaReduce(raw, inputs).final);
+          attackStart = r.output;
+          pushStep(`攻击修正 · 减伤前 · 优先级 ${clamp(parseInt(m.step)||0,0,1000)}`, m, before, attackStart, r, '该步骤结束后作为新的原始伤害');
+        } catch (e) { errors.set(m.id, e.message); push('攻击修正 · 减伤前 · 错误', m.label, before, before, e.message); }
+      }
+      raw = attackStart;
+
+      const vanillaAtCurrentRaw = vanillaReduce(raw, inputs, true);
+      let finalDamage = vanillaAtCurrentRaw.final;
+      for (const part of vanillaAtCurrentRaw.parts) push('原版减伤', part.name, part.before, part.after, part.detail);
+      if (!vanillaAtCurrentRaw.parts.length) push('原版减伤', '无减伤项', raw, finalDamage, '原始伤害 = 最终伤害');
+
+      // 攻击修正 · 减伤后：从最终伤害出发，直接改写最终伤害。
+      let attackEnd = finalDamage;
+      for (const m of sortedAttack(modifiers, 'end')) {
+        if (!appliesToEvent(m, inputs)) { push('攻击修正 · 减伤后', m.label, attackEnd, attackEnd, '环境伤害无攻击者，攻击修正不生效，跳过'); continue; }
+        const before = attackEnd;
+        try {
+          const r = runModifier(m, attackEnd, inputs, raw, attackEnd);
+          attackEnd = r.output;
+          pushStep(`攻击修正 · 减伤后 · 优先级 ${clamp(parseInt(m.step)||0,0,1000)}`, m, before, attackEnd, r, '直接改写最终伤害');
+        } catch (e) { errors.set(m.id, e.message); push('攻击修正 · 减伤后 · 错误', m.label, before, before, e.message); }
+      }
+      finalDamage = attackEnd;
+
+      // 伤害修正 · 减伤后：把输出当作新的原始伤害并重新计算减伤。
+      for (const m of modifiers.filter(m => m.mechanic === 'damage' && m.mode === 'end').sort((a,b) => a.seq - b.seq)) {
+        if (!appliesToEvent(m, inputs)) { push('伤害修正 · 减伤后', m.label, finalDamage, finalDamage, '启用了“仅实体伤害”，且当前是环境伤害，跳过'); continue; }
+        const beforeFinal = finalDamage;
+        try {
+          const r = runModifier(m, finalDamage, inputs, raw, finalDamage);
+          const newRaw = r.output;
+          pushStep('伤害修正 · 减伤后', m, beforeFinal, newRaw, r, '该输出成为新的原始伤害，并重新计算减伤');
+          raw = newRaw;
+          const recalculated = vanillaReduce(raw, inputs, true);
+          finalDamage = recalculated.final;
+          for (const part of recalculated.parts) push('原版重新计算', part.name, part.before, part.after, part.detail);
+          if (!recalculated.parts.length) push('原版重新计算', '无减伤项', raw, finalDamage, '新原始伤害 = 最终伤害');
+        } catch (e) { errors.set(m.id, e.message); push('伤害修正 · 减伤后 · 错误', m.label, beforeFinal, beforeFinal, e.message); }
+      }
+
+      const baseline = vanillaReduce(inputs.raw, inputs, true);
+      const healthDamage = finalDamage;
+      const remaining = Math.max(0, inputs.targetHp - healthDamage);
+      const hits = healthDamage > 0 ? Math.ceil(inputs.targetHp / healthDamage) : Infinity;
+      const ttk = Number.isFinite(hits) ? Math.max(0, hits - 1) * inputs.attackInterval : Infinity;
+      return {
+        initialRaw: inputs.raw,
+        finalRaw: raw,
+        vanillaFinal: baseline.final,
+        vanillaBeforeAbsorption: baseline.beforeAbsorption,
+        vanillaAbsorbed: baseline.absorbed,
+        finalDamage,
+        healthDamage,
+        remaining,
+        hits,
+        ttk,
+        steps,
+        trace,
+        errors
+      };
+    }
+
+    function describeModifier(m, amount) {
+      return `${m.mechanic === 'attack' ? '攻击修正' : '伤害修正'} ${opSymbol(m.operation)} ${fmt(amount)}`;
+    }
+    function opSymbol(operation) {
+      return ({ set: '=', add: '+', subtract: '−', multiply: '×', divide: '÷' })[operation] || '?';
+    }
+    function capNote(cap, tail) { return `${cap === null ? '' : `上限 ${fmt(cap)}；`}${tail}`; }
+
+    function newModifier(mechanic = 'attack', overrides = {}) {
+      const id = state.nextId++;
+      return {
+        id,
+        seq: id,
+        label: `${mechanic === 'attack' ? '攻击修正' : '伤害修正'} #${id}`,
+        mechanic,
+        mode: 'start',
+        step: 0,
+        operation: 'add',
+        amount: '0',
+        maxDamage: '',
+        onlyByEntity: true,
+        ...overrides
+      };
+    }
+
+    function renderModifiers() {
+      const list = $('modifierList');
+      list.innerHTML = '';
+      if (!state.modifiers.length) {
+        list.innerHTML = '<div class="empty">尚未添加修正步骤。<br>先添加 攻击修正 或 伤害修正，再填写数值/公式、运算方式和时机。</div>';
+        return;
+      }
+      const tpl = $('modifierTemplate');
+      for (const m of state.modifiers) {
+        const row = tpl.content.firstElementChild.cloneNode(true);
+        row.dataset.id = m.id;
+        for (const el of row.querySelectorAll('[data-key]')) el.value = m[el.dataset.key];
+        const stepWrap = row.querySelector('.step');
+        if (m.mechanic === 'damage') {
+          stepWrap.classList.remove('step-disabled');
+          stepWrap.innerHTML = `<label>仅实体伤害</label><label class="inline-check" style="min-height:34px"><input data-key="onlyByEntity" type="checkbox" ${m.onlyByEntity ? 'checked' : ''}/><span>启用</span></label>`;
+        }
+        const error = row.querySelector('.row-error');
+        const message = state.lastResult?.errors?.get(m.id);
+        if (message) { error.textContent = message; error.classList.add('show'); }
+
+        row.addEventListener('input', (event) => {
+          const key = event.target.dataset.key;
+          if (!key) return;
+          m[key] = event.target.type === 'checkbox'
+            ? event.target.checked
+            : (key === 'step' ? clamp(parseInt(event.target.value) || 0, 0, 1000) : event.target.value);
+          if (key === 'mechanic') {
+            m.label = `${m.mechanic === 'attack' ? '攻击修正' : '伤害修正'} #${m.id}`;
+            renderModifiers();
+          }
+          calculate();
+        });
+        row.querySelector('.remove').addEventListener('click', () => {
+          state.modifiers = state.modifiers.filter(x => x.id !== m.id);
+          renderModifiers(); calculate();
+        });
+        row.addEventListener('dragstart', () => { state.dragId = m.id; row.classList.add('dragging'); });
+        row.addEventListener('dragend', () => { state.dragId = null; row.classList.remove('dragging'); });
+        row.addEventListener('dragover', (e) => e.preventDefault());
+        row.addEventListener('drop', (e) => {
+          e.preventDefault();
+          if (state.dragId === null || state.dragId === m.id) return;
+          const from = state.modifiers.findIndex(x => x.id === state.dragId);
+          const to = state.modifiers.findIndex(x => x.id === m.id);
+          const [moved] = state.modifiers.splice(from, 1);
+          state.modifiers.splice(to, 0, moved);
+          state.modifiers.forEach((x, i) => x.seq = i + 1);
+          renderModifiers(); calculate();
+        });
+        list.appendChild(row);
+      }
+    }
+
+    function updateResult(result, inputs) {
+      $('rawMetric').textContent = fmt(result.initialRaw);
+      $('rawHearts').textContent = `${fmt(result.initialRaw / 2)} 心`;
+      $('vanillaMetric').textContent = fmt(result.vanillaFinal);
+      $('vanillaReduction').textContent = `总减伤 ${fmt(result.initialRaw > 0 ? (1 - result.vanillaFinal / result.initialRaw) * 100 : 0, 1)}%`;
+      $('finalMetric').textContent = fmt(result.finalDamage);
+      $('finalHearts').textContent = `${fmt(result.finalDamage / 2)} 心`;
+      $('healthMetric').textContent = fmt(result.healthDamage);
+      $('absorbMetric').textContent = `目标吸收值 ${fmt(inputs.absorption)}`;
+      const ratio = result.vanillaFinal > 0 ? result.finalDamage / result.vanillaFinal : (result.finalDamage > 0 ? Infinity : 0);
+      $('ratioMetric').textContent = Number.isFinite(ratio) ? `×${fmt(ratio)}` : '∞';
+      $('deltaMetric').textContent = Number.isFinite(ratio) ? `相对原版 ${ratio >= 1 ? '+' : ''}${fmt((ratio - 1) * 100, 1)}%` : '原版为 0';
+      $('hitsMetric').textContent = Number.isFinite(result.hits) ? result.hits : '∞';
+      $('ttkMetric').textContent = Number.isFinite(result.ttk) ? `${fmt(result.ttk, 2)}s` : '∞';
+      $('remainingMetric').textContent = fmt(result.remaining);
+      $('lethalMetric').textContent = result.remaining <= 0 ? '本次伤害致死' : `剩余 ${fmt(result.remaining / 2)} 心`;
+      $('statusTag').textContent = result.errors.size ? `${result.errors.size} 个表达式错误` : '计算正常';
+      $('statusTag').style.color = result.errors.size ? 'var(--bad)' : 'var(--good)';
+      $('endWarning').hidden = !state.modifiers.some(m => m.mechanic === 'damage' && m.mode === 'end');
+    }
+
+    function renderTrace(trace) {
+      $('traceBody').innerHTML = trace.map(t => `<tr>
+        <td class="num">${t.index}</td>
+        <td><span class="tag">${escapeHtml(t.phase)}</span></td>
+        <td>${escapeHtml(t.formula)}</td>
+        <td class="num">${fmt(t.before)}</td>
+        <td class="num">${fmt(t.after)}</td>
+        <td class="note">${escapeHtml(t.note)}</td>
+      </tr>`).join('');
+    }
+
+    function buildPreview(steps) {
+      if (!steps.length) return '尚未添加修正步骤';
+      return steps.map((s, i) => {
+        const opText = s.operation === 'set' ? `设为 ${fmt(s.amount)}` : `${fmt(s.before)} ${s.symbol} ${fmt(s.amount)}`;
+        const capText = s.cap === null ? '' : `（上限 ${fmt(s.cap)}）`;
+        return `${i + 1}. ${s.label} · ${s.phase}：${opText} → ${fmt(s.after)}${capText}`;
+      }).join('\n');
+    }
+
+    function drawChart(inputs) {
+      const canvas = $('armorChart');
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      const w = rect.width, h = rect.height;
+      const pad = { l: 44, r: 18, t: 18, b: 32 };
+      const pw = w - pad.l - pad.r, ph = h - pad.t - pad.b;
+      const points = [];
+      let maxY = 1;
+      for (let armor = 0; armor <= 30; armor += .5) {
+        const local = { ...inputs, armor };
+        const r = simulate(local, state.modifiers, false);
+        points.push({ armor, vanilla: r.vanillaFinal, final: r.finalDamage });
+        maxY = Math.max(maxY, r.vanillaFinal, r.finalDamage);
+      }
+      maxY *= 1.08;
+      ctx.clearRect(0,0,w,h);
+      ctx.font = '11px system-ui';
+      ctx.strokeStyle = 'rgba(29,29,31,.075)';
+      ctx.fillStyle = '#86868b';
+      ctx.lineWidth = 1;
+      for (let i=0;i<=4;i++) {
+        const y = pad.t + ph * i / 4;
+        ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+        const value = maxY * (1 - i/4);
+        ctx.fillText(fmt(value,1), 4, y+4);
+      }
+      for (let armor=0; armor<=30; armor+=5) {
+        const x = pad.l + pw * armor/30;
+        ctx.beginPath(); ctx.moveTo(x,pad.t); ctx.lineTo(x,h-pad.b); ctx.stroke();
+        ctx.fillText(String(armor), x-6, h-10);
+      }
+      const path = (key, color, dashed) => {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.setLineDash(dashed ? [6,5] : []);
+        ctx.beginPath();
+        points.forEach((p,i) => {
+          const x = pad.l + pw * p.armor/30;
+          const y = pad.t + ph * (1 - p[key]/maxY);
+          i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+        });
+        ctx.stroke(); ctx.restore();
+      };
+      path('vanilla', 'rgba(118,118,124,.72)', true);
+      path('final', 'rgba(180,123,22,1)', false);
+      ctx.fillStyle = '#77777c'; ctx.fillText('原版', w-118, 15);
+      ctx.strokeStyle = 'rgba(118,118,124,.72)'; ctx.setLineDash([5,4]); ctx.beginPath(); ctx.moveTo(w-152,11); ctx.lineTo(w-124,11); ctx.stroke();
+      ctx.fillStyle = '#9b680d'; ctx.fillText('叠加后', w-54, 15);
+      ctx.strokeStyle = 'rgba(180,123,22,1)'; ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(w-91,11); ctx.lineTo(w-61,11); ctx.stroke();
+    }
+
+    function calculate() {
+      $('meleeFields').hidden = $('inputMode').value !== 'melee';
+      $('rawFields').hidden = $('inputMode').value !== 'raw';
+      $('cooldownLabel').textContent = `${Math.round(n('cooldown', 1) * 100)}%`;
+      const customEnchant = $('weaponEnchant').value === 'custom';
+      $('enchantDamage').readOnly = !customEnchant;
+      if (!customEnchant) $('enchantDamage').value = fmt(calculateEnchantDamage(), 3).replace(/,/g, '');
+      const inputs = getInputs();
+      const b = inputs.attackBreakdown;
+      $('attributePartPreview').textContent = b ? fmt(b.scaledAttribute) : '—';
+      $('critPartPreview').textContent = b ? `+${fmt(b.criticalBonus)}` : '—';
+      $('postPartPreview').textContent = b ? fmt(b.enchantScaled + b.postCritBonus) : '—';
+      const result = simulate(inputs, state.modifiers, true);
+      state.lastResult = result;
+      updateResult(result, inputs);
+      renderTrace(result.trace);
+      $('previewBox').value = buildPreview(result.steps);
+      for (const row of document.querySelectorAll('.modifier-row')) {
+        const message = result.errors.get(Number(row.dataset.id));
+        const box = row.querySelector('.row-error');
+        box.textContent = message || '';
+        box.classList.toggle('show', !!message);
+      }
+      drawChart(inputs);
+    }
+
+    function safeStorageGet(key) { try { return window.localStorage.getItem(key); } catch (_) { return null; } }
+    function safeStorageSet(key, value) { try { window.localStorage.setItem(key, value); } catch (_) {} }
+    function safeStorageRemove(key) { try { window.localStorage.removeItem(key); } catch (_) {} }
+
+    function exportState() {
+      const inputs = {};
+      document.querySelectorAll('input[id],select[id]').forEach(el => {
+        if (['importFile'].includes(el.id)) return;
+        inputs[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+      });
+      return { version: 2, inputs, modifiers: state.modifiers };
+    }
+
+    function importState(data) {
+      if (!data || typeof data !== 'object') throw new Error('JSON 结构无效');
+      if (data.inputs) {
+        for (const [id, value] of Object.entries(data.inputs)) {
+          const el = $(id); if (!el) continue;
+          if (el.type === 'checkbox') el.checked = !!value; else el.value = value;
+        }
+      }
+      if (Array.isArray(data.modifiers)) {
+        state.modifiers = data.modifiers.map((m, i) => {
+          const merged = { ...newModifier(m.mechanic || 'attack'), ...m, seq: i + 1 };
+          if (/^On(Attack|Damage)/.test(String(merged.label || ''))) {
+            merged.label = `${merged.mechanic === 'attack' ? '攻击修正' : '伤害修正'} #${merged.id}`;
+          }
+          return merged;
+        });
+        state.nextId = Math.max(1, ...state.modifiers.map(m => Number(m.id) || 0)) + 1;
+      }
+      renderModifiers(); calculate();
+    }
+
+    function loadCritExample() {
+      $('inputMode').value = 'melee'; $('weaponPreset').value = 'custom'; $('attackDamage').value = 19.2;
+      $('attributeBonus').value = 0; $('strengthLevel').value = 0; $('postCritBonus').value = 36.48;
+      $('weaponEnchant').value = 'none'; $('enchantLevel').value = 0; $('creatureType').value = 'other';
+      $('cooldown').value = 1; $('critical').checked = true; $('attackInterval').value = .625;
+      $('armorPreset').value = 'none'; $('armor').value = 0; $('toughness').value = 0;
+      $('epf').value = 0; $('resistance').value = 0; $('absorption').value = 0;
+      $('targetHp').value = 100; $('targetMaxHp').value = 100;
+      state.modifiers = [newModifier('attack', { mode:'start', step:0, operation:'add', amount:'0' })];
+      renderModifiers(); calculate();
+    }
+
+    function loadExample() {
+      $('inputMode').value = 'melee'; $('weaponPreset').value = 'netherite_sword'; $('attackDamage').value = 8;
+      $('attributeBonus').value = 0; $('strengthLevel').value = 0; $('postCritBonus').value = 0;
+      $('weaponEnchant').value = 'sharpness'; $('enchantLevel').value = 5; $('creatureType').value = 'other';
+      $('cooldown').value = 1; $('critical').checked = true; $('attackInterval').value = .625;
+      $('armor').value = 20; $('toughness').value = 12; $('epf').value = 8; $('resistance').value = 0;
+      $('targetHp').value = 40; $('targetMaxHp').value = 40; $('absorption').value = 0;
+      state.modifiers = [
+        newModifier('damage', { mode:'start', operation:'multiply', amount:'0.9', label:'伤害修正 #1' }),
+        newModifier('attack', { mode:'start', step:0, operation:'add', amount:'targetMaxHp * 0.05', label:'攻击修正 #2' }),
+        newModifier('attack', { mode:'start', step:1, operation:'multiply', amount:'2 - (targetHpPercent / 100)', label:'攻击修正 #3' }),
+        newModifier('attack', { mode:'end', step:0, operation:'multiply', amount:'1.2', maxDamage:'targetMaxHp * 0.5', label:'攻击修正 #4' })
+      ];
+      state.modifiers.forEach((m,i) => m.seq = i+1);
+      renderModifiers(); calculate();
+    }
+
+    // Global listeners
+    document.querySelectorAll('input[id],select[id]').forEach(el => {
+      if (el.id === 'importFile') return;
+      el.addEventListener('input', calculate);
+      el.addEventListener('change', calculate);
+    });
+
+    $('weaponPreset').addEventListener('change', () => {
+      const preset = weaponPresets[$('weaponPreset').value];
+      if (preset) {
+        $('attackDamage').value = preset.damage;
+        $('attackInterval').value = Number(preset.interval.toFixed(6));
+        calculate();
+      }
+    });
+    $('attackDamage').addEventListener('input', () => {
+      const preset = weaponPresets[$('weaponPreset').value];
+      if (preset && Math.abs(n('attackDamage', 0) - preset.damage) > 1e-9) $('weaponPreset').value = 'custom';
+    });
+
+    $('armorPreset').addEventListener('change', () => {
+      const preset = $('armorPreset').value;
+      const values = { none:[0,0], leather:[7,0], gold:[11,0], chain:[12,0], iron:[15,0], diamond:[20,8], netherite:[20,12] };
+      if (values[preset]) { [$('armor').value, $('toughness').value] = values[preset]; calculate(); }
+    });
+    $('addAttack').addEventListener('click', () => { state.modifiers.push(newModifier('attack')); renderModifiers(); calculate(); });
+    $('addDamage').addEventListener('click', () => { state.modifiers.push(newModifier('damage')); renderModifiers(); calculate(); });
+    $('clearModifiers').addEventListener('click', () => { state.modifiers = []; renderModifiers(); calculate(); });
+    $('loadExample').addEventListener('click', loadExample);
+    $('loadCritExample').addEventListener('click', loadCritExample);
+    $('resetAll').addEventListener('click', () => { safeStorageRemove('blancDamageCalc'); location.reload(); });
+    $('copyPreview').addEventListener('click', async () => {
+      await navigator.clipboard.writeText($('previewBox').value);
+      const old = $('copyPreview').textContent; $('copyPreview').textContent = '已复制'; setTimeout(() => $('copyPreview').textContent = old, 900);
+    });
+    $('exportConfig').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(exportState(), null, 2)], { type:'application/json' });
+      const url = URL.createObjectURL(blob); const a = document.createElement('a');
+      a.href = url; a.download = 'mc-damage-calculator-config.json'; a.click(); URL.revokeObjectURL(url);
+    });
+    $('importConfig').addEventListener('click', () => $('importFile').click());
+    $('importFile').addEventListener('change', async () => {
+      const file = $('importFile').files[0]; if (!file) return;
+      try { importState(JSON.parse(await file.text())); } catch(e) { alert(`导入失败：${e.message}`); }
+      $('importFile').value = '';
+    });
+
+    let saveTimer;
+    const observer = new MutationObserver(() => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => safeStorageSet('blancDamageCalc', JSON.stringify(exportState())), 300);
+    });
+    observer.observe(document.body, { subtree:true, attributes:true, childList:true });
+    document.addEventListener('input', () => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => safeStorageSet('blancDamageCalc', JSON.stringify(exportState())), 300);
+    });
+    window.addEventListener('resize', () => state.lastResult && drawChart(getInputs()));
+
+    try {
+      const saved = safeStorageGet('blancDamageCalc');
+      if (saved) importState(JSON.parse(saved));
+      else {
+        state.modifiers = [newModifier('attack', { mode:'start', step:0, operation:'add', amount:'0' })];
+        renderModifiers(); calculate();
+      }
+    } catch (e) {
+      state.modifiers = [newModifier('attack')];
+      renderModifiers(); calculate();
+    }
+  })();
+  </script>
+</body>
+</html>

@@ -82,7 +82,8 @@ class VanillaAccessoryLoad extends BaseAccessoryLoad {
     private boolean containsAnyKeyword(String line, List<String> keywords) {
         String lowerLine = line.toLowerCase(Locale.ROOT);
         for (String keyword : keywords) {
-            if (keyword != null && !keyword.isBlank() && lowerLine.contains(keyword.toLowerCase(Locale.ROOT))) {
+            if (keyword != null && !keyword.isBlank()
+                    && LoreUtils.containsKeyword(lowerLine, keyword.toLowerCase(Locale.ROOT))) {
                 return true;
             }
         }

@@ -18,6 +18,7 @@ items:
       #   - onDamaged: 玩家受伤时触发（伤害即使被其他机制取消也会触发，便于刷新免伤类 aura）
       #   - onInteract: 玩家交互时触发
       #   - onKill: 玩家击杀实体时触发
+      #     施放时 MythicMobs 技能的 trigger 为被杀实体（可用 <target.xxx> / <trigger.xxx> 获取）
       #   - onDeath: 玩家死亡时触发
       #   - onShoot: 玩家发射投射物时触发
       #   - onTimer: 周期触发

@@ -123,7 +123,7 @@ public final class AccessorySkills {
                 for (TimerEntry timerEntry : loadout.timers()) {
                     if (tick % timerEntry.period() == 0) {
                         Entity target = timerEntry.entry().target() == TargetType.NONE ? null : p;
-                        castIfReady(p, timerEntry.entry(), target);
+                        castIfReady(p, timerEntry.entry(), target, null);
                     }
                 }
             }
@@ -277,15 +277,16 @@ public final class AccessorySkills {
     }
 
     public void triggerAttack(Player caster, Entity victim) {
-        trigger(caster, TriggerType.ON_ATTACK, targetForEvent(TargetType.TARGETED, caster, victim, null));
+        trigger(caster, TriggerType.ON_ATTACK, targetForEvent(TargetType.TARGETED, caster, victim, null), null);
     }
 
     public void triggerDamaged(Player caster, Entity attacker) {
-        trigger(caster, TriggerType.ON_DAMAGED, targetForEvent(TargetType.ATTACKER, caster, null, attacker));
+        trigger(caster, TriggerType.ON_DAMAGED, targetForEvent(TargetType.ATTACKER, caster, null, attacker), null);
     }
 
     public void triggerKill(Player caster, Entity victim) {
-        trigger(caster, TriggerType.ON_KILL, targetForEvent(TargetType.TARGETED, caster, victim, null));
+        // onKill 的 MythicMobs trigger 必须是被杀实体，<target.xxx> / <trigger.xxx> 才能取到被杀者
+        trigger(caster, TriggerType.ON_KILL, targetForEvent(TargetType.TARGETED, caster, victim, null), victim);
     }
 
     /**
@@ -321,7 +322,7 @@ public final class AccessorySkills {
 
         boolean anyCancelCast = false;
         for (ResolvedEntry entry : entries) {
-            if (castIfReady(caster, entry, resolveTarget(entry, caster, caster)) && entry.cancelEvent()) {
+            if (castIfReady(caster, entry, resolveTarget(entry, caster, caster), null) && entry.cancelEvent()) {
                 anyCancelCast = true;
             }
         }
@@ -340,7 +341,7 @@ public final class AccessorySkills {
 
     public void triggerShoot(Player caster, Entity projectile) {
         if (projectile != null && !shootHandledProjectiles.add(projectile.getUniqueId())) return;
-        trigger(caster, TriggerType.ON_SHOOT, targetForEvent(TargetType.PROJECTILE, caster, projectile, null));
+        trigger(caster, TriggerType.ON_SHOOT, targetForEvent(TargetType.PROJECTILE, caster, projectile, null), null);
     }
 
     public void clearShootFlag(Entity projectile) {
@@ -357,7 +358,7 @@ public final class AccessorySkills {
         };
     }
 
-    private void trigger(Player caster, TriggerType trigger, Entity eventTarget) {
+    private void trigger(Player caster, TriggerType trigger, Entity eventTarget, Entity triggerEntity) {
         PlayerLoadout loadout = loadouts.get(caster.getUniqueId());
         if (loadout == null) {
             debug("跳过技能触发（没有已加载的饰品）: player=" + caster.getName() + ", trigger=" + trigger);
@@ -374,7 +375,7 @@ public final class AccessorySkills {
                 + ", skills=" + entries.size() + ", eventTarget=" + entityName(eventTarget));
 
         for (ResolvedEntry entry : entries) {
-            castIfReady(caster, entry, resolveTarget(entry, caster, eventTarget));
+            castIfReady(caster, entry, resolveTarget(entry, caster, eventTarget), triggerEntity);
         }
     }
 
@@ -387,7 +388,7 @@ public final class AccessorySkills {
     }
 
     /** Returns whether the skill actually executed this time (not on cooldown). */
-    private boolean castIfReady(Player caster, ResolvedEntry entry, Entity target) {
+    private boolean castIfReady(Player caster, ResolvedEntry entry, Entity target, Entity triggerEntity) {
         Map<String, Long> playerCooldowns = cooldowns.computeIfAbsent(caster.getUniqueId(), ignored -> new ConcurrentHashMap<>());
         long readyAt = playerCooldowns.getOrDefault(entry.cooldownKey(), 0L);
         if (tick < readyAt) {
@@ -395,7 +396,7 @@ public final class AccessorySkills {
                     + ", remaining=" + ((readyAt - tick) / 20.0) + "s");
             return false;
         }
-        if (cast(caster, entry, target)) {
+        if (cast(caster, entry, target, triggerEntity)) {
             if (entry.cooldown() > 0) {
                 // cooldown 配置单位为秒，内部按 tick 计时
                 playerCooldowns.put(entry.cooldownKey(), tick + entry.cooldown() * 20L);
@@ -405,14 +406,17 @@ public final class AccessorySkills {
         return false;
     }
 
-    private boolean cast(Player caster, ResolvedEntry entry, Entity target) {
+    private boolean cast(Player caster, ResolvedEntry entry, Entity target, Entity triggerEntity) {
         boolean success = MythicBukkit.inst().getAPIHelper().castSkill(caster, entry.skill(), meta -> {
             if (target != null) {
-                io.lumine.mythic.api.adapters.AbstractEntity adapted = BukkitAdapter.adapt(target);
-                // MM 5.13 的 <target.xxx> 占位符从 trigger 实体解析，而不是 entityTarget；
-                // 饰品通过 API 施法时 trigger 默认是 null，必须一并设置，否则 <target.mhp> 等无法解析
-                meta.setEntityTarget(adapted);
-                meta.setTrigger(adapted);
+                meta.setEntityTarget(BukkitAdapter.adapt(target));
+            }
+            // MM 5.13 的 <target.xxx> 占位符从 trigger 实体解析，而不是 entityTarget；
+            // 饰品通过 API 施法时 trigger 默认是 null，必须一并设置，否则 <target.mhp> 等无法解析。
+            // onKill 场景下 trigger 固定为被杀实体（可能与技能目标不同，例如 target: self）。
+            Entity trigger = triggerEntity != null ? triggerEntity : target;
+            if (trigger != null) {
+                meta.setTrigger(BukkitAdapter.adapt(trigger));
             }
             if (entry.trigger() == TriggerType.ON_DEATH) {
                 // onDeath 默认允许技能在玩家死亡后继续执行
