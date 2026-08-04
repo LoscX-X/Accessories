@@ -24,7 +24,7 @@ public final class AccessoryQuickEquipListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onSneakRightClick(PlayerInteractEvent event) {
-        if (!plugin.getConfig().getBoolean("quick-equip.sneak-right-click", true)) {
+        if (!isQuickEquipEnabled()) {
             return;
         }
 
@@ -56,5 +56,12 @@ public final class AccessoryQuickEquipListener implements Listener {
         if (equipped) {
             event.setCancelled(true);
         }
+    }
+
+    private boolean isQuickEquipEnabled() {
+        if (plugin.getConfig().contains("quick-equip.shift-right-click")) {
+            return plugin.getConfig().getBoolean("quick-equip.shift-right-click");
+        }
+        return plugin.getConfig().getBoolean("quick-equip.sneak-right-click", true);
     }
 }

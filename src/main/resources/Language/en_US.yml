@@ -14,6 +14,7 @@ Message:
   Slot_no_permission: "<red>You do not have permission to use this accessory slot."
   Item_locked: "<red>This slot is locked."
   Item_limit_reached: "<red>This accessory has reached the maximum equip limit."
+  Item_cannot_unequip: "<red>This accessory is marked [Anti-unequip] and cannot be removed."
   Accessory_equipped: "<green>Accessory equipped to page {page}, slot {slot}."
   Quick_equip_select_header: "<yellow>Multiple accessory slots match this item. Click one to switch:"
   Quick_equip_select_option: "<aqua>[Page {page} / Slot {slot}]"

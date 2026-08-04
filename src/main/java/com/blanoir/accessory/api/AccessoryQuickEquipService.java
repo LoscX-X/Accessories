@@ -64,6 +64,10 @@ public final class AccessoryQuickEquipService {
         ItemStack[] contents = plugin.inventoryStore().getOrLoad(player.getUniqueId(), plugin.totalAccessoryStorageSize());
         int absoluteSlot = plugin.accessoryPageStart(page) + slot;
         ItemStack old = contents[absoluteSlot];
+        if (isAntiUnequip(old)) {
+            player.sendMessage(plugin.lang().langComponent("Item_cannot_unequip"));
+            return;
+        }
 
         ItemStack placed = source.clone();
         placed.setAmount(1);
@@ -208,6 +212,13 @@ public final class AccessoryQuickEquipService {
 
     private boolean isAir(ItemStack item) {
         return item == null || item.getType() == Material.AIR;
+    }
+
+    private boolean isAntiUnequip(ItemStack item) {
+        return !isAir(item) && LoreUtils.matchesAnyKeyword(
+                LoreUtils.plainLore(item),
+                plugin.antiUnequipLoreTags()
+        );
     }
 
     private boolean isFrameSlot(int page, int slot) {

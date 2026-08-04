@@ -113,6 +113,27 @@ public class AccessoryListener implements Listener {
         return meta != null && meta.getPersistentDataContainer().has(marker, PersistentDataType.BYTE);
     }
 
+    private boolean hasAntiUnequip(ItemStack item) {
+        return LoreUtils.matchesAnyKeyword(LoreUtils.plainLore(item), plugin.antiUnequipLoreTags());
+    }
+
+    private boolean hasAntiUnequipInTop(Inventory top) {
+        if (top == null) return false;
+        for (ItemStack item : top.getContents()) {
+            if (hasAntiUnequip(item)) return true;
+        }
+        return false;
+    }
+
+    private boolean isRemovalAction(InventoryAction action) {
+        return switch (action) {
+            case PICKUP_ALL, PICKUP_HALF, PICKUP_ONE, PICKUP_SOME,
+                 MOVE_TO_OTHER_INVENTORY, SWAP_WITH_CURSOR, HOTBAR_SWAP,
+                 COLLECT_TO_CURSOR, DROP_ONE_SLOT, DROP_ALL_SLOT -> true;
+            default -> false;
+        };
+    }
+
     private void scheduleRefresh(Player actor, InventoryView view) {
         Inventory top = view.getTopInventory();
         if (!(top.getHolder() instanceof AccessoryInventoryHolder holder)) {
@@ -183,6 +204,12 @@ public class AccessoryListener implements Listener {
             return;
         }
 
+        if (e.getAction() == InventoryAction.COLLECT_TO_CURSOR && hasAntiUnequipInTop(top)) {
+            e.setCancelled(true);
+            p.sendMessage(plugin.lang().langComponent("Item_cannot_unequip"));
+            return;
+        }
+
         // shift 点击玩家背包，禁止把东西直接塞进饰品 GUI
         if (e.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && raw >= topSize) {
             e.setCancelled(true);
@@ -208,6 +235,12 @@ public class AccessoryListener implements Listener {
         boolean isFrame = frame.contains(raw);
         boolean isDisabled = isSlotDisabled(raw);
         ItemStack cur = e.getCurrentItem();
+
+        if (!isFrame && !isDisabled && hasAntiUnequip(cur) && isRemovalAction(e.getAction())) {
+            e.setCancelled(true);
+            p.sendMessage(plugin.lang().langComponent("Item_cannot_unequip"));
+            return;
+        }
 
         if (isFrame || isDisabled) {
             switch (e.getAction()) {
@@ -296,6 +329,11 @@ public class AccessoryListener implements Listener {
         for (var en : e.getNewItems().entrySet()) {
             int raw = en.getKey();
             if (raw >= topSize) continue;
+            if (hasAntiUnequip(top.getItem(raw))) {
+                e.setCancelled(true);
+                p.sendMessage(plugin.lang().langComponent("Item_cannot_unequip"));
+                return;
+            }
             if (shouldRejectPlacement(p, page, raw, en.getValue(), top)) {
                 e.setCancelled(true);
                 if (hasSlotPermission(p, page, raw)) {

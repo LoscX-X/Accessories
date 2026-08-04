@@ -23,6 +23,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 
 import java.io.File;
+import java.util.List;
 
 public final class Accessory extends JavaPlugin {
 
@@ -53,6 +54,11 @@ public final class Accessory extends JavaPlugin {
     public AccessoryPageManager pageManager() { return pageManager; }
     public AccessoryQuickEquipService quickEquipService() { return quickEquipService; }
     public ItemLimitManager limitManager() { return limitManager; }
+
+    public List<String> antiUnequipLoreTags() {
+        List<String> tags = getConfig().getStringList("anti-unequip.lore");
+        return tags.isEmpty() ? java.util.List.of("[Anti-unequip]") : tags;
+    }
 
     @Override
     public void onEnable() {
