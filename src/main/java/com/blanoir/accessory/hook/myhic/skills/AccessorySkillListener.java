@@ -1,6 +1,10 @@
 package com.blanoir.accessory.hook.myhic.skills;
 
 import com.blanoir.accessory.Accessory;
+import io.lumine.mythic.api.adapters.AbstractEntity;
+import io.lumine.mythic.api.skills.SkillMetadata;
+import io.lumine.mythic.bukkit.BukkitAdapter;
+import io.lumine.mythic.bukkit.events.MythicSkillEvent;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -98,6 +102,29 @@ public final class AccessorySkillListener implements Listener {
     public void onShootBow(EntityShootBowEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
         plugin.skillEngine().triggerShoot(player, event.getProjectile());
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+    public void onSkillCast(MythicSkillEvent event) {
+        SkillMetadata meta = event.getSkillMetadata();
+        // 饰品自己通过 API 施放的技能不再触发 onSkillCast，避免无限循环。
+        if (meta.getMetadata(AccessorySkills.ACCESSORY_CAST_META).isPresent()) return;
+
+        if (meta.getCaster() == null || meta.getCaster().getEntity() == null) return;
+        if (!(BukkitAdapter.adapt(meta.getCaster().getEntity()) instanceof Player player)) return;
+
+        Entity target = null;
+        if (meta.hasEntityTargets()) {
+            for (AbstractEntity entityTarget : meta.getEntityTargets()) {
+                target = BukkitAdapter.adapt(entityTarget);
+                if (target != null) break;
+            }
+        }
+        if (target == null && meta.getTrigger() != null) {
+            target = BukkitAdapter.adapt(meta.getTrigger());
+        }
+        // target 与 trigger 都取被施放技能的目标实体，<target.xxx> / <trigger.xxx> 占位符可正常解析。
+        plugin.skillEngine().triggerSkillCast(player, target, target);
     }
 
     @EventHandler

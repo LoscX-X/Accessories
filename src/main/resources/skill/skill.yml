@@ -1,6 +1,6 @@
 # 全局签名：用于标记当前技能配置版本。
 # 当签名变化时，插件会重新写入饰品物品上的 PDC 标记。
-signature: 2
+signature: 3
 
 # items 下每个键为饰品唯一 ID。
 # 该 ID 需要与饰品识别逻辑（PDC dun_item_id / acc_item_id 或 name）匹配。
@@ -16,17 +16,17 @@ items:
       # trigger: 触发方式
       #   - onAttack: 玩家造成伤害时触发
       #   - onCriticalHit: 玩家造成暴击伤害时触发
-      #     施放时 MythicMobs 技能的 trigger 为被暴击实体（可用 <target.xxx> / <trigger.xxx> 获取）
       #   - onDamaged: 玩家受伤时触发（伤害即使被其他机制取消也会触发，便于刷新免伤类 aura）
       #   - onInteract: 玩家交互时触发
       #   - onKill: 玩家击杀实体时触发
-      #     施放时 MythicMobs 技能的 trigger 为被杀实体（可用 <target.xxx> / <trigger.xxx> 获取）
       #   - onDeath: 玩家死亡时触发
       #   - onShoot: 玩家发射投射物时触发
       #   - onTimer: 周期触发
+      #   - onSkillCast: 玩家施放任意 MythicMobs 技能时触发
+      #                  （饰品自身触发的技能除外，避免死循环）
       # target: 目标类型（不同 trigger 支持范围不同）
       #   - self: 施法者自己
-      #   - targeted: 当前目标（例如攻击目标）
+      #   - targeted: 当前目标（例如攻击目标；onSkillCast 时为被施放技能的目标实体）
       # period: 仅 onTimer 生效，单位 tick（20 tick = 1 秒）
       # cooldown: 技能成功触发后的冷却时间，单位 秒（0 或不填写表示无冷却）
       # cd: PlaceholderAPI 冷却展示槽位 1-10，对应 %blacc_cd_1% ~ %blacc_cd_10%

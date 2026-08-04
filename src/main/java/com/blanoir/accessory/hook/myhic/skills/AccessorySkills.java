@@ -28,6 +28,8 @@ public final class AccessorySkills {
     private final NamespacedKey legacyDunItemId;
     private final Map<String, List<SkillEntry>> skillsByItemId = new HashMap<>();
     private static final PlainTextComponentSerializer PLAIN_TEXT = PlainTextComponentSerializer.plainText();
+    /** Marks skills cast by this accessory engine so onSkillCast does not re-trigger on them. */
+    static final String ACCESSORY_CAST_META = "blacc:accessory-cast";
 
     private final Map<String, String> itemIdByName = new HashMap<>();
     private final Map<UUID, PlayerLoadout> loadouts = new ConcurrentHashMap<>();
@@ -439,6 +441,11 @@ public final class AccessorySkills {
         trigger(caster, TriggerType.ON_SHOOT, targetForEvent(TargetType.PROJECTILE, caster, projectile, null), null);
     }
 
+    /** Fires when the player casts any MythicMobs skill. */
+    public void triggerSkillCast(Player caster, Entity target, Entity triggerEntity) {
+        trigger(caster, TriggerType.ON_SKILL_CAST, target, triggerEntity);
+    }
+
     public void clearShootFlag(Entity projectile) {
         if (projectile == null) return;
         shootHandledProjectiles.remove(projectile.getUniqueId());
@@ -503,6 +510,7 @@ public final class AccessorySkills {
 
     private boolean cast(Player caster, ResolvedEntry entry, Entity target, Entity triggerEntity) {
         boolean success = MythicBukkit.inst().getAPIHelper().castSkill(caster, entry.skill(), meta -> {
+            meta.setMetadata(ACCESSORY_CAST_META, true);
             if (target != null) {
                 meta.setEntityTarget(BukkitAdapter.adapt(target));
             }
@@ -557,7 +565,7 @@ public final class AccessorySkills {
     }
 
     public enum TriggerType {
-        ON_ATTACK, ON_CRITICAL_HIT, ON_DAMAGED, ON_SHOOT, ON_KILL, ON_DEATH, ON_TIMER;
+        ON_ATTACK, ON_CRITICAL_HIT, ON_DAMAGED, ON_SHOOT, ON_KILL, ON_DEATH, ON_TIMER, ON_SKILL_CAST;
 
         static TriggerType from(String raw) {
             return switch (raw) {
@@ -568,6 +576,7 @@ public final class AccessorySkills {
                 case "onKill" -> ON_KILL;
                 case "onDeath" -> ON_DEATH;
                 case "onTimer" -> ON_TIMER;
+                case "onSkillCast" -> ON_SKILL_CAST;
                 default -> null;
             };
         }
@@ -593,7 +602,8 @@ public final class AccessorySkills {
                 case SELF, NONE -> true;
                 case TARGETED -> trigger == TriggerType.ON_ATTACK
                         || trigger == TriggerType.ON_CRITICAL_HIT
-                        || trigger == TriggerType.ON_KILL;
+                        || trigger == TriggerType.ON_KILL
+                        || trigger == TriggerType.ON_SKILL_CAST;
                 case ATTACKER -> trigger == TriggerType.ON_DAMAGED;
                 case PROJECTILE -> trigger == TriggerType.ON_SHOOT;
             };
@@ -601,7 +611,7 @@ public final class AccessorySkills {
 
         static TargetType defaultFor(TriggerType trigger) {
             return switch (trigger) {
-                case ON_ATTACK, ON_CRITICAL_HIT, ON_KILL -> TARGETED;
+                case ON_ATTACK, ON_CRITICAL_HIT, ON_KILL, ON_SKILL_CAST -> TARGETED;
                 case ON_DAMAGED -> ATTACKER;
                 case ON_SHOOT -> PROJECTILE;
                 case ON_DEATH, ON_TIMER -> SELF;

@@ -9,3 +9,7 @@ items:
       - skill: ExampleDefenceSkill
         trigger: onDamaged
         target: self
+
+      - skill: ExampleSkillCastSkill
+        trigger: onSkillCast
+        target: targeted
