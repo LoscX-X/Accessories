@@ -1,4 +1,4 @@
-package com.blanoir.accessory.hook.myhic;
+package com.blanoir.accessory.hook.myhic.machine;
 
 import io.lumine.mythic.api.adapters.AbstractEntity;
 import io.lumine.mythic.api.skills.ITargetedEntitySkill;

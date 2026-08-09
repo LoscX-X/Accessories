@@ -1,6 +1,7 @@
 package com.blanoir.accessory.hook.myhic.skills;
 
 import com.blanoir.accessory.Accessory;
+import com.blanoir.accessory.api.AccessorySkillInfo;
 import io.lumine.mythic.bukkit.BukkitAdapter;
 import io.lumine.mythic.bukkit.MythicBukkit;
 import org.bukkit.Bukkit;
@@ -292,6 +293,56 @@ public final class AccessorySkills {
                 .replace("{skill}", entry.skill());
     }
 
+    /**
+     * 返回玩家当前已装备饰品对应的全部技能及当前冷却信息（外部 API 使用）。
+     */
+    public List<AccessorySkillInfo> getSkills(Player player) {
+        if (player == null) {
+            return List.of();
+        }
+        PlayerLoadout loadout = loadouts.get(player.getUniqueId());
+        if (loadout == null) {
+            return List.of();
+        }
+
+        Map<String, Long> playerCooldowns = cooldowns.get(player.getUniqueId());
+        List<AccessorySkillInfo> infos = new ArrayList<>();
+        for (List<ResolvedEntry> entries : loadout.byTrigger().values()) {
+            for (ResolvedEntry entry : entries) {
+                infos.add(toSkillInfo(entry, playerCooldowns));
+            }
+        }
+        return List.copyOf(infos);
+    }
+
+    /**
+     * 返回指定技能的冷却信息。同名技能可能来自多个饰品或触发方式，
+     * 该方法返回第一个匹配项；未找到时返回空。
+     */
+    public Optional<AccessorySkillInfo> getSkill(Player player, String skill) {
+        if (skill == null || skill.isBlank()) {
+            return Optional.empty();
+        }
+        String target = skill.trim();
+        return getSkills(player).stream()
+                .filter(info -> info.skill().equalsIgnoreCase(target))
+                .findFirst();
+    }
+
+    private AccessorySkillInfo toSkillInfo(ResolvedEntry entry, Map<String, Long> playerCooldowns) {
+        long readyAt = playerCooldowns == null ? 0L : playerCooldowns.getOrDefault(entry.cooldownKey(), 0L);
+        long remainingTicks = Math.max(0L, readyAt - tick);
+        int remaining = entry.cooldown() <= 0 ? 0 : (int) Math.ceil(remainingTicks / 20.0);
+        boolean ready = entry.cooldown() <= 0 || remainingTicks == 0;
+        return new AccessorySkillInfo(
+                entry.skill(),
+                entry.trigger().configName(),
+                entry.cooldown(),
+                remaining,
+                ready
+        );
+    }
+
     private boolean isAccessorySlot(int absoluteSlot) {
         int page = plugin.pageManager().pageByAbsoluteSlot(absoluteSlot);
         int slot = plugin.pageManager().localSlot(absoluteSlot);
@@ -578,6 +629,19 @@ public final class AccessorySkills {
                 case "onTimer" -> ON_TIMER;
                 case "onSkillCast" -> ON_SKILL_CAST;
                 default -> null;
+            };
+        }
+
+        String configName() {
+            return switch (this) {
+                case ON_ATTACK -> "onAttack";
+                case ON_CRITICAL_HIT -> "onCriticalHit";
+                case ON_DAMAGED -> "onDamaged";
+                case ON_SHOOT -> "onShoot";
+                case ON_KILL -> "onKill";
+                case ON_DEATH -> "onDeath";
+                case ON_TIMER -> "onTimer";
+                case ON_SKILL_CAST -> "onSkillCast";
             };
         }
     }

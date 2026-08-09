@@ -1,5 +1,6 @@
 package com.blanoir.accessory.hook.myhic;
 
+import com.blanoir.accessory.hook.myhic.machine.RealAttackMechanic;
 import io.lumine.mythic.bukkit.events.MythicMechanicLoadEvent;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;

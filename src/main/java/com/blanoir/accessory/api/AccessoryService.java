@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -121,6 +122,28 @@ public final class AccessoryService {
         if (plugin.skillEngine() != null) {
             plugin.skillEngine().refreshAllCooldowns();
         }
+    }
+
+    /**
+     * 外部 API：获取玩家当前饰品装备对应的全部技能及当前冷却信息。
+     * MythicMobs 未启用（技能引擎未初始化）时返回空列表。
+     */
+    public List<AccessorySkillInfo> getPlayerSkills(Player player) {
+        if (plugin.skillEngine() == null) {
+            return List.of();
+        }
+        return plugin.skillEngine().getSkills(player);
+    }
+
+    /**
+     * 外部 API：查询玩家指定技能的冷却信息。
+     * 同名技能可能来自多个饰品或触发方式，返回第一个匹配项；未找到时返回空。
+     */
+    public Optional<AccessorySkillInfo> getPlayerSkill(Player player, String skill) {
+        if (plugin.skillEngine() == null) {
+            return Optional.empty();
+        }
+        return plugin.skillEngine().getSkill(player, skill);
     }
 
     /**

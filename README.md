@@ -38,6 +38,25 @@ Batch set disabled slots:
 service.setDisabledSlots(List.of(1, 3, 5));
 ```
 
+Get all equipped accessory skills and their cooldowns:
+
+```java
+List<AccessorySkillInfo> skills = service.getPlayerSkills(player);
+for (AccessorySkillInfo info : skills) {
+    String skill = info.skill();      // MythicMobs skill name
+    String trigger = info.trigger();  // trigger type, e.g. onAttack
+    int cooldown = info.cooldown();   // total cooldown in seconds (0 = no cooldown)
+    int remaining = info.remaining(); // remaining cooldown in seconds (rounded up)
+    boolean ready = info.ready();     // whether the skill can be cast now
+}
+```
+
+Query one skill by name:
+
+```java
+Optional<AccessorySkillInfo> skill = service.getPlayerSkill(player, "ExampleSkill");
+```
+
 Getting Started:.<br>
 Dependencies:.<br>
 1.AuraSkills(required).<br>
