@@ -2,14 +2,12 @@ package com.blanoir.accessory.api;
 
 import com.blanoir.accessory.Accessory;
 import com.blanoir.accessory.events.AccessoryPlaceEvent;
-import com.blanoir.accessory.module.attribute.loader.AccessoryLoad;
 import com.blanoir.accessory.utils.LoreUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -19,11 +17,9 @@ import java.util.Map;
 
 public final class AccessoryQuickEquipService {
     private final Accessory plugin;
-    private final AccessoryLoad accessoryLoad;
 
     public AccessoryQuickEquipService(Accessory plugin) {
         this.plugin = plugin;
-        this.accessoryLoad = new AccessoryLoad(plugin);
     }
 
     public boolean tryEquipMainHand(Player player) {
@@ -90,10 +86,7 @@ public final class AccessoryQuickEquipService {
         plugin.inventoryStore().update(player.getUniqueId(), contents, plugin.totalAccessoryStorageSize());
         plugin.inventoryStore().flush(player.getUniqueId(), plugin.totalAccessoryStorageSize());
 
-        accessoryLoad.rebuildFromContents(player, contents);
-        if (plugin.skillEngine() != null) {
-            plugin.skillEngine().refreshPlayer(player, contents);
-        }
+        plugin.refreshPlayerEffects(player, contents);
 
         player.sendActionBar(plugin.lang().langComponent(
                 "Accessory_equipped",
@@ -116,31 +109,13 @@ public final class AccessoryQuickEquipService {
         List<TargetSlot> targets = new ArrayList<>();
         int pages = plugin.accessoryPages();
         for (int page = 1; page <= pages; page++) {
-            ConfigurationSection pageSec = plugin.pageManager().pageAccessorySection(page);
-            if (pageSec == null) continue;
-            collectMatchingSlots(lore, page, pageSec, targets);
-        }
-
-        ConfigurationSection legacySec = plugin.pageManager().legacyAccessorySection();
-        if (legacySec != null) {
-            collectMatchingSlots(lore, 1, legacySec, targets);
+            collectMatchingSlots(lore, page, targets);
         }
         return targets;
     }
 
-    private void collectMatchingSlots(List<String> lore, int page, ConfigurationSection section, List<TargetSlot> targets) {
-        int pageSize = plugin.accessorySize(page);
-        for (String key : section.getKeys(false)) {
-            if (key.startsWith("page_")) continue;
-
-            int slot;
-            try {
-                slot = Integer.parseInt(key);
-            } catch (NumberFormatException ignored) {
-                continue;
-            }
-
-            if (slot < 0 || slot >= pageSize) continue;
+    private void collectMatchingSlots(List<String> lore, int page, List<TargetSlot> targets) {
+        for (int slot : plugin.pageManager().configuredSlots(page)) {
             if (plugin.service() != null && plugin.service().isSlotDisabled(slot)) continue;
             if (isFrameSlot(page, slot)) continue;
 
@@ -153,6 +128,7 @@ public final class AccessoryQuickEquipService {
     }
 
     private boolean shouldRejectPlacement(Player player, int page, int slot, ItemStack item) {
+        if (!plugin.pageManager().isSlotConfigured(page, slot)) return true;
         String permission = plugin.pageManager().requiredPermission(page, slot);
         if (permission != null && !player.hasPermission(permission)) {
             player.sendMessage(plugin.lang().langComponent("Slot_no_permission"));

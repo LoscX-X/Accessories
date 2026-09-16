@@ -1,7 +1,7 @@
 package com.blanoir.accessory.module.inventory.ui;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.module.inventory.AccessoryPageManager;
+import com.blanoir.accessory.config.AccessoryLayout.FrameItem;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
@@ -67,10 +67,10 @@ public final class AccessoryInventoryMenu {
     }
 
     private void applyFrames(Inventory inventory, AccessoryInventoryHolder holder) {
-        List<AccessoryPageManager.FrameItem> frameItems =
+        List<FrameItem> frameItems =
                 plugin.pageManager().frameItems(holder.currentPage(), inventory.getSize());
 
-        for (AccessoryPageManager.FrameItem frameItem : frameItems) {
+        for (FrameItem frameItem : frameItems) {
             ItemStack frame = itemFactory.frameItem(
                     frameItem.section(),
                     holder.currentPage(),
@@ -106,7 +106,7 @@ public final class AccessoryInventoryMenu {
     }
 
     private Component title(int currentPage, int totalPages) {
-        String raw = plugin.getConfig().getString("title", "<green>Accessory");
+        String raw = plugin.pageManager().pageTitle(currentPage);
 
         return MINI_MESSAGE.deserialize(
                 raw.replace("{page}", String.valueOf(currentPage))

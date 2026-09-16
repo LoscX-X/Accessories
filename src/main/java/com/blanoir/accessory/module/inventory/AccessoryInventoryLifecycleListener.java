@@ -23,15 +23,11 @@ public class AccessoryInventoryLifecycleListener implements Listener {
     private final Accessory plugin;
     private final NamespacedKey locked;
     private final NamespacedKey disabled;
-    private final NamespacedKey prePage;
-    private final NamespacedKey nextPage;
 
     public AccessoryInventoryLifecycleListener(Accessory plugin) {
         this.plugin = plugin;
         this.locked = new NamespacedKey(plugin, "locked");
         this.disabled = new NamespacedKey(plugin, "disabled");
-        this.prePage = new NamespacedKey(plugin, "pre_page");
-        this.nextPage = new NamespacedKey(plugin, "next_page");
     }
 
     @EventHandler
@@ -64,9 +60,9 @@ public class AccessoryInventoryLifecycleListener implements Listener {
         );
 
         Player owner = Bukkit.getPlayer(ownerId);
-        if (owner != null && plugin.skillEngine() != null) {
+        if (owner != null) {
             ItemStack[] fullContents = plugin.inventoryStore().getOrLoad(ownerId, plugin.totalAccessoryStorageSize());
-            plugin.skillEngine().refreshPlayer(owner, fullContents);
+            plugin.refreshPlayerEffects(owner, fullContents);
         }
     }
 
@@ -84,9 +80,7 @@ public class AccessoryInventoryLifecycleListener implements Listener {
         }
 
         for (int slot = 0; slot < snapshot.length; slot++) {
-            if (hasMarker(snapshot[slot], disabled)
-                    || hasMarker(snapshot[slot], prePage)
-                    || hasMarker(snapshot[slot], nextPage)) {
+            if (hasMarker(snapshot[slot], disabled)) {
                 snapshot[slot] = null;
             }
         }

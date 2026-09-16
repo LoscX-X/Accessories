@@ -1,6 +1,7 @@
 Message:
   No_permission: "<red>You do not have permission to use this command."
   Reload_success: "<green>[Accessory] Reload completed successfully."
+  Reload_failed: "<red>[Accessory] Reload failed. Check the console for configuration errors."
   Reload_usage: "<red>Usage: /accessory reload"
   View_usage: "<red>Usage: /accessory view <player>"
   Clear_usage: "<red>Usage: /accessory clear <player>"

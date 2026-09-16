@@ -1,5 +1,6 @@
 package com.blanoir.accessory.module.attribute.aura.traits;
 
+import com.blanoir.accessory.config.AccessorySettings;
 import com.blanoir.accessory.module.attribute.aura.CustomTraits;
 import com.blanoir.accessory.events.traits.AbsorbShieldRegenEvent;
 import com.blanoir.accessory.module.attribute.aura.traits.utils.ShieldUtil;
@@ -32,14 +33,9 @@ public class Absorb implements BukkitTraitHandler, Listener {
     private final Map<UUID, Double> shieldMap = new HashMap<>();
     private final Map<UUID, Long> lastDamageTime = new HashMap<>();
 
-    // 配置参数
-      // 脱战时间（秒）
-
-
     public Absorb(JavaPlugin plugin, AuraSkillsApi auraSkills) {
         this.plugin = plugin;
         this.auraSkills = auraSkills;
-        int OUT_OF_COMBAT_SECONDS = plugin.getConfig().getInt("OUT_OF_COMBAT_SECONDS",12);
         // 定时任务：处理脱战恢复护盾逻辑
         new BukkitRunnable() {
             @Override
@@ -57,7 +53,7 @@ public class Absorb implements BukkitTraitHandler, Listener {
 
                     // 脱战且未满护盾 → 恢复逻辑
                     long lastHit = lastDamageTime.getOrDefault(uuid, 0L);
-                    if (System.currentTimeMillis() - lastHit > OUT_OF_COMBAT_SECONDS * 1000L) {
+                    if (System.currentTimeMillis() - lastHit > AccessorySettings.current(plugin).physicalShield().outOfCombatSeconds() * 1000L) {
                         if (!player.getScoreboardTags().contains("noabsorb")){
                             regenShield(player);
                         }
@@ -159,15 +155,14 @@ public class Absorb implements BukkitTraitHandler, Listener {
         }
 
         double maxShield = getMaxShield(player);
-        double SHIELD_REGEN_PERCENT = plugin.getConfig()
-                .getDouble("SHIELD_REGEN_PERCENT", 0.1);
+        double regenPercent = AccessorySettings.current(plugin).physicalShield().regenPercent();
 
         if (maxShield <= 0) return;
 
         double current = shieldMap.getOrDefault(uuid, 0.0);
         if (current >= maxShield) return;
 
-        double regenAmount = maxShield * SHIELD_REGEN_PERCENT;
+        double regenAmount = maxShield * regenPercent;
         AbsorbShieldRegenEvent regenEvent = new AbsorbShieldRegenEvent(player, current, maxShield, regenAmount);
         Bukkit.getPluginManager().callEvent(regenEvent);
         if (regenEvent.isCancelled()) return;

@@ -1,5 +1,6 @@
 package com.blanoir.accessory.module.attribute.loader;
 
+import com.blanoir.accessory.config.AccessorySettings;
 import com.blanoir.accessory.utils.LoreUtils;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
@@ -50,7 +51,7 @@ class VanillaAccessoryLoad extends BaseAccessoryLoad {
 
             Attribute attribute = parseAttribute(mapping.getString("attribute", mappingKey));
             if (attribute == null) {
-                if (plugin.getConfig().getBoolean("debug-mode", false)) {
+                if (AccessorySettings.current(plugin).startupDebug()) {
                     plugin.getLogger().warning("Invalid vanilla lore attribute mapping: " + mappingKey);
                 }
                 continue;

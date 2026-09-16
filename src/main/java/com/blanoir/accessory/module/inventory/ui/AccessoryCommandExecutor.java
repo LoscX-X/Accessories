@@ -1,4 +1,4 @@
-package com.blanoir.accessory.module.inventory;
+package com.blanoir.accessory.module.inventory.ui;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;

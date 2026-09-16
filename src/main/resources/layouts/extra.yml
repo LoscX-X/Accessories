@@ -1,7 +1,6 @@
-# 饰品页面配置文件，必须填写 page，否则插件会在控制台报错并跳过此文件。
-# 文件名可自定义，例如 extra.yml，实际页码由 page 决定。
-page: 2
-
+# 可复用页面布局：文件名（不带 .yml）就是布局 ID。
+# 在 config.yml 的 layout.by-page 中绑定页码；本文件不再填写 page。
+# size 可省略以使用主配置默认值；title 也可按布局覆盖。
 size: 9
 
 # 当前页通过 AccessoryService API 在运行时禁用的槽位样式
@@ -18,7 +17,7 @@ Accessory:
     lore:
       - "[Ring]"
 
-# drag: "command" 时点击该物品会执行 command.console / command.player；也支持 "pre_page" / "next_page" 翻页。
+# action: "command" 时点击该物品会执行 command.console / command.player；也支持 "previous_page" / "next_page" 翻页。
 frame:
   locked:
     slots: [2, 4, 6]
@@ -37,7 +36,7 @@ frame:
     name: "<gray>Previous Page"
     lore:
       - "<dark_gray>Go to previous page"
-    drag: "pre_page"
+    action: "previous_page"
 
   command_button:
     slots: [7]
@@ -46,7 +45,7 @@ frame:
     name: "<aqua>Command Button"
     lore:
       - "<gray>Click to run configured commands"
-    drag: "command"
+    action: "command"
     command:
       console:
         - "say {player} clicked accessory page {page} slot {slot}"

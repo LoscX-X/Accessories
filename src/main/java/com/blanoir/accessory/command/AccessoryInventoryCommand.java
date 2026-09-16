@@ -1,15 +1,12 @@
 package com.blanoir.accessory.command;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.module.attribute.loader.AccessoryLoad;
-import com.blanoir.accessory.module.inventory.AccessoryInventoryLoad;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -21,13 +18,9 @@ public final class AccessoryInventoryCommand implements BasicCommand {
     private static final List<String> ROOT_COMMANDS = List.of("open", "reload", "clear", "view");
 
     private final Accessory plugin;
-    private final AccessoryLoad accessoryLoad;
-    private final AccessoryInventoryLoad inventoryLoad;
 
     public AccessoryInventoryCommand(Accessory plugin) {
         this.plugin = plugin;
-        this.accessoryLoad = new AccessoryLoad(plugin);
-        this.inventoryLoad = new AccessoryInventoryLoad(plugin);
     }
 
     @Override
@@ -51,7 +44,7 @@ public final class AccessoryInventoryCommand implements BasicCommand {
             return true;
         }
 
-        inventoryLoad.openFor(player);
+        plugin.menus().openFor(player, player);
         return true;
     }
 
@@ -66,18 +59,12 @@ public final class AccessoryInventoryCommand implements BasicCommand {
             return true;
         }
 
-        plugin.reloadPluginSettings();
-
-        int totalSize = plugin.totalAccessoryStorageSize();
-
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            ItemStack[] contents = plugin.inventoryStore().getOrLoad(online.getUniqueId(), totalSize);
-
-            accessoryLoad.rebuildFromContents(online, contents);
-
-            if (plugin.skillEngine() != null) {
-                plugin.skillEngine().refreshPlayer(online, contents);
-            }
+        try {
+            plugin.reloadPluginSettings();
+        } catch (RuntimeException ex) {
+            plugin.getLogger().severe("Reload failed: " + ex.getMessage());
+            sender.sendMessage(plugin.lang().langComponent("Reload_failed"));
+            return true;
         }
 
         sender.sendMessage(plugin.lang().langComponent("Reload_success"));
@@ -131,7 +118,7 @@ public final class AccessoryInventoryCommand implements BasicCommand {
             return true;
         }
 
-        inventoryLoad.openFor(viewer, target);
+        plugin.menus().openFor(viewer, target);
         return true;
     }
 

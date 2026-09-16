@@ -1,5 +1,6 @@
 package com.blanoir.accessory.module.attribute.aura.traits;
 
+import com.blanoir.accessory.config.AccessorySettings;
 import com.blanoir.accessory.module.attribute.aura.CustomTraits;
 import com.blanoir.accessory.events.traits.MagicShieldRegenEvent;
 import com.blanoir.accessory.module.attribute.aura.traits.utils.ShieldUtil;
@@ -32,15 +33,9 @@ public class MagicAbsorb implements BukkitTraitHandler, Listener {
     // 脱战判定（建议用“任何受伤都算战斗中”，避免挨打时回盾）
     private final Map<UUID, Long> lastDamageTime = new HashMap<>();
 
-    private final int OUT_OF_COMBAT_SECONDS;
-    private final double SHIELD_REGEN_PERCENT;
-
     public MagicAbsorb(JavaPlugin plugin, AuraSkillsApi auraSkills) {
         this.plugin = plugin;
         this.auraSkills = auraSkills;
-
-        this.OUT_OF_COMBAT_SECONDS = plugin.getConfig().getInt("MAGIC_SHIELD_OUT_OF_COMBAT_SECONDS", 12);
-        this.SHIELD_REGEN_PERCENT = plugin.getConfig().getDouble("MAGIC_SHIELD_REGEN_PERCENT", 0.1);
 
         new BukkitRunnable() {
             @Override
@@ -64,7 +59,7 @@ public class MagicAbsorb implements BukkitTraitHandler, Listener {
                     }
 
                     long lastHit = lastDamageTime.getOrDefault(uuid, 0L);
-                    if (System.currentTimeMillis() - lastHit > OUT_OF_COMBAT_SECONDS * 1000L) {
+                    if (System.currentTimeMillis() - lastHit > AccessorySettings.current(plugin).magicShield().outOfCombatSeconds() * 1000L) {
                         if (!player.getScoreboardTags().contains("nomabsorb")) {
                         regenShield(player);
                         }
@@ -154,7 +149,7 @@ public class MagicAbsorb implements BukkitTraitHandler, Listener {
         double cur = shieldMap.getOrDefault(uuid, 0.0);
         if (cur >= max) return;
 
-        double regenAmount = max * SHIELD_REGEN_PERCENT;
+        double regenAmount = max * AccessorySettings.current(plugin).magicShield().regenPercent();
         MagicShieldRegenEvent regenEvent = new MagicShieldRegenEvent(player, cur, max, regenAmount);
         Bukkit.getPluginManager().callEvent(regenEvent);
         if (regenEvent.isCancelled()) return;

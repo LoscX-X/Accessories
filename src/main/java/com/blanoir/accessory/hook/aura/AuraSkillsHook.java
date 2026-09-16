@@ -131,6 +131,6 @@ public final class AuraSkillsHook {
     }
 
     private boolean isStartupDebugEnabled() {
-        return plugin.getConfig().getBoolean("debug-mode", false);
+        return plugin.settings().startupDebug();
     }
 }

@@ -1,6 +1,7 @@
 Message:
   No_permission: "<red>你没有权限使用该指令。"
   Reload_success: "<green>[Accessory] 重载成功。"
+  Reload_failed: "<red>[Accessory] 重载失败，请检查控制台中的配置错误。"
   Reload_usage: "<red>用法: /accessory reload"
   View_usage: "<red>用法: /accessory view <玩家名>"
   Clear_usage: "<red>用法: /accessory clear <玩家名>"

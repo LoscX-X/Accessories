@@ -84,7 +84,7 @@ public class LifeSteal implements BukkitTraitHandler, Listener {
             attacker.removeMetadata(META_ACCESSORY_LIFESTEAL, plugin);
         }
 
-        if (plugin.getConfig().getBoolean("Life_Steal_demonstrate")) {
+        if (plugin.settings().demonstrateLifeSteal()) {
             attacker.sendMessage(plugin.lang().lang("Life_steal_success") + String.format("%.1f", healAmount));
         }
     }

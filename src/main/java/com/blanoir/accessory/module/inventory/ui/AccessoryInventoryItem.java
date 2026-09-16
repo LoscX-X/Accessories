@@ -31,14 +31,6 @@ public final class AccessoryInventoryItem {
         return markedItem(section, currentPage, totalPages, "disabled", "locked");
     }
 
-    public ItemStack previousPageItem(ConfigurationSection section, int currentPage, int totalPages) {
-        return markedItem(section, currentPage, totalPages, "pre_page");
-    }
-
-    public ItemStack nextPageItem(ConfigurationSection section, int currentPage, int totalPages) {
-        return markedItem(section, currentPage, totalPages, "next_page");
-    }
-
     public ItemStack markedItem(ConfigurationSection section,
                                 int currentPage,
                                 int totalPages,

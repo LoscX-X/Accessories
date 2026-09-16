@@ -9,7 +9,14 @@ import com.blanoir.accessory.hook.myhic.MythicBridgeListener;
 import com.blanoir.accessory.hook.myhic.skills.AccessorySkillListener;
 import com.blanoir.accessory.hook.myhic.skills.AccessorySkills;
 import com.blanoir.accessory.hook.placeholderapi.SkillCooldownPlaceholder;
-import com.blanoir.accessory.database.mysql.SqlManager;
+import com.blanoir.accessory.config.AccessorySettings;
+import com.blanoir.accessory.config.ConfigFiles;
+import com.blanoir.accessory.config.PageSettings;
+import com.blanoir.accessory.module.attribute.loader.AccessoryLoad;
+import com.blanoir.accessory.module.inventory.AccessoryStorage;
+import com.blanoir.accessory.module.inventory.ui.AccessoryMenuController;
+import com.blanoir.accessory.module.inventory.ui.AccessoryInventoryHolder;
+import org.bukkit.inventory.ItemStack;
 import com.blanoir.accessory.module.inventory.AccessoryPageManager;
 import com.blanoir.accessory.module.inventory.AccessoryInventoryLifecycleListener;
 import com.blanoir.accessory.module.inventory.AccessoryStore;
@@ -22,7 +29,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 
-import java.io.File;
 import java.util.List;
 
 public final class Accessory extends JavaPlugin {
@@ -30,11 +36,13 @@ public final class Accessory extends JavaPlugin {
     private Lang lang;
     private AccessoryService accessoryService;
     private AccessorySkills skillEngine;
-    private AccessoryStore inventoryStore;
+    private AccessoryStorage storage;
+    private AccessorySettings settings;
+    private AccessoryLoad effects;
     private AccessoryQuickEquipService quickEquipService;
     private AccessoryPageManager pageManager;
     private ItemLimitManager limitManager;
-    private SqlManager sqlManager;
+    private AccessoryMenuController menus;
     private final TraitsCommand shieldCommand = new TraitsCommand("accessory.shield", "shield");
     private final TraitsCommand magicShieldCommand = new TraitsCommand("accessory.magicshield", "magicshield");
 
@@ -50,163 +58,98 @@ public final class Accessory extends JavaPlugin {
 
     public Lang lang() { return lang; }
     public AccessorySkills skillEngine() { return skillEngine; }
-    public AccessoryStore inventoryStore() { return inventoryStore; }
+    public AccessoryStore inventoryStore() { return storage.store(); }
+    public AccessorySettings settings() { return settings; }
     public AccessoryPageManager pageManager() { return pageManager; }
     public AccessoryQuickEquipService quickEquipService() { return quickEquipService; }
     public ItemLimitManager limitManager() { return limitManager; }
+    public AccessoryMenuController menus() { return menus; }
 
     public List<String> antiUnequipLoreTags() {
-        List<String> tags = getConfig().getStringList("anti-unequip.lore");
-        return tags.isEmpty() ? java.util.List.of("[Anti-unequip]") : tags;
+        return settings.antiUnequipLore();
     }
 
     @Override
     public void onEnable() {
-        initFiles();
-        initLang();
-        initSkillConfigs();
-        initPageConfigs();
+        ConfigFiles.initialize(this);
+        limitManager = new ItemLimitManager(this);
+        applySettings(readSettings());
 
-        this.limitManager = new ItemLimitManager(this);
-        this.limitManager.reload();
-
-        initStorage();
-        this.accessoryService = new AccessoryService(this);
-        this.quickEquipService = new AccessoryQuickEquipService(this);
+        storage = new AccessoryStorage(this, settings.storage());
+        effects = new AccessoryLoad(this);
+        menus = new AccessoryMenuController(this);
+        accessoryService = new AccessoryService(this);
+        quickEquipService = new AccessoryQuickEquipService(this);
 
         registerListeners();
-
         startAutoSaveTask();
         checkAndScheduleMythicHook();
         initAuraHookIfPresent();
     }
 
-    public AccessoryService service() {
-        return accessoryService;
+    public AccessoryService service() { return accessoryService; }
+
+    private LoadedSettings readSettings() {
+        AccessorySettings values = AccessorySettings.read(getConfig());
+        AccessoryPageManager pages = new AccessoryPageManager(getDataFolder(), getLogger());
+        pages.reload(PageSettings.read(getConfig(), getLogger()), values.gui());
+        return new LoadedSettings(values, pages, new Lang(this, values.language()));
+    }
+
+    private void applySettings(LoadedSettings loaded) {
+        settings = loaded.values();
+        pageManager = loaded.pages();
+        lang = loaded.language();
+        limitManager.reload();
     }
 
     public void reloadPluginSettings() {
-        if (inventoryStore != null) {
-            inventoryStore.flushAllAsync(totalAccessoryStorageSize()).join();
-            inventoryStore.shutdown();
-        }
-        if (sqlManager != null) {
-            sqlManager.shutdown();
-            sqlManager = null;
-        }
         reloadConfig();
-        if (pageManager == null) {
-            initPageConfigs();
-        } else {
-            pageManager.reload();
+        LoadedSettings loaded = readSettings();
+        AccessoryStorage replacement = storage.uses(loaded.values().storage())
+                ? null : new AccessoryStorage(this, loaded.values().storage());
+        // Close using the old layout so InventoryCloseEvent saves to the correct page offsets.
+        closeAccessoryInventories();
+        int oldSize = totalAccessoryStorageSize();
+        if (replacement != null) {
+            storage.close(oldSize);
+            storage = replacement;
         }
-        if (limitManager != null) {
-            limitManager.reload();
+        applySettings(loaded);
+        if (skillEngine != null) skillEngine.loadConfig();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            refreshPlayerEffects(online, inventoryStore().getOrLoad(online.getUniqueId(), totalAccessoryStorageSize()));
         }
-        initLang();
-        initStorage();
-        if (skillEngine != null) {
-            skillEngine.loadConfig();
-        }
+    }
+
+    private record LoadedSettings(AccessorySettings values, AccessoryPageManager pages, Lang language) { }
+
+    /** One pipeline for effects after equip, GUI edits, clear and reload. */
+    public void refreshPlayerEffects(Player player, ItemStack[] contents) {
+        effects.rebuildFromContents(player, contents);
+        if (skillEngine != null) skillEngine.refreshPlayer(player, contents);
     }
 
     @Override
     public void onDisable() {
-        if (inventoryStore != null) {
-            int totalSize = totalAccessoryStorageSize();
-            inventoryStore.flushAllAsync(totalSize).join();
-            inventoryStore.shutdown();
+        if (storage != null) {
+            closeAccessoryInventories();
+            storage.close(totalAccessoryStorageSize());
         }
-        if (sqlManager != null) {
-            sqlManager.shutdown();
-        }
-        getLogger().info("Bye");
     }
 
-    private void initStorage() {
-        String typeRaw = getConfig().getString("database.type", "yml");
-        AccessoryStore.StorageType storageType = AccessoryStore.StorageType.fromConfig(typeRaw);
-
-        if (storageType == AccessoryStore.StorageType.MYSQL) {
-            this.sqlManager = new SqlManager(this);
-            this.sqlManager.init(
-                    getConfig().getString("database.mysql.host", "127.0.0.1"),
-                    getConfig().getInt("database.mysql.port", 3306),
-                    getConfig().getString("database.mysql.database", "minecraft"),
-                    getConfig().getString("database.mysql.username", "root"),
-                    getConfig().getString("database.mysql.password", "password"),
-                    getConfig().getInt("database.mysql.pool-size", 10),
-                    getConfig().getInt("database.mysql.min-idle", 2),
-                    getConfig().getInt("database.mysql.max-lifetime", 1800000),
-                    getConfig().getInt("database.mysql.connection-timeout", 10000),
-                    getConfig().getInt("database.mysql.idle-timeout", 600000)
-            );
-            getLogger().info("Accessory storage mode: mysql");
-        } else if (storageType == AccessoryStore.StorageType.YML) {
-            this.sqlManager = null;
-            getLogger().info("Accessory storage mode: yml");
-        } else {
-            this.sqlManager = null;
-            getLogger().info("Accessory storage mode: only-ram (data will not be persisted)");
+    private void closeAccessoryInventories() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player.getOpenInventory().getTopInventory().getHolder() instanceof AccessoryInventoryHolder) {
+                player.closeInventory();
+            }
         }
-
-        this.inventoryStore = new AccessoryStore(this, storageType, sqlManager);
     }
 
     private void startAutoSaveTask() {
         long period = 5L * 60L * 20L;
-        Bukkit.getScheduler().runTaskTimer(this, () -> {
-            int totalSize = totalAccessoryStorageSize();
-            inventoryStore.flushAllAsync(totalSize);
-        }, period, period);
-    }
-
-    private void initFiles() {
-        getDataFolder().mkdirs();
-        File statsFile = new File(getDataFolder(), "stats.yml");
-        if (!statsFile.exists()) {
-            saveResource("stats.yml", false);
-        }
-        saveDefaultConfig();
-    }
-
-    private void initPageConfigs() {
-        File pageFolder = new File(getDataFolder(), "page");
-        if (!pageFolder.exists()) {
-            pageFolder.mkdirs();
-        }
-        savePageResourceIfMissing("page/page1.yml");
-        savePageResourceIfMissing("page/page2.yml");
-
-        this.pageManager = new AccessoryPageManager(this);
-        this.pageManager.reload();
-    }
-
-    private void savePageResourceIfMissing(String path) {
-        File file = new File(getDataFolder(), path);
-        if (!file.exists()) {
-            saveResource(path, false);
-        }
-    }
-
-    private void initLang() {
-        String LangFile = getConfig().getString("Lang", "en_US");
-        lang = new Lang(this,LangFile);
-    }
-
-    private void initSkillConfigs() {
-        File skillFolder = new File(getDataFolder(), "skill");
-        if (!skillFolder.exists()) {
-            skillFolder.mkdirs();
-        }
-        File skillFile = new File(skillFolder, "skill.yml");
-        if (!skillFile.exists()) {
-            saveResource("skill/skill.yml", false);
-        }
-        File exampleFile = new File(skillFolder, "example.yml");
-        if (!exampleFile.exists()) {
-            saveResource("skill/example.yml", false);
-        }
+        Bukkit.getScheduler().runTaskTimer(this,
+                () -> inventoryStore().flushAllAsync(totalAccessoryStorageSize()), period, period);
     }
 
     private void checkAndScheduleMythicHook() {
@@ -269,29 +212,9 @@ public final class Accessory extends JavaPlugin {
         magicShieldCommand.configure(magicAbsorb::addShield, magicAbsorb::addShieldPercent);
     }
 
-    public int accessorySize() {
-        return accessorySize(1);
-    }
-
-    public int accessorySize(int page) {
-        if (pageManager != null) {
-            return pageManager.pageSize(page);
-        }
-        int size = getConfig().getInt("size", 9);
-        size = Math.max(9, Math.min(54, size));
-        return size - (size % 9);
-    }
-
-    public int accessoryPages() {
-        int configuredPages = Math.max(1, getConfig().getInt("pages", 1));
-        return pageManager == null ? configuredPages : pageManager.configuredPageCount(configuredPages);
-    }
-
-    public int accessoryPageStart(int page) {
-        return pageManager == null ? (Math.max(1, page) - 1) * accessorySize() : pageManager.pageStart(page);
-    }
-
-    public int totalAccessoryStorageSize() {
-        return pageManager == null ? accessorySize() * accessoryPages() : pageManager.totalStorageSize();
-    }
+    public int accessorySize() { return accessorySize(1); }
+    public int accessorySize(int page) { return pageManager.pageSize(page); }
+    public int accessoryPages() { return pageManager.pageCount(); }
+    public int accessoryPageStart(int page) { return pageManager.pageStart(page); }
+    public int totalAccessoryStorageSize() { return pageManager.totalStorageSize(); }
 }

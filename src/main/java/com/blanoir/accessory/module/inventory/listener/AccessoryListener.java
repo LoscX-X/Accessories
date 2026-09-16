@@ -1,11 +1,10 @@
 package com.blanoir.accessory.module.inventory.listener;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.module.attribute.loader.AccessoryLoad;
 import com.blanoir.accessory.events.AccessoryPlaceEvent;
 import com.blanoir.accessory.module.inventory.AccessoryInventoryLifecycleListener;
+import com.blanoir.accessory.module.inventory.AccessoryPageManager;
 import com.blanoir.accessory.module.inventory.ui.AccessoryInventoryHolder;
-import com.blanoir.accessory.module.inventory.ui.AccessoryInventoryMenu;
 import com.blanoir.accessory.utils.LoreUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -27,22 +26,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AccessoryListener implements Listener {
     private final Accessory plugin;
-    private final AccessoryLoad effects;
     private final AccessoryInventoryLifecycleListener invSave;
     private final NamespacedKey LOCKED;
-    private final NamespacedKey PRE_PAGE;
-    private final NamespacedKey NEXT_PAGE;
-    private final AccessoryInventoryMenu menu;
     private final Set<UUID> pendingRefresh = ConcurrentHashMap.newKeySet();
 
     public AccessoryListener(Accessory plugin) {
         this.plugin = plugin;
-        this.effects = new AccessoryLoad(plugin);
-        this.menu = new AccessoryInventoryMenu(plugin);
         this.invSave = new AccessoryInventoryLifecycleListener(plugin);
         this.LOCKED = new NamespacedKey(plugin, "locked");
-        this.PRE_PAGE = new NamespacedKey(plugin, "pre_page");
-        this.NEXT_PAGE = new NamespacedKey(plugin, "next_page");
     }
 
     private boolean isNotAccessoryTop(InventoryView view) {
@@ -141,6 +132,7 @@ public class AccessoryListener implements Listener {
         }
 
         UUID ownerId = holder.getOwnerId();
+        AccessoryPageManager pages = plugin.pageManager();
 
         if (!pendingRefresh.add(ownerId)) {
             return;
@@ -148,6 +140,7 @@ public class AccessoryListener implements Listener {
 
         Bukkit.getScheduler().runTask(plugin, () -> {
             pendingRefresh.remove(ownerId);
+            if (pages != plugin.pageManager()) return;
 
             ItemStack[] snapshot = invSave.sanitize(top, holder.currentPage());
 
@@ -165,11 +158,7 @@ public class AccessoryListener implements Listener {
             ItemStack[] fullContents = plugin.inventoryStore()
                     .getOrLoad(ownerId, plugin.totalAccessoryStorageSize());
 
-            effects.rebuildFromContents(refreshTarget, fullContents);
-
-            if (plugin.skillEngine() != null) {
-                plugin.skillEngine().refreshPlayer(refreshTarget, fullContents);
-            }
+            plugin.refreshPlayerEffects(refreshTarget, fullContents);
         });
     }
 
@@ -221,15 +210,6 @@ public class AccessoryListener implements Listener {
             return;
         }
 
-        ItemStack clicked = top.getItem(raw);
-
-        // 翻页按钮
-        if (hasMarker(clicked, PRE_PAGE) || hasMarker(clicked, NEXT_PAGE)) {
-            e.setCancelled(true);
-            switchPage(p, e.getView(), hasMarker(clicked, PRE_PAGE) ? page - 1 : page + 1);
-            return;
-        }
-
         List<Integer> frame = frameSlots(e.getView());
 
         boolean isFrame = frame.contains(raw);
@@ -254,7 +234,7 @@ public class AccessoryListener implements Listener {
                 default -> {
                     if (hasMarker(cur, LOCKED)) {
                         e.setCancelled(true);
-                        handleFrameDragAction(p, e.getView(), page, raw, topSize);
+                        plugin.menus().handleFrameClick(p, e.getView(), raw);
                         return;
                     }
                 }
@@ -352,61 +332,4 @@ public class AccessoryListener implements Listener {
         scheduleRefresh(p, e.getView());
     }
 
-    private void handleFrameDragAction(Player player, InventoryView view, int page, int slot, int topSize) {
-        String drag = plugin.pageManager().frameDragAction(page, slot, topSize);
-        switch (drag) {
-            case "pre_page" -> switchPage(player, view, page - 1);
-            case "next_page" -> switchPage(player, view, page + 1);
-            case "command" -> plugin.pageManager().executeFrameCommand(player, page, slot, topSize);
-            default -> {
-            }
-        }
-    }
-
-    private void switchPage(Player viewer, InventoryView view, int targetPage) {
-        if (!(view.getTopInventory().getHolder() instanceof AccessoryInventoryHolder holder)) {
-            return;
-        }
-
-        int current = holder.currentPage();
-        int total = holder.totalPages();
-        int next = Math.max(1, Math.min(total, targetPage));
-
-        if (next == current) {
-            return;
-        }
-
-        UUID ownerId = holder.getOwnerId();
-        Inventory top = view.getTopInventory();
-
-        ItemStack[] snapshot = invSave.sanitize(top, current);
-
-        plugin.inventoryStore().updateSlice(
-                ownerId,
-                plugin.accessoryPageStart(current),
-                snapshot,
-                plugin.accessorySize(current),
-                plugin.totalAccessoryStorageSize()
-        );
-
-        ItemStack[] nextContents = plugin.inventoryStore().getSliceOrLoad(
-                ownerId,
-                plugin.accessoryPageStart(next),
-                plugin.accessorySize(next),
-                plugin.totalAccessoryStorageSize()
-        );
-
-        var service = plugin.service();
-
-        Inventory nextInventory = menu.create(
-                ownerId,
-                next,
-                total,
-                nextContents,
-                service != null ? service.getDisabledSlots() : null
-        );
-
-        viewer.openInventory(nextInventory);
-        scheduleRefresh(viewer, viewer.getOpenInventory());
-    }
 }

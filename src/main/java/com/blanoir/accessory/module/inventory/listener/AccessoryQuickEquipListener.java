@@ -59,9 +59,6 @@ public final class AccessoryQuickEquipListener implements Listener {
     }
 
     private boolean isQuickEquipEnabled() {
-        if (plugin.getConfig().contains("quick-equip.shift-right-click")) {
-            return plugin.getConfig().getBoolean("quick-equip.shift-right-click");
-        }
-        return plugin.getConfig().getBoolean("quick-equip.sneak-right-click", true);
+        return plugin.settings().quickEquip();
     }
 }

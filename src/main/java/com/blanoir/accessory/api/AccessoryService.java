@@ -1,7 +1,6 @@
 package com.blanoir.accessory.api;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.module.attribute.loader.AccessoryLoad;
 import com.blanoir.accessory.module.inventory.ui.AccessoryInventoryHolder;
 import com.blanoir.accessory.module.inventory.ui.AccessoryInventoryMenu;
 import org.bukkit.Bukkit;
@@ -22,14 +21,12 @@ import java.util.UUID;
 public final class AccessoryService {
 
     private final Accessory plugin;
-    private final AccessoryLoad accessoryLoad;
     private final AccessoryInventoryMenu menu;
 
     private final Set<Integer> disabledSlots = new LinkedHashSet<>();
 
     public AccessoryService(Accessory plugin) {
         this.plugin = plugin;
-        this.accessoryLoad = new AccessoryLoad(plugin);
         this.menu = new AccessoryInventoryMenu(plugin);
     }
 
@@ -166,11 +163,7 @@ public final class AccessoryService {
         if (online != null) {
             ItemStack[] empty = new ItemStack[totalSize];
 
-            accessoryLoad.rebuildFromContents(online, empty);
-
-            if (plugin.skillEngine() != null) {
-                plugin.skillEngine().refreshPlayer(online, empty);
-            }
+            plugin.refreshPlayerEffects(online, empty);
         }
 
         return true;

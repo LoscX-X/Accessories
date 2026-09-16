@@ -1,129 +1,82 @@
 package com.blanoir.accessory.module.inventory;
 
-import com.blanoir.accessory.Accessory;
+import com.blanoir.accessory.config.AccessoryLayout;
+import com.blanoir.accessory.config.AccessoryLayout.FrameItem;
+import com.blanoir.accessory.config.AccessoryLayout.SlotRule;
+import com.blanoir.accessory.config.AccessorySettings;
+import com.blanoir.accessory.config.ConfigFiles;
+import com.blanoir.accessory.config.PageSettings;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.logging.Logger;
 
+/** Named layout registry and resolved page table; menu actions belong to the menu controller. */
 public final class AccessoryPageManager {
-    private static final String PAGE_DIR = "page";
+    private final File directory;
+    private final Logger logger;
+    private Map<String, AccessoryLayout> layouts = Map.of();
+    private List<AccessoryLayout> pages = List.of();
+    private int[] starts = new int[0];
 
-    private final Accessory plugin;
-    private final Map<Integer, YamlConfiguration> pages = new HashMap<>();
-
-    public AccessoryPageManager(Accessory plugin) {
-        this.plugin = plugin;
+    public AccessoryPageManager(File dataFolder, Logger logger) {
+        directory = new File(dataFolder, "layouts");
+        this.logger = logger;
     }
 
-    public void reload() {
-        pages.clear();
-
-        File dir = new File(plugin.getDataFolder(), PAGE_DIR);
-        if (!dir.exists() && !dir.mkdirs()) {
-            plugin.getLogger().severe("[Accessory] Failed to create page config folder: " + dir.getAbsolutePath());
-            return;
-        }
-
-        File[] files = dir.listFiles((file, name) -> name.toLowerCase().endsWith(".yml") || name.toLowerCase().endsWith(".yaml"));
-        if (files == null || files.length == 0) {
-            return;
-        }
-
-        List<File> sorted = new ArrayList<>(List.of(files));
-        sorted.sort(Comparator.comparing(File::getName));
-        for (File file : sorted) {
-            YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
-            if (!cfg.isInt("page")) {
-                plugin.getLogger().severe("[Accessory] 页面配置 " + file.getName() + " 缺失必填页码 page，已跳过该文件");
-                continue;
+    public void reload(PageSettings settings, AccessorySettings.Gui defaults) {
+        Map<String, AccessoryLayout> loaded = new LinkedHashMap<>();
+        for (File file : ConfigFiles.yamlFiles(directory)) {
+            var config = ConfigFiles.load(file, logger);
+            if (config == null) continue;
+            String name = file.getName();
+            String id = name.substring(0, name.lastIndexOf('.')).toLowerCase(Locale.ROOT);
+            if (loaded.containsKey(id)) {
+                throw new IllegalArgumentException("Duplicate layout id '" + id + "': " + file.getName());
             }
+            loaded.put(id, AccessoryLayout.read(id, config, defaults, logger));
+        }
 
-            int page = cfg.getInt("page");
-            if (page < 1) {
-                plugin.getLogger().severe("[Accessory] Page config " + file.getName() + " has invalid page: " + page);
-                continue;
+        // Resolve before publishing so a missing layout never replaces a working page table.
+        AccessoryLayout fallback = loaded.get(settings.defaultLayout());
+        if (fallback == null) {
+            throw new IllegalArgumentException("Default layout '" + settings.defaultLayout() + "' not found in layouts/");
+        }
+        var resolved = new java.util.ArrayList<AccessoryLayout>();
+        int[] offsets = new int[settings.count() + 1];
+        for (int page = 1; page <= settings.count(); page++) {
+            String id = settings.layoutFor(page);
+            AccessoryLayout layout = loaded.get(id);
+            if (layout == null) {
+                logger.warning("Page " + page + ": layout '" + id + "' not found; using '" + fallback.id() + "'.");
+                layout = fallback;
             }
-
-            if (pages.containsKey(page)) {
-                plugin.getLogger().severe("[Accessory] Duplicate page config for page " + page + ": " + file.getName() + " skipped");
-                continue;
-            }
-            pages.put(page, cfg);
+            resolved.add(layout);
+            offsets[page] = offsets[page - 1] + layout.size();
         }
+        layouts = Map.copyOf(loaded);
+        pages = List.copyOf(resolved);
+        starts = offsets;
     }
 
-    public int configuredPageCount(int configuredPages) {
-        int max = Math.max(1, configuredPages);
-        for (Integer page : pages.keySet()) {
-            max = Math.max(max, page);
-        }
-
-        ConfigurationSection accessorySection = plugin.getConfig().getConfigurationSection("Accessory");
-        if (accessorySection == null) {
-            return max;
-        }
-
-        for (String key : accessorySection.getKeys(false)) {
-            if (!key.startsWith("page_")) {
-                continue;
-            }
-            try {
-                max = Math.max(max, Integer.parseInt(key.substring("page_".length())));
-            } catch (NumberFormatException ignored) {
-                // Ignore non-numeric page section suffixes.
-            }
-        }
-        return max;
-    }
-
-    public int pageSize(int page) {
-        YamlConfiguration pageConfig = pages.get(page);
-        int size = pageConfig == null ? plugin.getConfig().getInt("size", 9) : pageConfig.getInt("size", plugin.getConfig().getInt("size", 9));
-        size = Math.max(9, Math.min(54, size));
-        return size - (size % 9);
-    }
-
-    public int maxPageSize() {
-        int max = 9;
-        for (int page = 1; page <= plugin.accessoryPages(); page++) {
-            max = Math.max(max, pageSize(page));
-        }
-        return max;
-    }
-
-    public int pageStart(int page) {
-        int start = 0;
-        int normalizedPage = Math.max(1, Math.min(plugin.accessoryPages(), page));
-        for (int i = 1; i < normalizedPage; i++) {
-            start += pageSize(i);
-        }
-        return start;
-    }
-
-    public int totalStorageSize() {
-        int total = 0;
-        for (int page = 1; page <= plugin.accessoryPages(); page++) {
-            total += pageSize(page);
-        }
-        return Math.max(9, total);
-    }
+    public int pageCount() { return pages.size(); }
+    public int normalizePage(int page) { return Math.clamp(page, 1, pageCount()); }
+    public AccessoryLayout layout(int page) { return pages.get(normalizePage(page) - 1); }
+    public Map<String, AccessoryLayout> layouts() { return layouts; }
+    public int pageSize(int page) { return layout(page).size(); }
+    public String pageTitle(int page) { return layout(page).title(); }
+    public int maxPageSize() { return pages.stream().mapToInt(AccessoryLayout::size).max().orElse(9); }
+    public int pageStart(int page) { return starts[normalizePage(page) - 1]; }
+    public int totalStorageSize() { return starts[pageCount()]; }
 
     public int pageByAbsoluteSlot(int absoluteSlot) {
-        int start = 0;
-        for (int page = 1; page <= plugin.accessoryPages(); page++) {
-            int size = pageSize(page);
-            if (absoluteSlot >= start && absoluteSlot < start + size) {
-                return page;
-            }
-            start += size;
+        if (absoluteSlot < 0 || absoluteSlot >= totalStorageSize()) return -1;
+        for (int page = 1; page <= pageCount(); page++) {
+            if (absoluteSlot < starts[page]) return page;
         }
         return -1;
     }
@@ -133,181 +86,33 @@ public final class AccessoryPageManager {
         return page == -1 ? -1 : absoluteSlot - pageStart(page);
     }
 
-    public boolean isSlotConfigured(int page, int slot) {
-        return pageSection(page, "Accessory." + slot) != null
-                || plugin.getConfig().isConfigurationSection("Accessory.page_" + page + "." + slot)
-                || plugin.getConfig().isConfigurationSection("Accessory." + slot);
-    }
+    public List<Integer> configuredSlots(int page) { return List.copyOf(layout(page).slots().keySet()); }
+    public boolean isSlotConfigured(int page, int slot) { return slotRule(page, slot) != null; }
 
     public List<String> requiredLore(int page, int slot) {
-        YamlConfiguration pageConfig = pages.get(page);
-        String pageFilePath = "Accessory." + slot + ".lore";
-        if (pageConfig != null && pageConfig.isList(pageFilePath)) {
-            return pageConfig.getStringList(pageFilePath);
-        }
-
-        String pagePath = "Accessory.page_" + page + "." + slot + ".lore";
-        if (plugin.getConfig().isList(pagePath)) {
-            return plugin.getConfig().getStringList(pagePath);
-        }
-        return plugin.getConfig().getStringList("Accessory." + slot + ".lore");
+        SlotRule rule = slotRule(page, slot);
+        return rule == null ? List.of() : rule.lore();
     }
 
     public String requiredPermission(int page, int slot) {
-        YamlConfiguration pageConfig = pages.get(page);
-        String pageFilePath = "Accessory." + slot + ".permission";
-        if (pageConfig != null && pageConfig.isString(pageFilePath)) {
-            String permission = pageConfig.getString(pageFilePath, "").trim();
-            return permission.isEmpty() ? null : permission;
-        }
-
-        String pagePath = "Accessory.page_" + page + "." + slot + ".permission";
-        String path = plugin.getConfig().isString(pagePath) ? pagePath : "Accessory." + slot + ".permission";
-        if (!plugin.getConfig().isString(path)) {
-            return null;
-        }
-        String permission = plugin.getConfig().getString(path, "").trim();
-        return permission.isEmpty() ? null : permission;
+        SlotRule rule = slotRule(page, slot);
+        return rule == null ? null : rule.permission();
     }
 
     public List<Integer> frameSlots(int page, int size) {
-        LinkedHashSet<Integer> out = new LinkedHashSet<>();
-        for (FrameItem item : frameItems(page, size)) {
-            out.addAll(item.slots());
-        }
-
-        if (out.isEmpty()) {
-            for (int d : new int[]{0, 2, 4, 6, 8}) {
-                if (d < size) out.add(d);
-            }
-        }
-        return new ArrayList<>(out);
+        return frameItems(page, size).stream().flatMap(item -> item.slots().stream()).filter(slot -> slot < size).distinct().toList();
     }
 
-    public List<FrameItem> frameItems(int page, int size) {
-        List<FrameItem> items = new ArrayList<>();
-        YamlConfiguration pageConfig = pages.get(page);
-        ConfigurationSection pageFrame = pageConfig == null ? null : pageConfig.getConfigurationSection("frame");
-        if (pageFrame != null) {
-            for (String key : pageFrame.getKeys(false)) {
-                ConfigurationSection itemSection = pageFrame.getConfigurationSection(key);
-                if (itemSection == null || !itemSection.isList("slots")) {
-                    continue;
-                }
-                items.add(new FrameItem(key, itemSection, validSlots(page, key, itemSection.getIntegerList("slots"), size)));
-            }
-        }
-
-        if (!items.isEmpty()) {
-            return items;
-        }
-
-        ConfigurationSection legacyItem = plugin.getConfig().getConfigurationSection("frame.item");
-        if (legacyItem != null) {
-            items.add(new FrameItem("item", legacyItem, validSlots(page, "item", rawLegacyFrameSlots(page), size)));
-        }
-        return items;
-    }
+    public List<FrameItem> frameItems(int page, int size) { return layout(page).frames(); }
 
     public FrameItem frameItemAt(int page, int slot, int size) {
-        for (FrameItem item : frameItems(page, size)) {
-            if (item.slots().contains(slot)) {
-                return item;
-            }
-        }
-        return null;
+        if (slot < 0 || slot >= size) return null;
+        return frameItems(page, size).stream().filter(item -> item.slots().contains(slot)).findFirst().orElse(null);
     }
 
-    public String frameDragAction(int page, int slot, int size) {
-        FrameItem item = frameItemAt(page, slot, size);
-        return item == null ? "" : item.section().getString("drag", "").trim().toLowerCase();
-    }
+    public ConfigurationSection disabledSlotItemSection(int page) { return layout(page).disabledItem(); }
 
-    public void executeFrameCommand(Player player, int page, int slot, int size) {
-        FrameItem item = frameItemAt(page, slot, size);
-        if (item == null || !"command".equalsIgnoreCase(item.section().getString("drag", ""))) {
-            return;
-        }
-
-        AccessoryCommandExecutor.execute(player, page, slot, commands(item.section(), "command.console"), true);
-        AccessoryCommandExecutor.execute(player, page, slot, commands(item.section(), "command.player"), false);
-    }
-
-    public ConfigurationSection pageButtonItemSection(int page, String buttonKey) {
-        return pageOrLegacySection(page, buttonKey + ".item");
-    }
-
-    public int pageButtonSlot(int page, String buttonKey, int defaultSlot) {
-        YamlConfiguration pageConfig = pages.get(page);
-        String path = buttonKey + ".slot";
-        if (pageConfig != null && pageConfig.isInt(path)) {
-            return pageConfig.getInt(path);
-        }
-        return plugin.getConfig().getInt(path, defaultSlot);
-    }
-
-    public ConfigurationSection disabledSlotItemSection(int page) {
-        return pageOrLegacySection(page, "disabled-slot.item");
-    }
-
-    public ConfigurationSection pageAccessorySection(int page) {
-        YamlConfiguration pageConfig = pages.get(page);
-        if (pageConfig != null && pageConfig.isConfigurationSection("Accessory")) {
-            return pageConfig.getConfigurationSection("Accessory");
-        }
-        return plugin.getConfig().getConfigurationSection("Accessory.page_" + page);
-    }
-
-    public ConfigurationSection legacyAccessorySection() {
-        return plugin.getConfig().getConfigurationSection("Accessory");
-    }
-
-
-    private List<String> commands(ConfigurationSection section, String path) {
-        if (section.isList(path)) {
-            return section.getStringList(path);
-        }
-        if (section.isString(path)) {
-            return List.of(section.getString(path, ""));
-        }
-        return List.of();
-    }
-
-    private List<Integer> validSlots(int page, String itemKey, List<Integer> raw, int size) {
-        LinkedHashSet<Integer> out = new LinkedHashSet<>();
-        for (Integer slot : raw) {
-            if (slot == null) continue;
-            if (slot < 0 || slot >= size) {
-                plugin.getLogger().warning("[Accessory] frame item " + itemKey + " slot out of bounds on page " + page + ": " + slot + " (invSize=" + size + ")");
-                continue;
-            }
-            out.add(slot);
-        }
-        return new ArrayList<>(out);
-    }
-
-    private ConfigurationSection pageSection(int page, String path) {
-        YamlConfiguration pageConfig = pages.get(page);
-        if (pageConfig == null) {
-            return null;
-        }
-        return pageConfig.getConfigurationSection(path);
-    }
-
-    private ConfigurationSection pageOrLegacySection(int page, String path) {
-        ConfigurationSection pageSection = pageSection(page, path);
-        return pageSection != null ? pageSection : plugin.getConfig().getConfigurationSection(path);
-    }
-
-    private List<Integer> rawLegacyFrameSlots(int page) {
-        String pagePath = "frame.page_" + page + ".slots";
-        List<Integer> slots = plugin.getConfig().getIntegerList(pagePath);
-        if (slots.isEmpty()) {
-            slots = plugin.getConfig().getIntegerList("frame.slots");
-        }
-        return slots;
-    }
-
-    public record FrameItem(String key, ConfigurationSection section, List<Integer> slots) {
+    private SlotRule slotRule(int page, int slot) {
+        return page < 1 || page > pageCount() ? null : layout(page).slots().get(slot);
     }
 }
