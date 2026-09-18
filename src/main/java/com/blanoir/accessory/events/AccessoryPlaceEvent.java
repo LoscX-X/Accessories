@@ -12,17 +12,28 @@ public class AccessoryPlaceEvent extends Event implements Cancellable {
     private static final HandlerList HANDLERS = new HandlerList();
 
     private final Player player;
+    private final java.util.UUID ownerId;
+    private final int page;
+    private final AccessoryChangeCause cause;
     private final int slot;
     private final ItemStack item;
     private final ItemStack replaced;
     private boolean cancelled;
 
-    public AccessoryPlaceEvent(Player player, int slot, ItemStack item, ItemStack replaced) {
+    public AccessoryPlaceEvent(Player player, java.util.UUID ownerId, int page, int slot,
+                               ItemStack item, ItemStack replaced, AccessoryChangeCause cause) {
         this.player = player;
+        this.ownerId = ownerId;
+        this.page = page;
+        this.cause = cause;
         this.slot = slot;
-        this.item = item;
-        this.replaced = replaced;
+        this.item = item.clone();
+        this.replaced = replaced == null ? null : replaced.clone();
     }
+
+    public java.util.UUID getOwnerId() { return ownerId; }
+    public int getPage() { return page; }
+    public AccessoryChangeCause getCause() { return cause; }
 
     public Player getPlayer() {
         return player;
@@ -33,11 +44,11 @@ public class AccessoryPlaceEvent extends Event implements Cancellable {
     }
 
     public ItemStack getItem() {
-        return item;
+        return item.clone();
     }
 
     public ItemStack getReplaced() {
-        return replaced;
+        return replaced == null ? null : replaced.clone();
     }
 
     @Override

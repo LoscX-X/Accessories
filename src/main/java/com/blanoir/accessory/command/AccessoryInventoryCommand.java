@@ -118,7 +118,7 @@ public final class AccessoryInventoryCommand implements BasicCommand {
             return true;
         }
 
-        plugin.menus().openFor(viewer, target);
+        plugin.service().open(viewer, target, com.blanoir.accessory.api.AccessoryViewMode.READ_ONLY);
         return true;
     }
 

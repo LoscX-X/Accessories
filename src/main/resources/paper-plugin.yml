@@ -33,7 +33,7 @@ permissions:
     description: Allow clearing player accessories
     default: op
   accessory.view:
-    description: Allow opening and editing another player's accessory inventory
+    description: Allow read-only viewing of another player's accessory inventory
     default: op
   accessory.shield:
     description: Allow adjusting physical shield

@@ -51,11 +51,7 @@ public final class AccessoryInventoryItem {
         }
 
         boolean hideTooltip = section == null || section.getBoolean("hide-tooltip", true);
-        try {
-            meta.setHideTooltip(hideTooltip);
-        } catch (NoSuchMethodError ignored) {
-            // Older API compatibility.
-        }
+        meta.setHideTooltip(hideTooltip);
 
         int customModelData = section == null ? -1 : section.getInt("custom-model-data", -1);
         if (customModelData > 0) {

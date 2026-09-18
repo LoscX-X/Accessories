@@ -6,327 +6,196 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
+/** Serial persistence, session cache, failed-write retention, and defensive snapshots. */
 public final class AccessoryStore {
-    private static final String CONTAINS_DIR = "contains";
-    private static final String CONTENTS_KEY = "contents";
-
     public enum StorageType {
-        MYSQL,
-        YML,
-        ONLY_RAM;
-
+        MYSQL, YML, ONLY_RAM;
         public static StorageType fromConfig(String raw) {
-            if (raw == null) {
-                return YML;
-            }
-            if ("mysql".equalsIgnoreCase(raw)) {
-                return MYSQL;
-            }
-            if ("only-ram".equalsIgnoreCase(raw) || "only_ram".equalsIgnoreCase(raw)
-                    || "ram".equalsIgnoreCase(raw)) {
-                return ONLY_RAM;
-            }
-            return YML;
+            if (raw == null) return YML;
+            return switch (raw.toLowerCase(Locale.ROOT)) {
+                case "mysql" -> MYSQL;
+                case "yml" -> YML;
+                case "only-ram" -> ONLY_RAM;
+                default -> throw new IllegalArgumentException("Unknown storage.type: " + raw);
+            };
         }
     }
-
+    private record Write(ItemStack[] contents, boolean delete) { }
     private final JavaPlugin plugin;
     private final StorageType storageType;
     private final SqlManager sqlManager;
-    private final Map<UUID, ItemStack[]> cache = new ConcurrentHashMap<>();
-    private final Set<UUID> mysqlDeletedPlayers = ConcurrentHashMap.newKeySet();
+    private final Object lock = new Object();
+    private final Map<UUID, ItemStack[]> cache = new HashMap<>();
+    private final Map<UUID, Long> generations = new HashMap<>();
+    private final Map<UUID, Write> pendingWrites = new HashMap<>();
+    private final List<Integer> legacySizes;
+    private final boolean stableSlots;
     private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor(r -> {
-        Thread thread = new Thread(r, "accessory-io");
-        thread.setDaemon(true);
-        return thread;
+        Thread thread = new Thread(r, "accessory-io"); thread.setDaemon(true); return thread;
     });
 
-    public AccessoryStore(JavaPlugin plugin, StorageType storageType, SqlManager sqlManager) {
-        this.plugin = plugin;
-        this.storageType = storageType;
-        this.sqlManager = sqlManager;
+    public AccessoryStore(JavaPlugin plugin, StorageType type, SqlManager sql) {
+        this.plugin = plugin; storageType = type; sqlManager = sql;
+        stableSlots = plugin instanceof Accessory;
+        if (plugin instanceof Accessory accessory) {
+            List<Integer> explicit = plugin.getConfig().getIntegerList("storage.legacy-page-sizes");
+            legacySizes = explicit.isEmpty() ? java.util.stream.IntStream.rangeClosed(1, accessory.pageManager().pageCount())
+                    .mapToObj(accessory.pageManager()::pageSize).toList() : List.copyOf(explicit);
+        } else legacySizes = List.of();
+        if (type == StorageType.MYSQL && sql == null) throw new IllegalArgumentException("MySQL selected without a connection manager");
     }
 
-    public void preload(UUID playerId, int totalSize) {
-        CompletableFuture.runAsync(() -> cache.computeIfAbsent(playerId, id -> load(id, totalSize)), ioExecutor);
-    }
+    public void preload(UUID player, int size) { readAsync(player, size).exceptionally(ex -> { log("load", player, ex); return null; }); }
 
-
-    public void getSliceOrLoadAsync(UUID playerId, int start, int size, int totalSize, Consumer<ItemStack[]> callback) {
-        CompletableFuture
-                .supplyAsync(() -> getOrLoadInternal(playerId, totalSize), ioExecutor)
-                .thenApply(full -> extractSlice(full, start, size))
-                .thenAccept(pageContents -> Bukkit.getScheduler().runTask(plugin, () -> callback.accept(pageContents)));
-    }
-
-    public ItemStack[] getOrLoad(UUID playerId, int totalSize) {
-        ItemStack[] contents = cache.computeIfAbsent(playerId, id -> load(id, totalSize));
-        return copyToSize(contents, totalSize);
-    }
-
-
-    public ItemStack[] getSliceOrLoad(UUID playerId, int start, int size, int totalSize) {
-        ItemStack[] full = getOrLoad(playerId, totalSize);
-        return extractSlice(full, start, size);
-    }
-
-    public ItemStack[] getPageOrLoad(UUID playerId, int page, int pageSize, int totalPages) {
-        // 多页面/每页大小不同时按真实页偏移读取，避免复制到错误的页
-        return getSliceOrLoad(playerId, pageStart(page, pageSize, totalPages), pageSize, totalSize(pageSize, totalPages));
-    }
-
-    public void update(UUID playerId, ItemStack[] contents, int totalSize) {
-        mysqlDeletedPlayers.remove(playerId);
-        cache.put(playerId, copyToSize(contents, totalSize));
-    }
-
-
-    public void updateSlice(UUID playerId, int start, ItemStack[] pageContents, int pageSize, int totalSize) {
-        mysqlDeletedPlayers.remove(playerId);
-        ItemStack[] full = getOrLoad(playerId, totalSize);
-        int safeStart = Math.max(0, Math.min(start, full.length));
-        int safeSize = Math.max(0, Math.min(pageSize, full.length - safeStart));
-        for (int i = 0; i < safeSize; i++) {
-            full[safeStart + i] = i < pageContents.length ? pageContents[i] : null;
+    public CompletableFuture<ItemStack[]> readAsync(UUID player, int size) {
+        final long generation;
+        synchronized (lock) {
+            var cached = cache.get(player);
+            if (cached != null) return CompletableFuture.completedFuture(copy(cached, size));
+            generation = generations.getOrDefault(player, 0L);
         }
-        cache.put(playerId, full);
-    }
-
-    public void updatePage(UUID playerId, int page, ItemStack[] pageContents, int pageSize, int totalPages) {
-        updateSlice(playerId, pageStart(page, pageSize, totalPages), pageContents, pageSize, totalSize(pageSize, totalPages));
-    }
-
-    public void clear(UUID playerId, int totalSize) {
-        ItemStack[] empty = new ItemStack[totalSize];
-        cache.put(playerId, empty);
-        if (storageType == StorageType.MYSQL && sqlManager != null) {
-            mysqlDeletedPlayers.add(playerId);
-            CompletableFuture.runAsync(() -> deleteFromMysql(playerId), ioExecutor);
-        } else if (storageType == StorageType.YML) {
-            CompletableFuture.runAsync(() -> saveToDisk(playerId, empty), ioExecutor);
-        }
-    }
-
-    public void saveAndRemove(UUID playerId, int totalSize) {
-        ItemStack[] removed = cache.remove(playerId);
-        ItemStack[] snapshot = copyToSize(removed, totalSize);
-
-        CompletableFuture.runAsync(() -> save(playerId, snapshot), ioExecutor)
-                .exceptionally(ex -> {
-                    plugin.getLogger().warning("Failed to save inventory for " + playerId + ": " + ex.getMessage());
-                    return null;
-                });
-    }
-
-    public void flush(UUID playerId, int totalSize) {
-        ItemStack[] snapshot = getOrLoad(playerId, totalSize);
-        CompletableFuture.runAsync(() -> save(playerId, snapshot), ioExecutor);
-    }
-
-    public CompletableFuture<Void> flushAllAsync(int totalSize) {
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        Map<UUID, ItemStack[]> snapshotByPlayer = new HashMap<>(cache);
-        for (Map.Entry<UUID, ItemStack[]> entry : snapshotByPlayer.entrySet()) {
-            UUID playerId = entry.getKey();
-            ItemStack[] snapshot = copyToSize(entry.getValue(), totalSize);
-            futures.add(CompletableFuture.runAsync(() -> save(playerId, snapshot), ioExecutor));
-        }
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-    }
-
-    public void shutdown() {
-        ioExecutor.shutdown();
-    }
-
-
-    private ItemStack[] extractSlice(ItemStack[] full, int start, int size) {
-        ItemStack[] out = new ItemStack[Math.max(0, size)];
-        int safeStart = Math.max(0, Math.min(start, full.length));
-        int copyLength = Math.min(out.length, full.length - safeStart);
-        if (copyLength > 0) {
-            System.arraycopy(full, safeStart, out, 0, copyLength);
-        }
-        return out;
-    }
-
-    private int totalSize(int pageSize, int totalPages) {
-        if (plugin instanceof Accessory accessory && accessory.pageManager() != null) {
-            return accessory.pageManager().totalStorageSize();
-        }
-        return Math.max(pageSize, pageSize * Math.max(1, totalPages));
-    }
-
-    private int pageStart(int page, int pageSize, int totalPages) {
-        if (plugin instanceof Accessory accessory && accessory.pageManager() != null) {
-            return accessory.pageManager().pageStart(page);
-        }
-        return (normalizedPage(page, totalPages) - 1) * pageSize;
-    }
-
-    private int normalizedPage(int page, int totalPages) {
-        int max = Math.max(1, totalPages);
-        return Math.max(1, Math.min(max, page));
-    }
-
-    private ItemStack[] getOrLoadInternal(UUID playerId, int totalSize) {
-        ItemStack[] contents = cache.computeIfAbsent(playerId, id -> load(id, totalSize));
-        return copyToSize(contents, totalSize);
-    }
-
-    private ItemStack[] load(UUID playerId, int size) {
-        return switch (storageType) {
-            case MYSQL -> loadFromMysql(playerId, size);
-            case YML -> loadFromDisk(playerId, size);
-            case ONLY_RAM -> new ItemStack[size];
-        };
-    }
-
-    private void save(UUID playerId, ItemStack[] contents) {
-        if (storageType == StorageType.MYSQL) {
-            if (mysqlDeletedPlayers.contains(playerId)) {
-                return;
+        return CompletableFuture.supplyAsync(() -> {
+            synchronized (lock) {
+                ItemStack[] current = cache.get(player);
+                if (current != null) return copy(current, size);
             }
-            saveToMysql(playerId, contents);
-            return;
-        }
-        if (storageType == StorageType.YML) {
-            saveToDisk(playerId, contents);
-        }
-    }
-
-    private void deleteFromMysql(UUID playerId) {
-        try {
-            sqlManager.deleteInventory(playerId);
-        } catch (Exception ex) {
-            plugin.getLogger().warning("Failed to delete inventory from MySQL for " + playerId + ": " + ex.getMessage());
-        }
-    }
-
-    private ItemStack[] loadFromMysql(UUID playerId, int size) {
-        if (sqlManager == null) {
-            plugin.getLogger().warning("MySQL storage selected but SqlManager is unavailable, fallback to empty data.");
-            return new ItemStack[size];
-        }
-        try {
-            String raw = sqlManager.loadInventory(playerId);
-            if (raw == null || raw.isEmpty()) {
-                return new ItemStack[size];
+            ItemStack[] loaded;
+            synchronized (lock) {
+                Write pending = pendingWrites.get(player);
+                loaded = pending == null ? null : copy(pending.contents(), size);
             }
-            return decode(raw, size);
-        } catch (Exception ex) {
-            plugin.getLogger().warning("Failed to load inventory from MySQL for " + playerId + ": " + ex.getMessage());
-            return new ItemStack[size];
-        }
-    }
-
-    private void saveToMysql(UUID playerId, ItemStack[] contents) {
-        if (sqlManager == null) {
-            plugin.getLogger().warning("MySQL storage selected but SqlManager is unavailable, skip save.");
-            return;
-        }
-        try {
-            sqlManager.saveInventory(playerId, encode(contents));
-        } catch (Exception ex) {
-            plugin.getLogger().warning("Failed to save inventory to MySQL for " + playerId + ": " + ex.getMessage());
-        }
-    }
-
-    private ItemStack[] loadFromDisk(UUID playerId, int size) {
-        File file = fileOf(playerId);
-        if (!file.exists()) {
-            return new ItemStack[size];
-        }
-
-        YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
-        ItemStack[] out = new ItemStack[size];
-        var raw = cfg.getList(CONTENTS_KEY);
-        if (raw == null || raw.isEmpty()) {
-            return out;
-        }
-
-        int limit = Math.min(size, raw.size());
-        for (int i = 0; i < limit; i++) {
-            Object it = raw.get(i);
-            if (it instanceof ItemStack stack) {
-                out[i] = stack;
+            if (loaded == null) loaded = load(player, size); // A failed read never becomes an empty inventory.
+            synchronized (lock) {
+                if (generations.getOrDefault(player, 0L) == generation) {
+                    cache.putIfAbsent(player, loaded);
+                    return copy(cache.get(player), size);
+                }
+                return copy(loaded, size); // Session consumer also validates its request token.
             }
-        }
-        return out;
+        }, ioExecutor);
     }
 
-    private void saveToDisk(UUID playerId, ItemStack[] contents) {
-        File dir = new File(plugin.getDataFolder(), CONTAINS_DIR);
-        if (!dir.exists() && !dir.mkdirs()) {
-            plugin.getLogger().warning("Failed to create contains directory: " + dir.getAbsolutePath());
-            return;
-        }
+    public void getSliceOrLoadAsync(UUID player, int start, int size, int total, Consumer<ItemStack[]> callback) {
+        readAsync(player, total).thenAccept(full -> {
+            if (plugin.isEnabled()) Bukkit.getScheduler().runTask(plugin, () -> callback.accept(slice(full, start, size)));
+        }).exceptionally(ex -> { log("load", player, ex); return null; });
+    }
+    public ItemStack[] getOrLoad(UUID player, int size) { return readAsync(player, size).join(); }
+    public ItemStack[] getSliceOrLoad(UUID player, int start, int size, int total) { return slice(getOrLoad(player, total), start, size); }
 
-        YamlConfiguration cfg = new YamlConfiguration();
-        cfg.set(CONTENTS_KEY, Arrays.asList(contents));
+    public void update(UUID player, ItemStack[] contents, int size) {
+        synchronized (lock) { cache.put(player, copy(contents, size)); }
+    }
+    public void updateSlice(UUID player, int start, ItemStack[] contents, int size, int total) {
+        ItemStack[] full = getOrLoad(player, total);
+        int safeStart = Math.clamp(start, 0, full.length);
+        int length = Math.min(size, full.length - safeStart);
+        for (int i = 0; i < length; i++) full[safeStart + i] = i < contents.length && contents[i] != null ? contents[i].clone() : null;
+        update(player, full, total);
+    }
+    public void clear(UUID player, int size) {
+        ItemStack[] empty = new ItemStack[size];
+        synchronized (lock) { generations.merge(player, 1L, Long::sum); cache.put(player, empty); }
+        enqueue(player, new Write(empty, storageType == StorageType.MYSQL));
+    }
+    public void saveAndRemove(UUID player, int size) {
+        ItemStack[] removed;
+        synchronized (lock) { generations.merge(player, 1L, Long::sum); removed = cache.remove(player); }
+        // Quitting before a load completed must never persist a fabricated empty snapshot.
+        if (removed != null) enqueue(player, new Write(copy(removed, size), false));
+    }
+    public void flush(UUID player, int size) { enqueue(player, new Write(getOrLoad(player, size), false)); }
+    public CompletableFuture<Void> flushAllAsync(int size) {
+        Map<UUID, Write> writes;
+        synchronized (lock) {
+            writes = new HashMap<>(pendingWrites);
+            cache.forEach((id, contents) -> writes.put(id, new Write(copy(contents, size), false)));
+        }
+        List<CompletableFuture<Void>> tasks = new ArrayList<>();
+        writes.forEach((id, write) -> tasks.add(enqueue(id, write)));
+        tasks.add(CompletableFuture.runAsync(() -> { }, ioExecutor)); // Includes departed players' queued writes.
+        return CompletableFuture.allOf(tasks.toArray(CompletableFuture[]::new));
+    }
+    public void shutdown() { ioExecutor.shutdown(); }
+
+    private CompletableFuture<Void> enqueue(UUID player, Write write) {
+        if (storageType == StorageType.ONLY_RAM) return CompletableFuture.completedFuture(null);
+        synchronized (lock) { pendingWrites.put(player, write); }
+        var task = CompletableFuture.runAsync(() -> {
+            persist(player, write);
+            if (plugin instanceof Accessory accessory) accessory.debug().trace("storage", player.toString(), () -> "saved owner=" + player + " slots=" + write.contents().length);
+            synchronized (lock) { pendingWrites.remove(player, write); }
+        }, ioExecutor);
+        task.whenComplete((ignored, ex) -> { if (ex != null) log("save (retained for retry)", player, ex); });
+        return task;
+    }
+    private ItemStack[] load(UUID player, int size) {
+        if (storageType == StorageType.ONLY_RAM) return new ItemStack[size];
         try {
-            cfg.save(fileOf(playerId));
-        } catch (IOException ex) {
-            plugin.getLogger().severe("Save failed: " + playerId);
-            ex.printStackTrace();
-        }
-    }
-
-    private String encode(ItemStack[] contents) {
-        YamlConfiguration cfg = new YamlConfiguration();
-        cfg.set(CONTENTS_KEY, Arrays.asList(contents));
-        return Base64.getEncoder().encodeToString(cfg.saveToString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-    }
-
-    private ItemStack[] decode(String encoded, int size) {
-        String yaml = new String(Base64.getDecoder().decode(encoded), java.nio.charset.StandardCharsets.UTF_8);
-        YamlConfiguration cfg = new YamlConfiguration();
-        try {
-            cfg.loadFromString(yaml);
-        } catch (Exception ex) {
-            throw new IllegalArgumentException("Invalid serialized inventory", ex);
-        }
-
-        ItemStack[] out = new ItemStack[size];
-        var raw = cfg.getList(CONTENTS_KEY);
-        if (raw == null || raw.isEmpty()) {
-            return out;
-        }
-
-        int limit = Math.min(size, raw.size());
-        for (int i = 0; i < limit; i++) {
-            Object value = raw.get(i);
-            if (value instanceof ItemStack stack) {
-                out[i] = stack;
+            YamlConfiguration config = new YamlConfiguration();
+            if (storageType == StorageType.MYSQL) {
+                String raw = sqlManager.loadInventory(player);
+                if (raw == null || raw.isEmpty()) return new ItemStack[size];
+                config.loadFromString(new String(Base64.getDecoder().decode(raw), StandardCharsets.UTF_8));
+            } else {
+                File file = fileOf(player);
+                if (!file.exists()) return new ItemStack[size];
+                config.load(file); // Unlike loadConfiguration(), parsing errors propagate.
             }
-        }
-        return out;
+            List<?> raw = config.getList("contents");
+            if (raw == null) throw new IllegalArgumentException("Missing contents list");
+            ItemStack[] contents = new ItemStack[raw.size()];
+            for (int i = 0; i < contents.length; i++) {
+                Object value = raw.get(i);
+                if (value != null && !(value instanceof ItemStack)) throw new IllegalArgumentException("Invalid item at slot " + i);
+                contents[i] = value == null ? null : ((ItemStack) value).clone();
+            }
+            int format = config.getInt("format", 1);
+            if (format != 1 && format != 2) throw new IllegalArgumentException("Unsupported inventory format: " + format);
+            return stableSlots && format == 1 ? InventorySlotLayout.migrateLegacy(contents, legacySizes, size) : copy(contents, size);
+        } catch (Exception ex) { throw new CompletionException("Cannot load accessory inventory " + player, ex); }
     }
-
-    private File fileOf(UUID playerId) {
-        return new File(plugin.getDataFolder(), CONTAINS_DIR + "/" + playerId + ".yml");
+    private void persist(UUID player, Write write) {
+        try {
+            if (storageType == StorageType.MYSQL && write.delete()) { sqlManager.deleteInventory(player); return; }
+            YamlConfiguration config = new YamlConfiguration();
+            config.set("format", stableSlots ? 2 : 1);
+            config.set("contents", Arrays.asList(write.contents()));
+            if (storageType == StorageType.MYSQL) {
+                sqlManager.saveInventory(player, Base64.getEncoder().encodeToString(config.saveToString().getBytes(StandardCharsets.UTF_8)));
+            } else if (storageType == StorageType.YML) {
+                Path destination = fileOf(player).toPath();
+                Files.createDirectories(destination.getParent());
+                Path temporary = Files.createTempFile(destination.getParent(), player + "-", ".tmp");
+                try {
+                    config.save(temporary.toFile());
+                    try { Files.move(temporary, destination, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING); }
+                    catch (AtomicMoveNotSupportedException ex) { Files.move(temporary, destination, StandardCopyOption.REPLACE_EXISTING); }
+                } finally { Files.deleteIfExists(temporary); }
+            }
+        } catch (Exception ex) { throw new CompletionException("Cannot save accessory inventory " + player, ex); }
     }
-
-    private ItemStack[] copyToSize(ItemStack[] source, int size) {
-        ItemStack[] coped = new ItemStack[size];
-
-        if (source == null || source.length == 0) {
-            return coped;
-        }
-
-        int limit = Math.min(size, source.length);
-        for (int i = 0; i < limit; i++) {
-            coped[i] = source[i] == null ? null : source[i].clone();
-        }
-
-        return coped;
+    private File fileOf(UUID player) { return new File(plugin.getDataFolder(), "contains/" + player + ".yml"); }
+    private static ItemStack[] slice(ItemStack[] full, int start, int size) {
+        ItemStack[] result = new ItemStack[Math.max(0, size)];
+        for (int i = 0; i < result.length && start + i < full.length; i++) if (start + i >= 0 && full[start + i] != null) result[i] = full[start + i].clone();
+        return result;
+    }
+    private static ItemStack[] copy(ItemStack[] source, int minimum) {
+        // Hidden pages survive profile/layout shrinkage.
+        ItemStack[] result = new ItemStack[Math.max(minimum, source == null ? 0 : source.length)];
+        if (source != null) for (int i = 0; i < source.length; i++) result[i] = source[i] == null ? null : source[i].clone();
+        return result;
+    }
+    private void log(String operation, UUID player, Throwable ex) {
+        Throwable root = ex; while (root.getCause() != null) root = root.getCause();
+        plugin.getLogger().warning("Accessory " + operation + " failed for " + player + ": " + root.getMessage());
     }
 }

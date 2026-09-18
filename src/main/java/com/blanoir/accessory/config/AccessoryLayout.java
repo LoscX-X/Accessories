@@ -21,22 +21,23 @@ public record AccessoryLayout(String id, String title, int size, Map<Integer, Sl
 
     public static AccessoryLayout read(String id, ConfigurationSection config,
                                        AccessorySettings.Gui defaults, Logger logger) {
+        if (config.contains("Accessory", true)) throw new IllegalArgumentException("Layout " + id + ": replace the old Accessory section with slots");
         int requestedSize = config.getInt("size", defaults.defaultSize());
         int size = AccessorySettings.normalizeSize(requestedSize);
         if (size != requestedSize) logger.warning("Layout " + id + ": size " + requestedSize + " normalized to " + size);
 
         Map<Integer, SlotRule> slots = new LinkedHashMap<>();
-        ConfigurationSection accessories = config.getConfigurationSection("Accessory");
+        ConfigurationSection accessories = config.getConfigurationSection("slots");
         if (accessories != null) {
             for (String key : accessories.getKeys(false)) {
                 try {
                     int slot = Integer.parseInt(key);
                     ConfigurationSection rule = accessories.getConfigurationSection(key);
-                    if (rule == null || !validSlot(slot, size, id, "Accessory." + key, logger)) continue;
+                    if (rule == null || !validSlot(slot, size, id, "slots." + key, logger)) continue;
                     String permission = rule.getString("permission", "").trim();
                     slots.put(slot, new SlotRule(List.copyOf(rule.getStringList("lore")), permission.isEmpty() ? null : permission));
                 } catch (NumberFormatException ex) {
-                    logger.warning("Layout " + id + ": invalid Accessory slot " + key + "; skipped.");
+                    logger.warning("Layout " + id + ": invalid slots entry " + key + "; skipped.");
                 }
             }
         }

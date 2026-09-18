@@ -19,8 +19,9 @@ public final class ConfigFiles {
     public static void initialize(JavaPlugin plugin) {
         plugin.saveDefaultConfig();
         saveIfMissing(plugin, "stats.yml");
+        initializeDirectory(plugin, "profiles", List.of("default.yml", "arena.yml", "vip.yml"));
         initializeDirectory(plugin, "layouts", List.of("default.yml", "extra.yml"));
-        initializeDirectory(plugin, "skill", List.of("skill.yml", "example.yml"));
+        initializeDirectory(plugin, "skills", List.of("example.yml"));
     }
 
     private static void initializeDirectory(JavaPlugin plugin, String name, List<String> examples) {

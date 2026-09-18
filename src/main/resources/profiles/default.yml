@@ -1,0 +1,16 @@
+# 第一步：选择背包页面。每个名称对应 layouts/<名称>.yml。
+# default 适用于没有匹配其他 profile 的玩家，也是其他 profile 的继承基础。
+inventory:
+  title: "<green>饰品背包 <gray>{page}/{max_page}"
+  pages: [default, extra]
+
+# 第二步（可选）：限制功能。没有写的规则由其他 profile 继承。
+rules:
+  open: true
+  equip: true
+  unequip: true
+  attributes: true
+  skills: true
+  # 空列表允许全部页面；页面从 1 开始，槽位从 0 开始。
+  pages: []
+  disabled-slots: {}

@@ -1,73 +1,74 @@
-# 全局显示默认值；layouts/*.yml 可分别覆盖 title / size。
-title: "<gradient:#00ffa6:#00d1ff><b>Accessories {page}/{max_page}</b></gradient>"
-size: 9
+# 当前版本只读取以下分组。群体使用哪套背包请配置 profiles/，槽位外观请配置 layouts/。
+general:
+  language: en_US
 
-# 页面管理采用 ExcellentShop 的“页数 + 默认布局 + 逐页布局”方式。
-# 页数只由这里决定（1-100），增加布局文件不会自动增加页数。
-pages: 2
-layout:
-  # false: 所有页共用 by-page.0；true: 允许其他页单独指定布局。
-  paginated: true
-  by-page:
-    # 0 代表默认布局；值为 layouts/ 下的文件名，不含扩展名。
-    "0": default
-    "2": extra
+inventory:
+  # 布局文件省略 title / size 时采用的默认值。
+  title: "<green>饰品背包 <gray>{page}/{max_page}"
+  size: 9
+  quick-equip:
+    shift-right-click: true
+  anti-unequip:
+    lore: ["[Anti-unequip]"]
+  item-limits:
+    example_ring:
+      id: example_ring
+      max: 1
 
-# 页面槽位、边框、按钮和禁用样式仅配置在 layouts/*.yml。
-# 旧 page/*.yml、主配置 Accessory/frame/disabled-slot 不再读取。
-# 完整配置关系与升级方式见 docs/configuration.md。
-
-# Language/ 中的文件名，不带 .yml；消息支持 MiniMessage。
-Lang: "en_US"
-debug-mode: false
-skill-debug: false
-
-# 快速装备：潜行 + 主手右键；多个匹配槽位会显示可点击选项。
-quick-equip:
-  shift-right-click: true
-
-# 已装备物品包含任意关键词时，不能卸下或被快捷装备替换。
-anti-unequip:
+attribute:
+  # 只能选择一个外部属性来源：none / AuraSkills / AttributePlus / BlancAttribute。
+  # 只使用原版属性：provider: none + vanilla: true。不会自动选择其他插件。
+  provider: none
+  vanilla: true
   lore:
-    - "[Anti-unequip]"
+    enable: false
+    mappings:
+      health:
+        attribute: minecraft:max_health
+        keywords: [生命, health]
 
-# 同一物品的装备/生效数量限制，与 skill/*.yml 的 items ID 可以对应。
-# 支持 id、name（字符串/列表）、lore（列表）、material；max <= 0 不限制。
-# 未指定 id 时，规则键名同时作为 ID、名称及 lore 关键词兜底。
-item-limits:
-  example_ring:
-    id: example_ring
-    max: 1
+skills:
+  # 独立的 MythicMobs 技能系统；未安装依赖时不启动。技能定义放在 skills/。
+  enabled: true
+  triggers:
+    # 需要免伤 aura 在伤害取消后也触发时才开启。
+    cancelled-damage: false
+  cooldowns:
+    # 冷却默认属于登录会话；死亡、换槽和切换 profile 均不会重置。
+    reset-on-quit: true
 
-# 属性来源自动选择：BlancAttribute > AttributePlus > AuraSkills > 原版。
-# 以下 Lore 映射仅在原版模式生效；原 attribute-plus.enable 无效开关已移除。
-# 例：生命: +5 / 生命: -5 / 生命: x1.2（倍率 1.2 自动换算为 +0.2）。
-vanilla-lore-attributes:
-  enable: false
-  mappings:
-    health:
-      attribute: "minecraft:max_health"
-      keywords: ["生命", "health"]
+lifecycle:
+  # keep / drop / follow-keep-inventory
+  death: keep
 
-# AuraSkills 物理/魔法护盾：脱战时间单位为秒，恢复比例每秒应用一次。
-# 两组设置均支持 /accessory reload。
-OUT_OF_COMBAT_SECONDS: 12
-SHIELD_REGEN_PERCENT: 0.10
-MAGIC_SHIELD_OUT_OF_COMBAT_SECONDS: 12
-MAGIC_SHIELD_REGEN_PERCENT: 0.10
-Life_Steal_demonstrate: false
+debug:
+  enabled: false
+  categories: [lifecycle, inventory, skills, hooks, storage]
+  # 同类事件的最短日志间隔，单位 tick；0 表示不节流。
+  interval-ticks: 20
 
-# 存储方式：yml / mysql / only-ram。
-# only-ram 不落盘；普通配置重载保留内存，切换存储或停服后丢失。
-# 更换存储连接不会迁移原数据。
-database:
-  type: "yml"
+aura:
+  physical-shield:
+    out-of-combat-seconds: 12
+    regen-percent: 0.10
+  magic-shield:
+    out-of-combat-seconds: 12
+    regen-percent: 0.10
+  life-steal:
+    show-heal-message: false
+
+storage:
+  # yml / mysql / only-ram。RAM 专用于小游戏，退出后清空，不写入持久化存储。
+  type: yml
+  # 仅迁移旧物品数据时使用：依次填写旧背包每页的大小，例如 [9, 27]。
+  # 新数据以固定页号/槽号保存；修改 profile 不会改变存储位置。
+  legacy-page-sizes: []
   mysql:
-    host: "127.0.0.1"
+    host: 127.0.0.1
     port: 3306
-    database: "minecraft"
-    username: "root"
-    password: "password"
+    database: minecraft
+    username: root
+    password: password
     pool-size: 10
     min-idle: 2
     max-lifetime: 1800000

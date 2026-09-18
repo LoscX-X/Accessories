@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.blanoir'
-version = '4.0.0'
+version = '4.0.1'
 
 repositories {
     mavenCentral()
@@ -63,3 +63,20 @@ processResources {
         expand props
     }
 }
+
+// Offline-friendly behavioral verification against the actual configuration/event classes.
+sourceSets {
+    verification {
+        compileClasspath = sourceSets.main.output + configurations.compileClasspath
+        runtimeClasspath = output + compileClasspath
+    }
+}
+tasks.register('verifyAccessory', JavaExec) {
+    group = 'verification'
+    description = 'Checks attribute selection, loader contexts and equipment event contracts.'
+    dependsOn tasks.verificationClasses
+    classpath = sourceSets.verification.runtimeClasspath
+    mainClass = 'com.blanoir.accessory.verification.VerificationMain'
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+}
+tasks.named('check') { dependsOn tasks.named('verifyAccessory') }

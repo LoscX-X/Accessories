@@ -34,12 +34,14 @@ public final class AccessoryStorage {
                 && (sql == null || settings.mysql().equals(other.mysql()));
     }
 
+    public void flush(int totalSize) { store.flushAllAsync(totalSize).join(); }
+    public void shutdown() { store.shutdown(); if (sql != null) sql.shutdown(); }
+
     public void close(int totalSize) {
         try {
-            store.flushAllAsync(totalSize).join();
+            flush(totalSize);
         } finally {
-            store.shutdown();
-            if (sql != null) sql.shutdown();
+            shutdown();
         }
     }
 }

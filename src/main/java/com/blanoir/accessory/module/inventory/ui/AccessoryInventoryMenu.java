@@ -5,6 +5,8 @@ import com.blanoir.accessory.config.AccessoryLayout.FrameItem;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -24,15 +26,13 @@ public final class AccessoryInventoryMenu {
         this.itemFactory = new AccessoryInventoryItem(plugin);
     }
 
-    public Inventory create(UUID ownerId,
-                            int page,
-                            int totalPages,
-                            ItemStack[] contents,
-                            Collection<Integer> disabledSlots) {
-        AccessoryInventoryHolder holder = new AccessoryInventoryHolder(ownerId, page, totalPages);
+    public Inventory create(UUID ownerId, int page, int totalPages, ItemStack[] contents,
+                            Collection<Integer> disabledSlots, com.blanoir.accessory.api.AccessoryViewMode mode,
+                            com.blanoir.accessory.module.inventory.AccessoryPageManager pages) {
+        AccessoryInventoryHolder holder = new AccessoryInventoryHolder(ownerId, page, totalPages, mode, pages);
 
-        int size = plugin.accessorySize(holder.currentPage());
-        Component title = title(holder.currentPage(), holder.totalPages());
+        int size = pages.pageSize(holder.currentPage());
+        Component title = title(pages.pageTitle(holder.currentPage()), holder.currentPage(), holder.totalPages());
 
         Inventory inventory = Bukkit.createInventory(holder, size, title);
         holder.bindInventory(inventory);
@@ -43,32 +43,21 @@ public final class AccessoryInventoryMenu {
         return inventory;
     }
 
-    public Inventory createEmpty(UUID ownerId,
-                                 int page,
-                                 int totalPages,
-                                 Collection<Integer> disabledSlots) {
-        int safeTotalPages = Math.max(1, totalPages);
-        int safePage = Math.max(1, Math.min(safeTotalPages, page));
-
-        return create(
-                ownerId,
-                safePage,
-                safeTotalPages,
-                new ItemStack[plugin.accessorySize(safePage)],
-                disabledSlots
-        );
-    }
-
     public void decorate(Inventory inventory,
                          AccessoryInventoryHolder holder,
                          Collection<Integer> disabledSlots) {
+        // Remove only our old decoration. Occupied slots always retain their real items.
+        for (int slot = 0; slot < inventory.getSize(); slot++) {
+            ItemStack item = inventory.getItem(slot);
+            if (isDecoration(item)) inventory.setItem(slot, null);
+        }
         applyFrames(inventory, holder);
         applyDisabledSlots(inventory, holder, disabledSlots);
     }
 
     private void applyFrames(Inventory inventory, AccessoryInventoryHolder holder) {
         List<FrameItem> frameItems =
-                plugin.pageManager().frameItems(holder.currentPage(), inventory.getSize());
+                holder.pages().frameItems(holder.currentPage(), inventory.getSize());
 
         for (FrameItem frameItem : frameItems) {
             ItemStack frame = itemFactory.frameItem(
@@ -78,7 +67,7 @@ public final class AccessoryInventoryMenu {
             );
 
             for (int slot : frameItem.slots()) {
-                if (isValidSlot(inventory, slot)) {
+                if (isValidSlot(inventory, slot) && isEmpty(inventory.getItem(slot))) {
                     inventory.setItem(slot, frame.clone());
                 }
             }
@@ -93,20 +82,19 @@ public final class AccessoryInventoryMenu {
         }
 
         ItemStack disabled = itemFactory.disabledItem(
-                plugin.pageManager().disabledSlotItemSection(holder.currentPage()),
+                holder.pages().disabledSlotItemSection(holder.currentPage()),
                 holder.currentPage(),
                 holder.totalPages()
         );
 
         for (Integer slot : disabledSlots) {
-            if (slot != null && isValidSlot(inventory, slot)) {
+            if (slot != null && isValidSlot(inventory, slot) && isEmpty(inventory.getItem(slot))) {
                 inventory.setItem(slot, disabled.clone());
             }
         }
     }
 
-    private Component title(int currentPage, int totalPages) {
-        String raw = plugin.pageManager().pageTitle(currentPage);
+    private Component title(String raw, int currentPage, int totalPages) {
 
         return MINI_MESSAGE.deserialize(
                 raw.replace("{page}", String.valueOf(currentPage))
@@ -131,5 +119,14 @@ public final class AccessoryInventoryMenu {
 
     private boolean isValidSlot(Inventory inventory, int slot) {
         return slot >= 0 && slot < inventory.getSize();
+    }
+
+    private boolean isEmpty(ItemStack item) { return item == null || item.getType().isAir(); }
+
+    private boolean isDecoration(ItemStack item) {
+        if (isEmpty(item) || !item.hasItemMeta()) return false;
+        var pdc = item.getItemMeta().getPersistentDataContainer();
+        return pdc.has(new NamespacedKey(plugin, "locked"), PersistentDataType.BYTE)
+                || pdc.has(new NamespacedKey(plugin, "disabled"), PersistentDataType.BYTE);
     }
 }

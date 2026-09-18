@@ -1,0 +1,12 @@
+# 示例默认关闭。启用后，进入 arena 世界的玩家使用此规则。
+enabled: false
+priority: 100
+match:
+  worlds: [arena]
+  # 同时满足所有权限；空列表不限制权限。世界和权限之间是 AND。
+  permissions: []
+rules:
+  equip: false
+  unequip: false
+  skills: false
+  # 省略字段继承 default。每个玩家只选优先级最高的一套。

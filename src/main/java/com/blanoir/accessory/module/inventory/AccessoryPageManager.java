@@ -5,7 +5,6 @@ import com.blanoir.accessory.config.AccessoryLayout.FrameItem;
 import com.blanoir.accessory.config.AccessoryLayout.SlotRule;
 import com.blanoir.accessory.config.AccessorySettings;
 import com.blanoir.accessory.config.ConfigFiles;
-import com.blanoir.accessory.config.PageSettings;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.io.File;
@@ -21,18 +20,17 @@ public final class AccessoryPageManager {
     private final Logger logger;
     private Map<String, AccessoryLayout> layouts = Map.of();
     private List<AccessoryLayout> pages = List.of();
-    private int[] starts = new int[0];
 
     public AccessoryPageManager(File dataFolder, Logger logger) {
         directory = new File(dataFolder, "layouts");
         this.logger = logger;
     }
 
-    public void reload(PageSettings settings, AccessorySettings.Gui defaults) {
+    public void reload(AccessorySettings.Gui defaults) {
         Map<String, AccessoryLayout> loaded = new LinkedHashMap<>();
         for (File file : ConfigFiles.yamlFiles(directory)) {
             var config = ConfigFiles.load(file, logger);
-            if (config == null) continue;
+            if (config == null) throw new IllegalArgumentException("Invalid layout: " + file);
             String name = file.getName();
             String id = name.substring(0, name.lastIndexOf('.')).toLowerCase(Locale.ROOT);
             if (loaded.containsKey(id)) {
@@ -41,26 +39,23 @@ public final class AccessoryPageManager {
             loaded.put(id, AccessoryLayout.read(id, config, defaults, logger));
         }
 
-        // Resolve before publishing so a missing layout never replaces a working page table.
-        AccessoryLayout fallback = loaded.get(settings.defaultLayout());
-        if (fallback == null) {
-            throw new IllegalArgumentException("Default layout '" + settings.defaultLayout() + "' not found in layouts/");
-        }
-        var resolved = new java.util.ArrayList<AccessoryLayout>();
-        int[] offsets = new int[settings.count() + 1];
-        for (int page = 1; page <= settings.count(); page++) {
-            String id = settings.layoutFor(page);
-            AccessoryLayout layout = loaded.get(id);
-            if (layout == null) {
-                logger.warning("Page " + page + ": layout '" + id + "' not found; using '" + fallback.id() + "'.");
-                layout = fallback;
-            }
-            resolved.add(layout);
-            offsets[page] = offsets[page - 1] + layout.size();
-        }
+        AccessoryLayout fallback = loaded.get("default");
+        if (fallback == null) throw new IllegalArgumentException("layouts/default.yml is required");
         layouts = Map.copyOf(loaded);
-        pages = List.copyOf(resolved);
-        starts = offsets;
+        pages = List.of(fallback);
+    }
+
+    public AccessoryPageManager forProfile(List<String> names, String title) {
+        AccessoryPageManager selected = new AccessoryPageManager(directory.getParentFile(), logger);
+        selected.layouts = layouts;
+        List<AccessoryLayout> base = names.isEmpty() ? pages : names.stream().map(name -> {
+            AccessoryLayout layout = layouts.get(name.toLowerCase(Locale.ROOT));
+            if (layout == null) throw new IllegalArgumentException("Unknown profile layout: " + name);
+            return layout;
+        }).toList();
+        selected.pages = title.isBlank() ? base : base.stream().map(layout -> new AccessoryLayout(layout.id(), title,
+                layout.size(), layout.slots(), layout.frames(), layout.disabledItem())).toList();
+        return selected;
     }
 
     public int pageCount() { return pages.size(); }
@@ -70,22 +65,6 @@ public final class AccessoryPageManager {
     public int pageSize(int page) { return layout(page).size(); }
     public String pageTitle(int page) { return layout(page).title(); }
     public int maxPageSize() { return pages.stream().mapToInt(AccessoryLayout::size).max().orElse(9); }
-    public int pageStart(int page) { return starts[normalizePage(page) - 1]; }
-    public int totalStorageSize() { return starts[pageCount()]; }
-
-    public int pageByAbsoluteSlot(int absoluteSlot) {
-        if (absoluteSlot < 0 || absoluteSlot >= totalStorageSize()) return -1;
-        for (int page = 1; page <= pageCount(); page++) {
-            if (absoluteSlot < starts[page]) return page;
-        }
-        return -1;
-    }
-
-    public int localSlot(int absoluteSlot) {
-        int page = pageByAbsoluteSlot(absoluteSlot);
-        return page == -1 ? -1 : absoluteSlot - pageStart(page);
-    }
-
     public List<Integer> configuredSlots(int page) { return List.copyOf(layout(page).slots().keySet()); }
     public boolean isSlotConfigured(int page, int slot) { return slotRule(page, slot) != null; }
 

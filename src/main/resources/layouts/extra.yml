@@ -1,5 +1,5 @@
 # 可复用页面布局：文件名（不带 .yml）就是布局 ID。
-# 在 config.yml 的 layout.by-page 中绑定页码；本文件不再填写 page。
+# 在 profiles/<群体>.yml 的 inventory.pages 中使用此布局名。
 # size 可省略以使用主配置默认值；title 也可按布局覆盖。
 size: 9
 
@@ -12,7 +12,7 @@ disabled-slot:
     lore:
       - "<dark_red>This slot is disabled"
 
-Accessory:
+slots:
   "1":
     lore:
       - "[Ring]"

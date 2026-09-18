@@ -1,53 +1,55 @@
 # BlancAccessory
 
-可配置的多页饰品背包，支持 Lore 槽位规则、快捷装备、属性与 MythicMobs 技能。
+按玩家群体定制的多页饰品背包，支持装备生命周期事件、明确选择属性来源，以及独立的 MythicMobs 技能系统。
 
-- 打开背包：`/accessory`（别名 `/acc`、`/acre`）。
-- 快捷装备：潜行 + 主手右键；多个匹配槽位会显示选择菜单。
-- [配置说明与旧配置迁移](docs/configuration.md)
-- [架构与运行流程](docs/architecture.md)
-
-## 配置入口
-
-| 文件 | 职责 |
+| 配置入口 | 负责什么 |
 | --- | --- |
-| `config.yml` | 页数、布局映射、语言、装备限制、属性设置、存储 |
-| `layouts/*.yml` | 可复用的 GUI 布局、槽位规则、按钮与禁用样式 |
-| `skill/*.yml` | 饰品 ID 到 MythicMobs 技能的映射 |
-| `Language/*.yml` | 提示消息 |
-| `stats.yml` | AuraSkills 自定义属性定义 |
+| `config.yml` | 语言、全局装备规则、属性、技能开关、死亡策略、debug、存储 |
+| `profiles/*.yml` | 哪类玩家使用哪套背包：匹配条件、标题、页面列表、规则覆盖 |
+| `layouts/*.yml` | 每页大小、可装备槽位、Lore/权限、装饰和按钮 |
+| `skills/*.yml` | 饰品 ID/显示名对应的 MythicMobs 技能 |
+| `Language/*.yml`、`stats.yml` | 提示语言、AuraSkills 自定义特性 |
 
-页面管理参考 ExcellentShop：布局按文件名注册，`pages` 指定总页数，`layout.by-page.0` 指定默认布局，其余页码可覆盖。布局与玩家物品分开管理，多页共用布局时物品仍独立保存。
+例如 VIP 群体使用两页背包：
 
-## 可选集成
-
-属性来源自动选择：BlancAttribute → AttributePlus → AuraSkills → 原版属性。MythicMobs 提供饰品触发技能，PlaceholderAPI 提供护盾和技能冷却变量。未安装这些插件时仍可使用饰品背包。
-
-- 物理护盾：`%absorb_current_shield%` / `%absorb_max_shield%`
-- 技能冷却：`%blacc_cd_1%` ～ `%blacc_cd_10%`
-
-## 管理命令
-
-| 命令 | 权限 | 作用 |
-| --- | --- | --- |
-| `/accessory reload` | `accessory.reload` | 重载配置、布局、语言和技能，刷新在线玩家效果 |
-| `/accessory clear <玩家>` | `accessory.clear` | 清空饰品 |
-| `/accessory view <玩家>` | `accessory.view` | 查看、编辑在线玩家的饰品 |
-| `/shield` | `accessory.shield` | 调整物理护盾；需要 AuraSkills |
-| `/magicshield` | `accessory.magicshield` | 调整魔法护盾；需要 AuraSkills |
-
-## 外部 API
-
-```java
-Accessory plugin = (Accessory) Bukkit.getPluginManager().getPlugin("BlancAccessory");
-AccessoryService service = plugin.service();
-service.setSlotEnabled(3, false);
-service.setSlotEnabled(3, true);
-service.setDisabledSlots(List.of(1, 3, 5));
+```yaml
+# profiles/vip.yml
+enabled: true
+priority: 10
+match:
+  permissions: [accessory.profile.vip]
+inventory:
+  title: "<gold>VIP 饰品 {page}/{max_page}"
+  pages: [default, extra]
 ```
 
-禁用槽位 API 使用页内槽位编号，对所有页面的同编号槽位生效；样式由各布局的 `disabled-slot.item` 决定。
+每个名称引用一个布局文件。玩家只使用优先级最高的匹配 Profile；未匹配时使用 default。物品按固定页号/槽号保存，换组后暂时隐藏的物品继续保留。
 
-## 构建
+属性配置只选择一个外部来源，原版属性独立控制：
 
-使用 Java 25、Gradle 9.2.1；本地编译依赖放在 `libs/`。执行 `gradle shadowJar`，产物为 `build/libs/Blanc-Accessory.jar`。
+```yaml
+attribute:
+  provider: none # none / AuraSkills / AttributePlus / BlancAttribute
+  vanilla: true
+```
+
+只启用原版就是 `none + true`。不会自动替换缺失的属性插件。RAM 专供小游戏，退出即清空。
+
+- [配置教程](docs/configuration.md)
+- [API 与生命周期事件](docs/lifecycle-api.md)
+- [职责与架构](docs/architecture.md)
+- [生命周期审计、市场对比与剩余限制](docs/lifecycle-audit-2026-09-17.md)
+
+| 命令 | 权限 | 用途 |
+| --- | --- | --- |
+| `/accessory` | — | 打开自己的背包 |
+| `/accessory reload` | `accessory.reload` | 验证并重载配置 |
+| `/accessory clear <玩家>` | `accessory.clear` | 清空饰品 |
+| `/accessory view <玩家>` | `accessory.view` | 只读查看在线玩家背包 |
+| `/shield`、`/magicshield` | `accessory.shield`、`accessory.magicshield` | AuraSkills 护盾控制 |
+
+快捷装备使用潜行 + 主手右键；多个槽位匹配时显示选择选项。管理员需要编辑时可通过 API 显式使用 EDIT 模式。
+
+Java 25、Gradle 9.2.1；外部插件编译依赖位于 `libs/`。执行 `gradle check shadowJar`，产物为 `build/libs/Accessory.jar`。存储故障回归另运行 `tests/lifecycle-probes/run.ps1`。
+
+本次版本不再支持旧配置别名、旧内部加载器和混合在库存服务中的技能 API；请按当前文档配置。已有饰品物品数据保留格式校验和迁移能力。

@@ -9,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * 饰品技能冷却占位符：%blacc_cd_1% ~ %blacc_cd_10%。
  *
- * <p>槽位与格式在 skill/*.yml 的每个技能里配置：cd 指定 1-10 槽位，
+ * <p>槽位与格式在 skills/*.yml 的每个技能里配置：cd 指定 1-10 槽位，
  * cd-format 自定义显示格式（支持 {cd} 剩余秒 / {max} 总冷却 / {skill} 技能名）。
  * 未指定 cd 的技能按冷却时长升序自动填入剩余槽位（冷却短的在上）。</p>
  */
@@ -23,7 +23,7 @@ public final class SkillCooldownPlaceholder extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getIdentifier() {
-        return "blacc";
+        return "acc";
     }
 
     @Override
@@ -54,10 +54,7 @@ public final class SkillCooldownPlaceholder extends PlaceholderExpansion {
 
         try {
             int slot = Integer.parseInt(lower.substring(3));
-            if (plugin.skillEngine() == null) {
-                return "";
-            }
-            return plugin.skillEngine().formatCooldown(player, slot);
+            return plugin.skills().formatCooldown(player, slot);
         } catch (NumberFormatException e) {
             return null;
         }

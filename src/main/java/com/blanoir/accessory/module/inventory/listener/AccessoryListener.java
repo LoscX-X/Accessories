@@ -1,335 +1,121 @@
 package com.blanoir.accessory.module.inventory.listener;
 
 import com.blanoir.accessory.Accessory;
-import com.blanoir.accessory.events.AccessoryPlaceEvent;
-import com.blanoir.accessory.module.inventory.AccessoryInventoryLifecycleListener;
-import com.blanoir.accessory.module.inventory.AccessoryPageManager;
-import com.blanoir.accessory.module.inventory.ui.AccessoryInventoryHolder;
-import com.blanoir.accessory.utils.LoreUtils;
+import com.blanoir.accessory.api.*;
+import com.blanoir.accessory.events.*;
+import com.blanoir.accessory.module.inventory.InventoryRules;
+import com.blanoir.accessory.module.inventory.ui.*;
 import org.bukkit.Bukkit;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
+import org.bukkit.event.*;
 import org.bukkit.event.inventory.*;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryView;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.inventory.*;
+import java.util.*;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
-public class AccessoryListener implements Listener {
+/** Event translation only: owner policy, proposed transfer, cancellable event, deferred commit. */
+public final class AccessoryListener implements Listener {
     private final Accessory plugin;
-    private final AccessoryInventoryLifecycleListener invSave;
-    private final NamespacedKey LOCKED;
-    private final Set<UUID> pendingRefresh = ConcurrentHashMap.newKeySet();
-
+    private final InventoryRules rules;
+    private final MenuSnapshot snapshot;
+    private final Set<Inventory> pending = Collections.newSetFromMap(new IdentityHashMap<>());
     public AccessoryListener(Accessory plugin) {
-        this.plugin = plugin;
-        this.invSave = new AccessoryInventoryLifecycleListener(plugin);
-        this.LOCKED = new NamespacedKey(plugin, "locked");
+        this.plugin = plugin; rules = new InventoryRules(plugin); snapshot = new MenuSnapshot(plugin);
     }
-
-    private boolean isNotAccessoryTop(InventoryView view) {
-        return !(view.getTopInventory().getHolder() instanceof AccessoryInventoryHolder);
-    }
-
-    private int currentPage(InventoryView view) {
-        if (view.getTopInventory().getHolder() instanceof AccessoryInventoryHolder holder) {
-            return holder.currentPage();
+    @EventHandler(ignoreCancelled = true)
+    public void onClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player actor)) return;
+        Inventory top = event.getView().getTopInventory();
+        if (!(top.getHolder() instanceof AccessoryInventoryHolder holder)) return;
+        Player owner = Bukkit.getPlayer(holder.getOwnerId());
+        int slot = event.getRawSlot();
+        if (slot >= 0 && slot < top.getSize() && snapshot.decoration(top.getItem(slot))) {
+            event.setCancelled(true); plugin.menus().handleFrameClick(actor, event.getView(), slot); return;
         }
-        return 1;
-    }
-
-    private boolean isSlotConfigured(int page, int slot) {
-        return plugin.pageManager().isSlotConfigured(page, slot);
-    }
-
-    private boolean isSlotDisabled(int slot) {
-        return plugin.service() != null && plugin.service().isSlotDisabled(slot);
-    }
-
-    private List<String> requiredLore(int page, int slot) {
-        return plugin.pageManager().requiredLore(page, slot);
-    }
-
-    private String requiredPermission(int page, int slot) {
-        return plugin.pageManager().requiredPermission(page, slot);
-    }
-
-    private boolean hasSlotPermission(Player player, int page, int slot) {
-        String permission = requiredPermission(page, slot);
-        return permission != null && !player.hasPermission(permission);
-    }
-
-    private boolean shouldRejectPlacement(Player player, int page, int slot, ItemStack item, Inventory top) {
-        if (isSlotDisabled(slot)) return true;
-        if (!isSlotConfigured(page, slot)) return true;
-
-        if (hasSlotPermission(player, page, slot)) {
-            return true;
+        if (owner == null || holder.mode() == AccessoryViewMode.READ_ONLY || holder.pages() != plugin.pageManager(owner)
+                || !plugin.profiles().isAllowed(owner, AccessoryAction.OPEN)) { event.setCancelled(true); return; }
+        // These actions affect an unknown set of top slots, or manufacture items.
+        if (event.getAction() == InventoryAction.COLLECT_TO_CURSOR || event.getAction() == InventoryAction.CLONE_STACK
+                || event.getAction() == InventoryAction.UNKNOWN) { event.setCancelled(true); return; }
+        if (slot >= top.getSize()) {
+            if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) event.setCancelled(true);
+            return;
         }
-
-        // 同一物品数量限制：把当前 GUI 页面合并进仓库快照后再判断。
-        if (plugin.limitManager() != null) {
-            ItemStack[] contents = plugin.inventoryStore()
-                    .getOrLoad(player.getUniqueId(), plugin.totalAccessoryStorageSize());
-            if (top != null) {
-                int start = plugin.accessoryPageStart(page);
-                ItemStack[] gui = top.getContents();
-                for (int i = 0; i < gui.length && start + i < contents.length; i++) {
-                    contents[start + i] = gui[i];
-                }
-            }
-            int absoluteSlot = plugin.accessoryPageStart(page) + slot;
-            if (plugin.limitManager().wouldExceedLimit(contents, absoluteSlot, item)) {
-                player.sendMessage(plugin.lang().langComponent("Item_limit_reached"));
-                return true;
-            }
-        }
-
-        List<String> need = requiredLore(page, slot);
-        return !LoreUtils.matchesAnyKeyword(LoreUtils.plainLore(item), need);
-    }
-
-    private boolean hasMarker(ItemStack it, NamespacedKey marker) {
-        if (it == null || it.getType().isAir()) return false;
-        ItemMeta meta = it.getItemMeta();
-        return meta != null && meta.getPersistentDataContainer().has(marker, PersistentDataType.BYTE);
-    }
-
-    private boolean hasAntiUnequip(ItemStack item) {
-        return LoreUtils.matchesAnyKeyword(LoreUtils.plainLore(item), plugin.antiUnequipLoreTags());
-    }
-
-    private boolean hasAntiUnequipInTop(Inventory top) {
-        if (top == null) return false;
-        for (ItemStack item : top.getContents()) {
-            if (hasAntiUnequip(item)) return true;
-        }
-        return false;
-    }
-
-    private boolean isRemovalAction(InventoryAction action) {
-        return switch (action) {
-            case PICKUP_ALL, PICKUP_HALF, PICKUP_ONE, PICKUP_SOME,
-                 MOVE_TO_OTHER_INVENTORY, SWAP_WITH_CURSOR, HOTBAR_SWAP,
-                 COLLECT_TO_CURSOR, DROP_ONE_SLOT, DROP_ALL_SLOT -> true;
+        if (slot < 0) return; // Dropping the cursor outside does not mutate the accessory inventory.
+        ItemStack old = event.getCurrentItem();
+        boolean removes = switch (event.getAction()) {
+            case PICKUP_ALL, PICKUP_HALF, PICKUP_ONE, PICKUP_SOME, MOVE_TO_OTHER_INVENTORY,
+                 SWAP_WITH_CURSOR, HOTBAR_SWAP, DROP_ONE_SLOT, DROP_ALL_SLOT -> true;
             default -> false;
         };
+        if (removes && !rules.mayRemove(owner, old)) { deny(event, actor, "Item_cannot_unequip"); return; }
+        ItemStack incoming = switch (event.getAction()) {
+            case PLACE_ALL, PLACE_SOME, PLACE_ONE, SWAP_WITH_CURSOR -> event.getCursor();
+            case HOTBAR_SWAP -> event.getClick() == ClickType.SWAP_OFFHAND ? actor.getInventory().getItemInOffHand()
+                    : event.getHotbarButton() >= 0 && event.getHotbarButton() < 9 ? actor.getInventory().getItem(event.getHotbarButton()) : null;
+            default -> null;
+        };
+        if (!InventoryRules.empty(incoming)) {
+            if (!rules.mayPlace(owner, holder.currentPage(), slot, incoming)
+                    || !rules.candidateAllowed(owner, full(owner, top, holder), Map.of(plugin.accessoryPageStart(holder.currentPage()) + slot, incoming))) {
+                deny(event, actor, "Item_not_match"); return;
+            }
+            ItemStack[] before = top.getContents();
+            ItemStack cursor = event.getCursor() == null ? null : event.getCursor().clone();
+            if (!place(actor, holder, slot, incoming, old) || !Arrays.equals(before, top.getContents())
+                    || !Objects.equals(cursor, event.getCursor()) || holder.pages() != plugin.pageManager(owner)
+                    || !rules.mayPlace(owner, holder.currentPage(), slot, incoming)) { event.setCancelled(true); return; }
+        }
+        schedule(actor, top);
     }
-
-    private void scheduleRefresh(Player actor, InventoryView view) {
-        Inventory top = view.getTopInventory();
-        if (!(top.getHolder() instanceof AccessoryInventoryHolder holder)) {
-            return;
+    @EventHandler(ignoreCancelled = true)
+    public void onDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player actor)) return;
+        Inventory top = event.getView().getTopInventory();
+        if (!(top.getHolder() instanceof AccessoryInventoryHolder holder)) return;
+        Map<Integer, ItemStack> changes = new LinkedHashMap<>();
+        event.getNewItems().forEach((slot, item) -> { if (slot >= 0 && slot < top.getSize()) changes.put(slot, item); });
+        if (changes.isEmpty()) return;
+        Player owner = Bukkit.getPlayer(holder.getOwnerId());
+        if (owner == null || holder.mode() == AccessoryViewMode.READ_ONLY || holder.pages() != plugin.pageManager(owner)
+                || !plugin.profiles().isAllowed(owner, AccessoryAction.OPEN)) { event.setCancelled(true); return; }
+        Map<Integer, ItemStack> absolute = new LinkedHashMap<>();
+        for (var change : changes.entrySet()) {
+            int slot = change.getKey();
+            if (snapshot.decoration(top.getItem(slot)) || !rules.mayRemove(owner, top.getItem(slot))
+                    || !rules.mayPlace(owner, holder.currentPage(), slot, change.getValue())) { event.setCancelled(true); return; }
+            absolute.put(plugin.accessoryPageStart(holder.currentPage()) + slot, change.getValue());
         }
-
-        UUID ownerId = holder.getOwnerId();
-        AccessoryPageManager pages = plugin.pageManager();
-
-        if (!pendingRefresh.add(ownerId)) {
-            return;
+        if (!rules.candidateAllowed(owner, full(owner, top, holder), absolute)) {
+            event.setCancelled(true); actor.sendMessage(plugin.lang().langComponent("Item_limit_reached")); return;
         }
-
+        ItemStack[] before = top.getContents();
+        for (var change : changes.entrySet()) if (!place(actor, holder, change.getKey(), change.getValue(), top.getItem(change.getKey()))) {
+            event.setCancelled(true); return;
+        }
+        if (!Arrays.equals(before, top.getContents()) || holder.pages() != plugin.pageManager(owner)
+                || changes.entrySet().stream().anyMatch(change -> !rules.mayPlace(owner, holder.currentPage(), change.getKey(), change.getValue()))) {
+            event.setCancelled(true); return;
+        }
+        schedule(actor, top);
+    }
+    private ItemStack[] full(Player owner, Inventory top, AccessoryInventoryHolder holder) {
+        ItemStack[] contents = plugin.inventoryStore().getOrLoad(owner.getUniqueId(), plugin.totalAccessoryStorageSize());
+        ItemStack[] page = snapshot.read(top);
+        System.arraycopy(page, 0, contents, plugin.accessoryPageStart(holder.currentPage()), page.length);
+        return contents;
+    }
+    private boolean place(Player actor, AccessoryInventoryHolder holder, int slot, ItemStack item, ItemStack old) {
+        var event = new AccessoryPlaceEvent(actor, holder.getOwnerId(), holder.currentPage(), slot, item, old, AccessoryChangeCause.GUI);
+        Bukkit.getPluginManager().callEvent(event); return !event.isCancelled();
+    }
+    private void schedule(Player actor, Inventory top) {
+        if (!pending.add(top)) return;
         Bukkit.getScheduler().runTask(plugin, () -> {
-            pendingRefresh.remove(ownerId);
-            if (pages != plugin.pageManager()) return;
-
-            ItemStack[] snapshot = invSave.sanitize(top, holder.currentPage());
-
-            plugin.inventoryStore().updateSlice(
-                    ownerId,
-                    plugin.accessoryPageStart(holder.currentPage()),
-                    snapshot,
-                    plugin.accessorySize(holder.currentPage()),
-                    plugin.totalAccessoryStorageSize()
-            );
-
-            Player owner = Bukkit.getPlayer(ownerId);
-            Player refreshTarget = owner != null ? owner : actor;
-
-            ItemStack[] fullContents = plugin.inventoryStore()
-                    .getOrLoad(ownerId, plugin.totalAccessoryStorageSize());
-
-            plugin.refreshPlayerEffects(refreshTarget, fullContents);
+            pending.remove(top);
+            if (actor.isOnline() && actor.getOpenInventory().getTopInventory() == top) plugin.menus().commit(actor, top);
         });
     }
-
-    private boolean callPlaceEvent(Player player, Inventory top, int slot, ItemStack item) {
-        AccessoryPlaceEvent event = new AccessoryPlaceEvent(
-                player,
-                slot,
-                item.clone(),
-                top.getItem(slot) == null ? null : Objects.requireNonNull(top.getItem(slot)).clone()
-        );
-        Bukkit.getPluginManager().callEvent(event);
-        return event.isCancelled();
+    private void deny(InventoryClickEvent event, Player actor, String message) {
+        event.setCancelled(true); actor.sendMessage(plugin.lang().langComponent(message));
     }
-
-    private List<Integer> frameSlots(InventoryView view) {
-        return plugin.pageManager().frameSlots(currentPage(view), view.getTopInventory().getSize());
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
-        if (isNotAccessoryTop(e.getView())) return;
-
-        Inventory top = e.getView().getTopInventory();
-        int topSize = top.getSize();
-        int raw = e.getRawSlot();
-        int page = currentPage(e.getView());
-
-        // 点到窗口外部，raw 通常是 -999
-        if (raw < 0) {
-            e.setCancelled(true);
-            return;
-        }
-
-        if (e.getAction() == InventoryAction.COLLECT_TO_CURSOR && hasAntiUnequipInTop(top)) {
-            e.setCancelled(true);
-            p.sendMessage(plugin.lang().langComponent("Item_cannot_unequip"));
-            return;
-        }
-
-        // shift 点击玩家背包，禁止把东西直接塞进饰品 GUI
-        if (e.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && raw >= topSize) {
-            e.setCancelled(true);
-            return;
-        }
-
-        // 只处理上方饰品 GUI，玩家背包普通点击不处理
-        if (raw >= topSize) {
-            return;
-        }
-
-        List<Integer> frame = frameSlots(e.getView());
-
-        boolean isFrame = frame.contains(raw);
-        boolean isDisabled = isSlotDisabled(raw);
-        ItemStack cur = e.getCurrentItem();
-
-        if (!isFrame && !isDisabled && hasAntiUnequip(cur) && isRemovalAction(e.getAction())) {
-            e.setCancelled(true);
-            p.sendMessage(plugin.lang().langComponent("Item_cannot_unequip"));
-            return;
-        }
-
-        if (isFrame || isDisabled) {
-            switch (e.getAction()) {
-                case PLACE_ALL, PLACE_SOME, PLACE_ONE,
-                     SWAP_WITH_CURSOR, HOTBAR_SWAP,
-                     COLLECT_TO_CURSOR,
-                     MOVE_TO_OTHER_INVENTORY -> {
-                    e.setCancelled(true);
-                    return;
-                }
-                default -> {
-                    if (hasMarker(cur, LOCKED)) {
-                        e.setCancelled(true);
-                        plugin.menus().handleFrameClick(p, e.getView(), raw);
-                        return;
-                    }
-                }
-            }
-        } else {
-            switch (e.getAction()) {
-                case PLACE_ALL, PLACE_SOME, PLACE_ONE, SWAP_WITH_CURSOR, HOTBAR_SWAP -> {
-                    ItemStack going;
-
-                    if (e.getAction() == InventoryAction.HOTBAR_SWAP) {
-                        int button = e.getHotbarButton();
-
-                        if (button < 0 || button > 8) {
-                            e.setCancelled(true);
-                            return;
-                        }
-
-                        going = p.getInventory().getItem(button);
-                    } else {
-                        going = e.getCursor();
-                    }
-
-                    if (going != null && !going.getType().isAir() && shouldRejectPlacement(p, page, raw, going, top)) {
-                        e.setCancelled(true);
-
-                        if (hasSlotPermission(p, page, raw)) {
-                            p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
-                        } else {
-                            p.sendMessage(plugin.lang().langComponent("Item_not_match"));
-                        }
-
-                        return;
-                    }
-
-                    if (going != null && !going.getType().isAir() && callPlaceEvent(p, top, raw, going)) {
-                        e.setCancelled(true);
-                        return;
-                    }
-                }
-                default -> {
-                }
-            }
-        }
-
-        scheduleRefresh(p, e.getView());
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void onDrag(InventoryDragEvent e) {
-        if (!(e.getWhoClicked() instanceof Player p)) return;
-        if (isNotAccessoryTop(e.getView())) return;
-
-        Inventory top = e.getView().getTopInventory();
-        int topSize = top.getSize();
-        int page = currentPage(e.getView());
-        List<Integer> FRAME = frameSlots(e.getView());
-
-        for (var en : e.getNewItems().entrySet()) {
-            int raw = en.getKey();
-            if (raw < topSize && FRAME.contains(raw)) {
-                e.setCancelled(true);
-                p.sendMessage(plugin.lang().langComponent("Item_locked"));
-                return;
-            }
-            if (raw < topSize && isSlotDisabled(raw)) {
-                e.setCancelled(true);
-                p.sendMessage(plugin.lang().langComponent("Item_locked"));
-                return;
-            }
-        }
-
-        for (var en : e.getNewItems().entrySet()) {
-            int raw = en.getKey();
-            if (raw >= topSize) continue;
-            if (hasAntiUnequip(top.getItem(raw))) {
-                e.setCancelled(true);
-                p.sendMessage(plugin.lang().langComponent("Item_cannot_unequip"));
-                return;
-            }
-            if (shouldRejectPlacement(p, page, raw, en.getValue(), top)) {
-                e.setCancelled(true);
-                if (hasSlotPermission(p, page, raw)) {
-                    p.sendMessage(plugin.lang().langComponent("Slot_no_permission"));
-                } else {
-                    p.sendMessage(plugin.lang().langComponent("Item_not_match"));
-                }
-                return;
-            }
-            if (callPlaceEvent(p, top, raw, en.getValue())) {
-                e.setCancelled(true);
-                return;
-            }
-        }
-
-        scheduleRefresh(p, e.getView());
-    }
-
 }

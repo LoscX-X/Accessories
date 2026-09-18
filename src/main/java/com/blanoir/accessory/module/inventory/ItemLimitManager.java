@@ -19,7 +19,7 @@ import java.util.Set;
 /**
  * 同一物品最多可装备次数的检测（skilled_item 数量限制）。
  *
- * <p>配置路径: config.yml 的 item-limits 节点。</p>
+ * <p>配置路径: config.yml 的 inventory.item-limits 节点。</p>
  */
 public final class ItemLimitManager {
 
@@ -27,19 +27,17 @@ public final class ItemLimitManager {
 
     private final Accessory plugin;
     private final NamespacedKey accItemId;
-    private final NamespacedKey legacyItemId;
     private final List<LimitRule> rules = new ArrayList<>();
 
     public ItemLimitManager(Accessory plugin) {
         this.plugin = plugin;
         this.accItemId = new NamespacedKey(plugin, "acc_item_id");
-        this.legacyItemId = new NamespacedKey(plugin, "dun_item_id");
     }
 
     public void reload() {
         rules.clear();
 
-        ConfigurationSection section = plugin.getConfig().getConfigurationSection("item-limits");
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection("inventory.item-limits");
         if (section == null) {
             return;
         }
@@ -237,8 +235,7 @@ public final class ItemLimitManager {
         if (id != null && !id.isBlank()) {
             return id;
         }
-        String legacy = meta.getPersistentDataContainer().get(legacyItemId, PersistentDataType.STRING);
-        return legacy != null && !legacy.isBlank() ? legacy : null;
+        return null;
     }
 
     private String identityKey(ItemStack item) {
